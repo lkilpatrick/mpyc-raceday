@@ -49,6 +49,10 @@
         {
           "fieldPath": "eventId",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "checkedInAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -59,6 +63,10 @@
         {
           "fieldPath": "eventId",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
         }
       ]
     }

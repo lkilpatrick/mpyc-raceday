@@ -53,6 +53,7 @@ dependencies:
   file_picker: any
   fl_chart: any
   responsive_framework: any
+  flutter_dotenv: any
 
 dev_dependencies:
   flutter_test:

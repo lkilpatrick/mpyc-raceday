@@ -24,6 +24,11 @@ const List<WebNavItem> webNavItems = [
     route: '/crew-management',
     icon: Icons.group,
   ),
+  WebNavItem(
+    label: 'Sync Dashboard',
+    route: '/sync-dashboard',
+    icon: Icons.sync,
+  ),
   WebNavItem(label: 'Members', route: '/members', icon: Icons.badge),
   WebNavItem(label: 'Race Events', route: '/race-events', icon: Icons.flag),
   WebNavItem(label: 'Courses', route: '/courses', icon: Icons.map),

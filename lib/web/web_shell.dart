@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/admin/presentation/web/member_management_page.dart';
+import 'package:mpyc_raceday/features/admin/presentation/web/sync_dashboard_panel.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_availability_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
@@ -31,6 +33,10 @@ class _WebShellState extends State<WebShell> {
         return const SeasonCalendarPage();
       case '/crew-management':
         return const CrewAvailabilityPage();
+      case '/sync-dashboard':
+        return const SyncDashboardPanel();
+      case '/members':
+        return const MemberManagementPage();
       case '/race-events':
         return const EventManagementPage();
       default:

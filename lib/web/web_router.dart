@@ -23,6 +23,11 @@ final GoRouter webRouter = GoRouter(
       builder: (context, state) => const WebShell(activeRoute: '/members'),
     ),
     GoRoute(
+      path: '/sync-dashboard',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/sync-dashboard'),
+    ),
+    GoRoute(
       path: '/race-events',
       builder: (context, state) => const WebShell(activeRoute: '/race-events'),
     ),

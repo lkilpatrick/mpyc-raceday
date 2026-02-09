@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 import 'package:mpyc_raceday/firebase_options.dart';
@@ -9,6 +10,15 @@ import 'package:mpyc_raceday/web/web_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb) {
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {
+      // Optional at runtime in local/dev. CLUBSPOT_API_KEY can also be passed via --dart-define.
+    }
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ProviderScope(child: MpycRacedayApp()));
 }
