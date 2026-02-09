@@ -76,6 +76,7 @@ class _WebShellState extends State<WebShell> {
         return const MaintenanceReportsPanel();
       case '/rules-reference':
         return const RulesReferencePage();
+      case '/courses':
       case '/course-config':
         return const CourseConfigurationPage();
       case '/fleet-broadcasts':
