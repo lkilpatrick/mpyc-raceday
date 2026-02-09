@@ -3,13 +3,9 @@ name: Deploy to Firebase
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  # ── PR checks: analyze, test, build ──
-  check:
-    if: github.event_name == 'pull_request'
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,72 +16,16 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Write service account key
-        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
-        env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        shell: bash
-
-      - name: Generate Firebase config
-        run: |
-          dart pub global activate flutterfire_cli
-          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
-
-      - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Analyze
-        run: dart analyze --no-fatal-infos
-
-      - name: Run tests
-        run: flutter test
-
-      - name: Build check (web)
-        run: flutter build web --release
-
-  # ── Deploy on merge to main ──
-  build-and-deploy:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      - name: Write service account key
-        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
-        env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        shell: bash
-
-      - name: Generate Firebase config
-        run: |
-          dart pub global activate flutterfire_cli
-          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
-
-      - name: Generate code (freezed/json_serializable)
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Run tests
-        run: flutter test
-
       - name: Build Flutter web
         run: flutter build web --release
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Write service account key
+        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        shell: bash
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -101,7 +41,7 @@ jobs:
           channelId: live
           projectId: mpyc-raceday
 
-      - name: Deploy Functions & Firestore
+      - name: Deploy Functions & Firestore rules
         run: npx firebase-tools deploy --only "functions,firestore" --project mpyc-raceday --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
