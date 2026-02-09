@@ -22,7 +22,7 @@ class ChecklistHistoryScreen extends ConsumerWidget {
           if (completions.isEmpty) {
             return const Center(child: Text('No completed checklists yet.'));
           }
-          final templates = templatesAsync.valueOrNull ?? [];
+          final templates = templatesAsync.value ?? [];
 
           return ListView.builder(
             padding: const EdgeInsets.all(12),

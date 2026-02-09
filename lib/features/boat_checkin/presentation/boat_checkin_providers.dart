@@ -16,7 +16,7 @@ final eventCheckinsProvider =
 
 final checkinCountProvider =
     Provider.family<int, String>((ref, eventId) {
-  return ref.watch(eventCheckinsProvider(eventId)).valueOrNull?.length ?? 0;
+  return ref.watch(eventCheckinsProvider(eventId)).value?.length ?? 0;
 });
 
 final checkinsClosedProvider =

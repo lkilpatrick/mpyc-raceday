@@ -160,7 +160,7 @@ class _WebShellState extends ConsumerState<WebShell> {
       orElse: () => webNavItems.first,
     );
 
-    final member = ref.watch(currentUserProvider).valueOrNull;
+    final member = ref.watch(currentUserProvider).value;
     final userName = member != null
         ? '${member.firstName} ${member.lastName}'.trim()
         : null;

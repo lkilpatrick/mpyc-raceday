@@ -62,7 +62,7 @@ class _CourseSelectionScreenState extends ConsumerState<CourseSelectionScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (courses) {
-                final selectedId = selectedAsync.valueOrNull;
+                final selectedId = selectedAsync.value;
 
                 // Sort: recommended first
                 final recommendedIds =

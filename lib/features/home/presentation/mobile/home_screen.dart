@@ -17,7 +17,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final memberAsync = ref.watch(currentUserProvider);
-    final member = memberAsync.valueOrNull;
+    final member = memberAsync.value;
     final isRCChair = member?.isRCChair ?? false;
     final isProOrAdmin = isRCChair;
     final isRcCrew = isRCChair;
@@ -695,7 +695,7 @@ class _MaintenanceAlertCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final countAsync = ref.watch(criticalMaintenanceCountProvider);
-    final count = countAsync.valueOrNull ?? 0;
+    final count = countAsync.value ?? 0;
     if (count == 0) return const SizedBox.shrink();
 
     return Card(

@@ -172,13 +172,13 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                 const SizedBox(height: 16),
 
                 // Recent Lookups
-                if (recentAsync.valueOrNull?.isNotEmpty ?? false) ...[
+                if (recentAsync.value?.isNotEmpty ?? false) ...[
                   Text(
                     'Recent Lookups',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  ...recentAsync.valueOrNull!.take(8).map((num) {
+                  ...recentAsync.value!.take(8).map((num) {
                     final rule = db.findRule(num);
                     return ListTile(
                       contentPadding: EdgeInsets.zero,

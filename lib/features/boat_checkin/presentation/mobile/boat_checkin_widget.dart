@@ -14,7 +14,7 @@ class BoatCheckinWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final count = ref.watch(checkinCountProvider(eventId));
     final closedAsync = ref.watch(checkinsClosedProvider(eventId));
-    final isClosed = closedAsync.valueOrNull ?? false;
+    final isClosed = closedAsync.value ?? false;
 
     return Card(
       child: InkWell(

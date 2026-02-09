@@ -17,7 +17,7 @@ final allCoursesProvider = StreamProvider<List<CourseConfig>>((ref) {
 
 final coursesByWindBandProvider =
     Provider.family<List<CourseConfig>, String>((ref, band) {
-  final courses = ref.watch(allCoursesProvider).valueOrNull ?? [];
+  final courses = ref.watch(allCoursesProvider).value ?? [];
   return courses.where((c) => c.windDirectionBand == band).toList();
 });
 
@@ -44,12 +44,12 @@ final broadcastsProvider =
 });
 
 final inflatableCoursesProvider = Provider<List<CourseConfig>>((ref) {
-  final courses = ref.watch(allCoursesProvider).valueOrNull ?? [];
+  final courses = ref.watch(allCoursesProvider).value ?? [];
   return courses.where((c) => c.windDirectionBand == 'INFLATABLE').toList();
 });
 
 final longRaceCoursesProvider = Provider<List<CourseConfig>>((ref) {
-  final courses = ref.watch(allCoursesProvider).valueOrNull ?? [];
+  final courses = ref.watch(allCoursesProvider).value ?? [];
   return courses.where((c) => c.windDirectionBand == 'LONG').toList();
 });
 
@@ -57,7 +57,7 @@ final longRaceCoursesProvider = Provider<List<CourseConfig>>((ref) {
 /// Handles 360° wraparound for northerly bands.
 final recommendedCoursesProvider =
     Provider.family<List<CourseConfig>, double>((ref, windDirDeg) {
-  final courses = ref.watch(allCoursesProvider).valueOrNull ?? [];
+  final courses = ref.watch(allCoursesProvider).value ?? [];
   final results = <_ScoredCourse>[];
 
   for (final c in courses) {

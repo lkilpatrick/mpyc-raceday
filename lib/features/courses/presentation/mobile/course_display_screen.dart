@@ -35,7 +35,7 @@ class CourseDisplayScreen extends ConsumerWidget {
             );
           }
 
-          final distances = distancesAsync.valueOrNull ?? const [];
+          final distances = distancesAsync.value ?? const [];
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -181,7 +181,7 @@ class CourseDisplayScreen extends ConsumerWidget {
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 NauticalChartWidget(
-                  marks: ref.watch(marksProvider).valueOrNull?.cast() ?? const [],
+                  marks: ref.watch(marksProvider).value?.cast() ?? const [],
                   course: course,
                   height: 300,
                 ),

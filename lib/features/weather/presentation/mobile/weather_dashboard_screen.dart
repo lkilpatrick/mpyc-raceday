@@ -106,7 +106,7 @@ class WeatherDashboardScreen extends ConsumerWidget {
           right: 16,
           bottom: 16,
           child: FloatingActionButton(
-            onPressed: () => _showManualEntry(context, ref, conditionsAsync.valueOrNull),
+            onPressed: () => _showManualEntry(context, ref, conditionsAsync.value),
             child: const Icon(Icons.edit),
           ),
         ),

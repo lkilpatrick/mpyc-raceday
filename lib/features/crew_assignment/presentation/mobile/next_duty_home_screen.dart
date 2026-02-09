@@ -20,7 +20,7 @@ class NextDutyHomeScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(12),
       children: [
         // Maintenance alerts
-        if (criticalCount.valueOrNull != null && criticalCount.valueOrNull! > 0)
+        if (criticalCount.value != null && criticalCount.value! > 0)
           Card(
             color: Colors.red.shade50,
             child: InkWell(
@@ -34,7 +34,7 @@ class NextDutyHomeScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${criticalCount.valueOrNull} critical maintenance issue${criticalCount.valueOrNull! > 1 ? 's' : ''}',
+                        '${criticalCount.value} critical maintenance issue${criticalCount.value! > 1 ? 's' : ''}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.red.shade700,
@@ -47,7 +47,7 @@ class NextDutyHomeScreen extends ConsumerWidget {
               ),
             ),
           ),
-        if (criticalCount.valueOrNull != null && criticalCount.valueOrNull! > 0)
+        if (criticalCount.value != null && criticalCount.value! > 0)
           const SizedBox(height: 4),
         Card(
           child: Padding(

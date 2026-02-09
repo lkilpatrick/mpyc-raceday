@@ -36,12 +36,13 @@ class _ChecklistCompletionHistoryPageState
               value: _checklistFilter,
               items: [
                 const DropdownMenuItem(value: 'All', child: Text('All Checklists')),
-                ...templatesAsync.whenOrNull(
+                ...templatesAsync.when(
+                      loading: () => <DropdownMenuItem<String>>[],
+                      error: (_, __) => <DropdownMenuItem<String>>[],
                       data: (templates) => templates.map(
                         (t) => DropdownMenuItem(value: t.id, child: Text(t.name)),
                       ),
-                    ) ??
-                    [],
+                    ),
               ],
               onChanged: (v) => setState(() => _checklistFilter = v ?? 'All'),
             ),
@@ -72,7 +73,7 @@ class _ChecklistCompletionHistoryPageState
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (completions) {
-              final templates = templatesAsync.valueOrNull ?? [];
+              final templates = templatesAsync.value ?? [];
               final filtered = completions.where((c) {
                 if (_checklistFilter != 'All' &&
                     c.checklistId != _checklistFilter) {

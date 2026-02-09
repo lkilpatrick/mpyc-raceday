@@ -20,12 +20,12 @@ final currentUserProvider = StreamProvider<Member?>((ref) {
 
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);
-  return authState.valueOrNull != null;
+  return authState.value != null;
 });
 
 final currentRolesProvider = Provider<List<MemberRole>>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user.valueOrNull?.roles ?? [];
+  return user.value?.roles ?? [];
 });
 
 final isWebAdminProvider = Provider<bool>((ref) {

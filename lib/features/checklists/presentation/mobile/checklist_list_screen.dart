@@ -21,8 +21,8 @@ class ChecklistListScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (templates) {
           final active = templates.where((t) => t.isActive).toList();
-          final activeCompletions = activeAsync.valueOrNull ?? [];
-          final history = historyAsync.valueOrNull ?? [];
+          final activeCompletions = activeAsync.value ?? [];
+          final history = historyAsync.value ?? [];
 
           return ListView(
             padding: const EdgeInsets.all(12),

@@ -46,7 +46,7 @@ class _RuleDetailScreenState extends ConsumerState<RuleDetailScreen> {
           );
         }
 
-        final bookmarks = bookmarksAsync.valueOrNull ?? [];
+        final bookmarks = bookmarksAsync.value ?? [];
         final isBookmarked = bookmarks.contains(rule.number);
         final definedTerms =
             db.definitions.map((d) => d.term.toLowerCase()).toSet();

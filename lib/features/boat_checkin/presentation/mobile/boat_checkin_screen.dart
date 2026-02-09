@@ -40,7 +40,7 @@ class _BoatCheckinScreenState extends ConsumerState<BoatCheckinScreen>
     final checkinsAsync = ref.watch(eventCheckinsProvider(widget.eventId));
     final closedAsync = ref.watch(checkinsClosedProvider(widget.eventId));
     final count = ref.watch(checkinCountProvider(widget.eventId));
-    final isClosed = closedAsync.valueOrNull ?? false;
+    final isClosed = closedAsync.value ?? false;
 
     return Scaffold(
       appBar: AppBar(

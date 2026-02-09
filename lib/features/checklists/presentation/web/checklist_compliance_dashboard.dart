@@ -16,7 +16,7 @@ class ChecklistComplianceDashboard extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (completions) {
-        final templates = templatesAsync.valueOrNull ?? [];
+        final templates = templatesAsync.value ?? [];
 
         // Stats
         final total = completions.length;

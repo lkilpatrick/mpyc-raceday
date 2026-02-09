@@ -40,7 +40,7 @@ class _ActiveChecklistScreenState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (completion) {
-          final template = templatesAsync.valueOrNull
+          final template = templatesAsync.value
               ?.where((t) => t.id == completion.checklistId)
               .firstOrNull;
           if (template == null) {
@@ -130,12 +130,14 @@ class _ActiveChecklistScreenState
           );
         },
       ),
-      bottomNavigationBar: completionAsync.whenOrNull(
+      bottomNavigationBar: completionAsync.when(
+        loading: () => null,
+        error: (_, __) => null,
         data: (completion) {
           if (completion.status != ChecklistCompletionStatus.inProgress) {
             return null;
           }
-          final templatesVal = templatesAsync.valueOrNull;
+          final templatesVal = templatesAsync.value;
           final template = templatesVal
               ?.where((t) => t.id == completion.checklistId)
               .firstOrNull;

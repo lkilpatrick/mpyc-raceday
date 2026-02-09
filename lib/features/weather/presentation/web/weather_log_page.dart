@@ -49,7 +49,7 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: () => _exportCsv(
-                    entriesAsync.valueOrNull ?? []),
+                    entriesAsync.value ?? []),
                 icon: const Icon(Icons.download),
                 label: const Text('Export CSV'),
               ),

@@ -79,7 +79,7 @@ class _EventCheckinTable extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final checkinsAsync = ref.watch(eventCheckinsProvider(eventId));
     final closedAsync = ref.watch(checkinsClosedProvider(eventId));
-    final isClosed = closedAsync.valueOrNull ?? false;
+    final isClosed = closedAsync.value ?? false;
 
     return checkinsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),

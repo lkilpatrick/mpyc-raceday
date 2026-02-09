@@ -99,7 +99,7 @@ class MaintenanceDashboardPage extends ConsumerWidget {
                       : null;
 
                   // Upcoming scheduled
-                  final scheduled = scheduleAsync.valueOrNull
+                  final scheduled = scheduleAsync.value
                           ?.where((s) => s.boatName == boat)
                           .toList() ??
                       [];

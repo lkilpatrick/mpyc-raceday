@@ -96,7 +96,7 @@ class _TimingResultsScreenState extends ConsumerState<TimingResultsScreen> {
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (finishes) {
-                final ratings = ratingsAsync.valueOrNull ?? [];
+                final ratings = ratingsAsync.value ?? [];
                 final results =
                     _calculateResults(finishes, ratings);
 
@@ -224,8 +224,8 @@ class _TimingResultsScreenState extends ConsumerState<TimingResultsScreen> {
 
   Future<void> _publishResults() async {
     final finishes =
-        ref.read(finishRecordsProvider(widget.raceStartId)).valueOrNull ?? [];
-    final ratings = ref.read(handicapRatingsProvider).valueOrNull ?? [];
+        ref.read(finishRecordsProvider(widget.raceStartId)).value ?? [];
+    final ratings = ref.read(handicapRatingsProvider).value ?? [];
     final results = _calculateResults(finishes, ratings);
 
     final updatedRecords = results.map((r) {
@@ -248,8 +248,8 @@ class _TimingResultsScreenState extends ConsumerState<TimingResultsScreen> {
 
   void _exportCsv() {
     final finishes =
-        ref.read(finishRecordsProvider(widget.raceStartId)).valueOrNull ?? [];
-    final ratings = ref.read(handicapRatingsProvider).valueOrNull ?? [];
+        ref.read(finishRecordsProvider(widget.raceStartId)).value ?? [];
+    final ratings = ref.read(handicapRatingsProvider).value ?? [];
     final results = _calculateResults(finishes, ratings);
 
     final buffer = StringBuffer();
@@ -272,8 +272,8 @@ class _TimingResultsScreenState extends ConsumerState<TimingResultsScreen> {
 
   void _copyToClipboard() {
     final finishes =
-        ref.read(finishRecordsProvider(widget.raceStartId)).valueOrNull ?? [];
-    final ratings = ref.read(handicapRatingsProvider).valueOrNull ?? [];
+        ref.read(finishRecordsProvider(widget.raceStartId)).value ?? [];
+    final ratings = ref.read(handicapRatingsProvider).value ?? [];
     final results = _calculateResults(finishes, ratings);
 
     final buffer = StringBuffer();

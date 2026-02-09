@@ -182,8 +182,8 @@ class _CourseConfigurationPageState
                         ? _CourseDetailPanel(
                             course: _selectedCourse!,
                             distances:
-                                distancesAsync.valueOrNull ?? const [],
-                            marks: ref.watch(marksProvider).valueOrNull ?? const [],
+                                distancesAsync.value ?? const [],
+                            marks: ref.watch(marksProvider).value ?? const [],
                             onEdit: () => _editCourse(_selectedCourse!),
                             onDelete: () =>
                                 _deleteCourse(_selectedCourse!),
