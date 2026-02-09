@@ -30,6 +30,10 @@ final marksProvider = FutureProvider<List<Mark>>((ref) {
   return ref.watch(coursesRepositoryProvider).getMarks();
 });
 
+final watchMarksProvider = StreamProvider<List<Mark>>((ref) {
+  return ref.watch(coursesRepositoryProvider).watchMarks();
+});
+
 final markDistancesProvider = FutureProvider<List<MarkDistance>>((ref) {
   return ref.watch(coursesRepositoryProvider).getMarkDistances();
 });

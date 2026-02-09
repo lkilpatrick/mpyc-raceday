@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../domain/crew_assignment_repository.dart';
 import '../crew_assignment_providers.dart';
@@ -254,8 +255,8 @@ class _MonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firstOfMonth = DateTime(month.year, month.month, 1);
-    // Monday = 1, so offset = (weekday - 1) to start grid on Monday
-    final startOffset = (firstOfMonth.weekday - 1) % 7;
+    // Sunday = 7 in Dart, so offset = weekday % 7 to start grid on Sunday
+    final startOffset = firstOfMonth.weekday % 7;
     final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
     final totalCells = startOffset + daysInMonth;
     final rows = (totalCells / 7).ceil();
@@ -267,7 +268,7 @@ class _MonthGrid extends StatelessWidget {
         Container(
           color: Colors.grey.shade100,
           child: Row(
-            children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
                 .map((d) => Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -328,7 +329,7 @@ class _MonthGrid extends StatelessWidget {
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade200),
                             color: isToday
-                                ? Colors.blue.shade50
+                                ? const Color(0xFFE8EEF5)
                                 : Colors.white,
                           ),
                           child: Padding(
@@ -343,7 +344,7 @@ class _MonthGrid extends StatelessWidget {
                                   alignment: Alignment.center,
                                   decoration: isToday
                                       ? const BoxDecoration(
-                                          color: Colors.blue,
+                                          color: AppColors.primary,
                                           shape: BoxShape.circle,
                                         )
                                       : null,
@@ -378,7 +379,7 @@ class _MonthGrid extends StatelessWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: isSelected
-                                              ? Colors.blue.shade200
+                                              ? AppColors.primary
                                               : _eventColor(e),
                                           borderRadius:
                                               BorderRadius.circular(3),

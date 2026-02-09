@@ -215,23 +215,16 @@ class _NotificationsTab extends StatefulWidget {
 }
 
 class _NotificationsTabState extends State<_NotificationsTab> {
-  final _fromEmailCtrl = TextEditingController();
-  final _fromNameCtrl = TextEditingController();
-  final _smsProviderCtrl = TextEditingController();
-  final _smsFromCtrl = TextEditingController();
+  final _twilioSidCtrl = TextEditingController();
+  final _twilioTokenCtrl = TextEditingController();
+  final _twilioFromCtrl = TextEditingController();
   bool _loading = true;
-  bool _emailEnabled = true;
-  bool _pushEnabled = true;
-  bool _smsEnabled = true;
   final Map<String, bool> _triggers = {
     'courseSelected': true,
     'incidentReported': true,
     'hearingScheduled': true,
     'maintenanceCritical': true,
     'crewAssigned': true,
-    'weeklyMaintenance': true,
-    'crewReminders': true,
-    'fleetBroadcast': true,
   };
 
   @override
@@ -247,13 +240,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         .get();
     if (doc.exists) {
       final d = doc.data()!;
-      _fromEmailCtrl.text = d['fromEmail'] as String? ?? '';
-      _fromNameCtrl.text = d['fromName'] as String? ?? 'MPYC Raceday';
-      _smsProviderCtrl.text = d['smsProvider'] as String? ?? '';
-      _smsFromCtrl.text = d['smsFrom'] as String? ?? '';
-      _emailEnabled = d['emailEnabled'] as bool? ?? true;
-      _pushEnabled = d['pushEnabled'] as bool? ?? true;
-      _smsEnabled = d['smsEnabled'] as bool? ?? true;
+      _twilioSidCtrl.text = d['twilioSid'] as String? ?? '';
+      _twilioTokenCtrl.text = d['twilioToken'] as String? ?? '';
+      _twilioFromCtrl.text = d['twilioFrom'] as String? ?? '';
       final t = d['triggers'] as Map<String, dynamic>? ?? {};
       for (final key in _triggers.keys) {
         _triggers[key] = t[key] as bool? ?? true;
@@ -267,13 +256,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         .collection('settings')
         .doc('notifications')
         .set({
-      'fromEmail': _fromEmailCtrl.text.trim(),
-      'fromName': _fromNameCtrl.text.trim(),
-      'smsProvider': _smsProviderCtrl.text.trim(),
-      'smsFrom': _smsFromCtrl.text.trim(),
-      'emailEnabled': _emailEnabled,
-      'pushEnabled': _pushEnabled,
-      'smsEnabled': _smsEnabled,
+      'twilioSid': _twilioSidCtrl.text.trim(),
+      'twilioToken': _twilioTokenCtrl.text.trim(),
+      'twilioFrom': _twilioFromCtrl.text.trim(),
       'triggers': _triggers,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -286,10 +271,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
   @override
   void dispose() {
-    _fromEmailCtrl.dispose();
-    _fromNameCtrl.dispose();
-    _smsProviderCtrl.dispose();
-    _smsFromCtrl.dispose();
+    _twilioSidCtrl.dispose();
+    _twilioTokenCtrl.dispose();
+    _twilioFromCtrl.dispose();
     super.dispose();
   }
 
@@ -301,132 +285,58 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── SMS Configuration ──
-          const Text('SMS — Race Day Operations',
+          const Text('Twilio Configuration',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text(
-            'SMS is used for time-critical race-day notifications: course selection, '
-            'fleet broadcasts, and scoring notes. Messages are queued in the Firestore '
-            '"sms" collection and delivered by your configured SMS provider extension.',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 500,
+            child: TextField(
+              controller: _twilioSidCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Account SID',
+                border: OutlineInputBorder(),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              SizedBox(
-                width: 300,
-                child: TextField(
-                  controller: _smsProviderCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'SMS Provider',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Twilio, Vonage, MessageBird',
-                  ),
-                ),
+          SizedBox(
+            width: 500,
+            child: TextField(
+              controller: _twilioTokenCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Auth Token',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 200,
-                child: TextField(
-                  controller: _smsFromCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'From Number',
-                    border: OutlineInputBorder(),
-                    hintText: '+1XXXXXXXXXX',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // ── Email Configuration ──
-          const Text('Email — General Notifications',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text(
-            'Email is used for non-urgent notifications: crew assignments, reminders, '
-            'maintenance alerts, and weekly summaries. Sent via the Firebase Trigger '
-            'Email extension (configure SMTP in Firebase console).',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              SizedBox(
-                width: 300,
-                child: TextField(
-                  controller: _fromEmailCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'From Email Address',
-                    border: OutlineInputBorder(),
-                    hintText: 'noreply@mpyc.org',
-                  ),
-                ),
+          SizedBox(
+            width: 300,
+            child: TextField(
+              controller: _twilioFromCtrl,
+              decoration: const InputDecoration(
+                labelText: 'From Number',
+                border: OutlineInputBorder(),
+                hintText: '+1XXXXXXXXXX',
               ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 200,
-                child: TextField(
-                  controller: _fromNameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'From Display Name',
-                    border: OutlineInputBorder(),
-                    hintText: 'MPYC Raceday',
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 20),
-
-          // ── Channels ──
-          const Text('Notification Channels',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            title: const Text('SMS (Race Day)'),
-            subtitle: const Text(
-                'Course selection, fleet broadcasts, scoring notes'),
-            value: _smsEnabled,
-            onChanged: (v) => setState(() => _smsEnabled = v),
-          ),
-          SwitchListTile(
-            title: const Text('Email (General)'),
-            subtitle: const Text(
-                'Crew assignments, reminders, maintenance, summaries'),
-            value: _emailEnabled,
-            onChanged: (v) => setState(() => _emailEnabled = v),
-          ),
-          SwitchListTile(
-            title: const Text('Push Notifications (FCM)'),
-            subtitle: const Text('Mobile push for all notification types'),
-            value: _pushEnabled,
-            onChanged: (v) => setState(() => _pushEnabled = v),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Triggers ──
           const Text('Notification Triggers',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
           ..._triggers.entries.map((e) {
-            final (label, channel) = switch (e.key) {
-              'courseSelected' => ('Course Selected', 'SMS + Push'),
-              'fleetBroadcast' => ('Fleet Broadcast', 'SMS + Push'),
-              'incidentReported' => ('Incident Reported', 'Email + Push'),
-              'hearingScheduled' => ('Hearing Scheduled', 'Email'),
-              'maintenanceCritical' => ('Critical Maintenance', 'Email + Push'),
-              'crewAssigned' => ('Crew Assigned', 'Email + Push'),
-              'weeklyMaintenance' => ('Weekly Maintenance Summary', 'Email'),
-              'crewReminders' => ('Crew Duty Reminders', 'Email + Push'),
-              _ => (e.key, ''),
+            final label = switch (e.key) {
+              'courseSelected' => 'Course Selected',
+              'incidentReported' => 'Incident Reported',
+              'hearingScheduled' => 'Hearing Scheduled',
+              'maintenanceCritical' => 'Critical Maintenance',
+              'crewAssigned' => 'Crew Assigned',
+              _ => e.key,
             };
             return SwitchListTile(
               title: Text(label),
-              subtitle: Text(channel,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               value: e.value,
               onChanged: (v) => setState(() => _triggers[e.key] = v),
             );

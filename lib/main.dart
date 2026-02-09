@@ -26,8 +26,10 @@ Future<void> main() async {
     }
   }
 
-  if (Firebase.apps.isEmpty) {
+  try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (_) {
+    // Already initialized (e.g. by google-services.json on Android)
   }
 
   // Enable Firestore offline persistence

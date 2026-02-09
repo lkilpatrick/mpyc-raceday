@@ -61,7 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _parseError(Object e) {
     final msg = e.toString();
     if (msg.contains('not-found')) {
-      return 'No member found. Try your signal #, membership #, or email.';
+      return 'No member found with that membership number.';
     }
     if (msg.contains('failed-precondition')) {
       return 'No email on file for this member. Contact the club for assistance.';
@@ -111,11 +111,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sign in with your signal #, membership #, or email',
+                    'Sign in with your membership number',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
                   TextFormField(
@@ -123,13 +122,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
-                      labelText: 'Signal #, Membership #, or Email',
+                      labelText: 'Membership Number',
                       prefixIcon: Icon(Icons.badge_outlined),
-                      hintText: 'e.g. 247, M-1042, or john@example.com',
+                      hintText: 'Enter your membership number',
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your identifier';
+                        return 'Please enter your membership number';
                       }
                       return null;
                     },

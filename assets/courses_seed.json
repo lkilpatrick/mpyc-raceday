@@ -1,13 +1,13 @@
 {
   "marks": [
-    {"id": "C", "name": "C", "type": "permanent", "description": "Committee Boat area"},
-    {"id": "X", "name": "X (Finish)", "type": "permanent", "description": "Primary start/finish"},
+    {"id": "C", "name": "C", "type": "permanent", "latitude": 36.606261, "longitude": -121.880688, "description": "Committee Boat area (approx)"},
+    {"id": "X", "name": "X (Finish)", "type": "permanent", "latitude": 36.605495, "longitude": -121.887381, "description": "Primary start/finish"},
     {"id": "LV", "name": "LV", "type": "inflatable", "latitude": 36.629983, "longitude": -121.915500, "description": "RC sets at N 36°37.799' W 121°54.930'"},
-    {"id": "P", "name": "P", "type": "permanent", "description": "Point Pinos area"},
-    {"id": "MY1", "name": "MY 1", "type": "permanent", "description": "Monterey buoy 1"},
-    {"id": "MY2", "name": "M (MY 2)", "type": "permanent", "description": "Monterey buoy 2"},
-    {"id": "MY3", "name": "MY 3", "type": "permanent", "description": "Monterey buoy 3"},
-    {"id": "MY4", "name": "MY 4", "type": "permanent", "description": "Monterey buoy 4"},
+    {"id": "P", "name": "P", "type": "permanent", "latitude": 36.647496, "longitude": -121.944101, "description": "Pt Pinos Lighted Bell Buoy 2 — 36°38'51.0\"N 121°56'38.8\"W"},
+    {"id": "MY1", "name": "MY 1", "type": "permanent", "latitude": 36.624333, "longitude": -121.895667, "description": "Red can \"4\" — Fl R 4s, bell — 36°37.46'N 121°53.74'W"},
+    {"id": "MY2", "name": "M (MY 2)", "type": "permanent", "latitude": 36.613938, "longitude": -121.891001, "description": "Monterey buoy 2"},
+    {"id": "MY3", "name": "MY 3", "type": "permanent", "latitude": 36.635918, "longitude": -121.861808, "description": "Monterey buoy 3"},
+    {"id": "MY4", "name": "MY 4", "type": "permanent", "latitude": 36.620231, "longitude": -121.847334, "description": "Monterey buoy 4"},
     {"id": "W", "name": "W (Windward)", "type": "inflatable", "description": "Set by RC upwind — position varies"},
     {"id": "R", "name": "R (Reach)", "type": "inflatable", "description": "Set by RC on reaching leg — position varies"},
     {"id": "L", "name": "L (Leeward)", "type": "inflatable", "description": "Set by RC downwind — position varies"}

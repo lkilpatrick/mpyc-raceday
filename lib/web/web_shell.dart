@@ -15,8 +15,6 @@ import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_s
 import 'package:mpyc_raceday/features/racing_rules/presentation/web/rules_reference_page.dart';
 import 'package:mpyc_raceday/features/weather/presentation/web/weather_analytics_panel.dart';
 import 'package:mpyc_raceday/features/weather/presentation/web/weather_log_page.dart';
-import 'package:mpyc_raceday/features/courses/presentation/web/course_configuration_page.dart';
-import 'package:mpyc_raceday/features/courses/presentation/web/fleet_broadcast_history_page.dart';
 import 'package:mpyc_raceday/features/boat_checkin/presentation/web/fleet_management_page.dart';
 import 'package:mpyc_raceday/features/boat_checkin/presentation/web/event_checkin_page.dart';
 import 'package:mpyc_raceday/features/incidents/presentation/web/incident_management_page.dart';
@@ -26,6 +24,8 @@ import 'package:mpyc_raceday/features/reports/presentation/web/reports_page.dart
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_availability_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
+import 'package:mpyc_raceday/features/courses/presentation/web/course_configuration_page.dart';
+import 'package:mpyc_raceday/features/courses/presentation/web/fleet_broadcast_history_page.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 import 'package:mpyc_raceday/web/layouts/web_scaffold.dart';
 import 'package:mpyc_raceday/web/navigation/web_sidebar.dart';

@@ -14,6 +14,9 @@ abstract class CoursesRepository {
 
   // Marks
   Future<List<Mark>> getMarks();
+  Stream<List<Mark>> watchMarks();
+  Future<void> saveMark(Mark mark);
+  Future<void> deleteMark(String id);
   Future<List<MarkDistance>> getMarkDistances();
 
   // Course selection

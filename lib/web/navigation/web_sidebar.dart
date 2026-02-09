@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mpyc_raceday/core/theme.dart';
 import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 
 /// Which roles can see this nav item.
@@ -78,6 +79,7 @@ const List<WebNavItem> webNavItems = [
     route: '/maintenance',
     icon: Icons.build,
     requiredRoles: [MemberRole.webAdmin, MemberRole.rcChair],
+    section: 'Fleet Maintenance',
   ),
 
   // Reports — web_admin + club_board
@@ -95,7 +97,7 @@ const List<WebNavItem> webNavItems = [
     route: '/members',
     icon: Icons.badge,
     requiredRoles: [MemberRole.webAdmin],
-    section: 'Admin',
+    section: 'Administration',
   ),
   WebNavItem(
     label: 'Sync Dashboard',
@@ -132,20 +134,87 @@ class WebSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleItems = webNavItems.where((item) => item.isVisibleTo(userRoles)).toList();
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      children: [
-        for (final item in visibleItems)
-          Tooltip(
-            message: isCollapsed ? item.label : '',
+    // Build widgets with section headers
+    final widgets = <Widget>[];
+    String? lastSection;
+
+    for (final item in visibleItems) {
+      // Insert section header when section changes
+      if (item.section != null && item.section != lastSection) {
+        lastSection = item.section;
+        if (!isCollapsed) {
+          widgets.add(
+            Padding(
+              padding: const EdgeInsets.only(left: 16, top: 20, bottom: 6, right: 16),
+              child: Text(
+                item.section!.toUpperCase(),
+                style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          );
+        } else {
+          widgets.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Divider(height: 1, color: Colors.white.withAlpha(30)),
+            ),
+          );
+        }
+      }
+
+      final isActive = activeRoute == item.route;
+
+      widgets.add(
+        Tooltip(
+          message: isCollapsed ? item.label : '',
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+            decoration: BoxDecoration(
+              color: isActive ? AppColors.sidebarSelected : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: isActive
+                  ? const Border(
+                      left: BorderSide(color: AppColors.accent, width: 3),
+                    )
+                  : null,
+            ),
             child: ListTile(
-              selected: activeRoute == item.route,
-              leading: Icon(item.icon),
-              title: isCollapsed ? null : Text(item.label),
+              dense: true,
+              visualDensity: const VisualDensity(vertical: -1),
+              leading: Icon(
+                item.icon,
+                size: 20,
+                color: isActive ? AppColors.accent : Colors.white60,
+              ),
+              title: isCollapsed
+                  ? null
+                  : Text(
+                      item.label,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : Colors.white70,
+                        fontSize: 13,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
               onTap: () => onSelected(item),
+              hoverColor: AppColors.sidebarSelected.withAlpha(120),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
-      ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      children: widgets,
     );
   }
 }

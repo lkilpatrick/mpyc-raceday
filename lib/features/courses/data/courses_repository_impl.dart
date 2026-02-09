@@ -209,6 +209,42 @@ class CoursesRepositoryImpl implements CoursesRepository {
   }
 
   @override
+  Stream<List<Mark>> watchMarks() {
+    return _marksCol.snapshots().map((snap) => snap.docs.map((doc) {
+      final d = doc.data();
+      return Mark(
+        id: doc.id,
+        name: d['name'] as String? ?? '',
+        type: d['type'] as String? ?? 'permanent',
+        latitude: (d['latitude'] as num?)?.toDouble(),
+        longitude: (d['longitude'] as num?)?.toDouble(),
+        description: d['description'] as String?,
+      );
+    }).toList());
+  }
+
+  @override
+  Future<void> saveMark(Mark mark) async {
+    final data = {
+      'name': mark.name,
+      'type': mark.type,
+      'latitude': mark.latitude,
+      'longitude': mark.longitude,
+      'description': mark.description,
+    };
+    if (mark.id.isEmpty) {
+      await _marksCol.add(data);
+    } else {
+      await _marksCol.doc(mark.id).set(data, SetOptions(merge: true));
+    }
+  }
+
+  @override
+  Future<void> deleteMark(String id) async {
+    await _marksCol.doc(id).delete();
+  }
+
+  @override
   Future<List<MarkDistance>> getMarkDistances() async {
     final snap = await _distCol.get();
     return snap.docs.map((doc) {

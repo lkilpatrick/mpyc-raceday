@@ -1,36 +1,70 @@
 {
-    "name": "MPYC RaceDay",
-    "short_name": "MPYC RC",
+
+    "name": "MPYC Raceday",
+
+    "short_name": "MPYC Raceday",
+
     "start_url": ".",
+
     "display": "standalone",
+
     "background_color": "#1B3A5C",
+
     "theme_color": "#1B3A5C",
-    "description": "Monterey Peninsula Yacht Club Race Committee management system for race day operations, crew scheduling, boat check-in, timing, and incident tracking.",
+
+    "description": "Monterey Peninsula Yacht Club — Race Day Operations",
+
     "orientation": "portrait-primary",
+
     "prefer_related_applications": false,
-    "categories": ["sports", "productivity"],
+
     "icons": [
+
         {
+
             "src": "icons/Icon-192.png",
+
             "sizes": "192x192",
+
             "type": "image/png"
+
         },
+
         {
+
             "src": "icons/Icon-512.png",
+
             "sizes": "512x512",
+
             "type": "image/png"
+
         },
+
         {
+
             "src": "icons/Icon-maskable-192.png",
+
             "sizes": "192x192",
+
             "type": "image/png",
+
             "purpose": "maskable"
+
         },
+
         {
+
             "src": "icons/Icon-maskable-512.png",
+
             "sizes": "512x512",
+
             "type": "image/png",
+
             "purpose": "maskable"
+
         }
+
     ]
+
 }
+

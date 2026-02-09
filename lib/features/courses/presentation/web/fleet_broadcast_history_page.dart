@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/fleet_broadcast.dart';
 import '../courses_providers.dart';
@@ -11,14 +12,18 @@ class FleetBroadcastHistoryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final broadcastsAsync = ref.watch(broadcastsProvider(null));
+    final theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('Fleet Broadcast History',
-              style: Theme.of(context).textTheme.headlineSmall),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Fleet Broadcast History',
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
         Expanded(
           child: broadcastsAsync.when(
@@ -26,40 +31,26 @@ class FleetBroadcastHistoryPage extends ConsumerWidget {
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (broadcasts) {
               if (broadcasts.isEmpty) {
-                return const Center(child: Text('No broadcasts sent yet.'));
-              }
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Event')),
-                      DataColumn(label: Text('Type')),
-                      DataColumn(label: Text('Message')),
-                      DataColumn(label: Text('Sent By')),
-                      DataColumn(label: Text('Delivered')),
+                return const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broadcast_on_personal,
+                          size: 48, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text('No broadcasts yet.',
+                          style: TextStyle(color: Colors.grey)),
                     ],
-                    rows: broadcasts.map((b) {
-                      return DataRow(cells: [
-                        DataCell(Text(
-                            DateFormat.yMMMd().add_Hm().format(b.sentAt))),
-                        DataCell(Text(b.eventId.length > 8
-                            ? b.eventId.substring(0, 8)
-                            : b.eventId)),
-                        DataCell(_typeChip(b.type)),
-                        DataCell(SizedBox(
-                          width: 300,
-                          child: Text(b.message,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis),
-                        )),
-                        DataCell(Text(b.sentBy)),
-                        DataCell(Text('${b.deliveryCount}')),
-                      ]);
-                    }).toList(),
                   ),
-                ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: broadcasts.length,
+                itemBuilder: (_, i) {
+                  final b = broadcasts[i];
+                  return _BroadcastCard(broadcast: b);
+                },
               );
             },
           ),
@@ -67,22 +58,135 @@ class FleetBroadcastHistoryPage extends ConsumerWidget {
       ],
     );
   }
+}
 
-  Widget _typeChip(BroadcastType type) {
-    final (label, color) = switch (type) {
-      BroadcastType.courseSelection => ('Course', Colors.green),
-      BroadcastType.postponement => ('Postpone', Colors.orange),
-      BroadcastType.abandonment => ('Abandon', Colors.red),
-      BroadcastType.courseChange => ('Change', Colors.blue),
-      BroadcastType.generalRecall => ('Recall', Colors.purple),
-      BroadcastType.shortenedCourse => ('Shorten', Colors.teal),
-      BroadcastType.cancellation => ('Cancel', Colors.red),
-      BroadcastType.general => ('General', Colors.grey),
-    };
-    return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 10)),
-      backgroundColor: color.withValues(alpha: 0.15),
-      visualDensity: VisualDensity.compact,
+class _BroadcastCard extends StatelessWidget {
+  const _BroadcastCard({required this.broadcast});
+
+  final FleetBroadcast broadcast;
+
+  @override
+  Widget build(BuildContext context) {
+    final typeLabel = broadcast.type.name
+        .replaceAllMapped(RegExp(r'[A-Z]'), (m) => ' ${m[0]}')
+        .trim();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _typeColor(broadcast.type).withAlpha(30),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _typeIcon(broadcast.type),
+                color: _typeColor(broadcast.type),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(
+                          typeLabel.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _typeColor(broadcast.type),
+                          ),
+                        ),
+                        backgroundColor:
+                            _typeColor(broadcast.type).withAlpha(20),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      const Spacer(),
+                      Text(
+                        DateFormat.yMMMd()
+                            .add_jm()
+                            .format(broadcast.sentAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    broadcast.message,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        broadcast.sentBy,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(Icons.send, size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${broadcast.deliveryCount} delivered',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  static Color _typeColor(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => AppColors.primary,
+      BroadcastType.postponement => Colors.orange,
+      BroadcastType.abandonment => Colors.red,
+      BroadcastType.courseChange => Colors.blue,
+      BroadcastType.generalRecall => Colors.purple,
+      BroadcastType.shortenedCourse => Colors.teal,
+      BroadcastType.cancellation => Colors.red.shade800,
+      BroadcastType.general => Colors.grey,
+    };
+  }
+
+  static IconData _typeIcon(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => Icons.map,
+      BroadcastType.postponement => Icons.schedule,
+      BroadcastType.abandonment => Icons.cancel,
+      BroadcastType.courseChange => Icons.swap_horiz,
+      BroadcastType.generalRecall => Icons.replay,
+      BroadcastType.shortenedCourse => Icons.content_cut,
+      BroadcastType.cancellation => Icons.block,
+      BroadcastType.general => Icons.campaign,
+    };
   }
 }

@@ -47,11 +47,6 @@ class _MaintenanceSchedulePageState
               icon: const Icon(Icons.add),
               label: const Text('Add Scheduled Item'),
             ),
-            OutlinedButton.icon(
-              onPressed: _seedDefaults,
-              icon: const Icon(Icons.download),
-              label: const Text('Seed Defaults'),
-            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -172,35 +167,6 @@ class _MaintenanceSchedulePageState
       await ref
           .read(maintenanceRepositoryProvider)
           .saveScheduledMaintenance(result);
-    }
-  }
-
-  Future<void> _seedDefaults() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Seed Default Schedule'),
-        content: const Text(
-          'This will add typical power boat maintenance items for all 4 boats '
-          '(engine, electrical, hull, safety, general). Existing items will not be overwritten.',
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Seed')),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await ref.read(maintenanceRepositoryProvider).seedScheduledMaintenance();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Scheduled maintenance items seeded')),
-        );
-      }
     }
   }
 

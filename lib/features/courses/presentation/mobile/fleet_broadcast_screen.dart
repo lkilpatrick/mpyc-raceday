@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/fleet_broadcast.dart';
+import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 
 class FleetBroadcastScreen extends ConsumerStatefulWidget {
@@ -15,201 +18,211 @@ class FleetBroadcastScreen extends ConsumerStatefulWidget {
 }
 
 class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
-  final _messageController = TextEditingController();
-  BroadcastType _selectedType = BroadcastType.general;
-
-  static const _templates = [
-    (BroadcastType.courseSelection, 'Course Selected', Icons.route),
-    (BroadcastType.postponement, 'Postponement', Icons.pause_circle),
-    (BroadcastType.abandonment, 'Abandonment', Icons.cancel),
-    (BroadcastType.courseChange, 'Course Change', Icons.swap_horiz),
-    (BroadcastType.generalRecall, 'General Recall', Icons.replay),
-    (BroadcastType.shortenedCourse, 'Shortened Course', Icons.content_cut),
-    (BroadcastType.cancellation, 'Racing Cancelled', Icons.block),
-    (BroadcastType.general, 'Custom Message', Icons.message),
-  ];
+  final _messageCtrl = TextEditingController();
+  BroadcastType _type = BroadcastType.general;
+  bool _sending = false;
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _messageCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final broadcastsAsync = ref.watch(broadcastsProvider(widget.eventId));
+
     return Scaffold(
       appBar: AppBar(title: const Text('Fleet Broadcast')),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
+      body: Column(
         children: [
-          // Template buttons
-          Text('Quick Templates',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _templates.map((t) {
-              final (type, label, icon) = t;
-              final isSelected = _selectedType == type;
-              return ChoiceChip(
-                avatar: Icon(icon, size: 18),
-                label: Text(label),
-                selected: isSelected,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedType = type;
-                    _messageController.text = _templateMessage(type);
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Message field
-          TextField(
-            controller: _messageController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Message',
-              border: OutlineInputBorder(),
-              hintText: 'Enter broadcast message...',
+          // Compose area
+          Container(
+            color: AppColors.surface,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<BroadcastType>(
+                  value: _type,
+                  decoration: const InputDecoration(
+                    labelText: 'Broadcast Type',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: BroadcastType.values
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_typeLabel(t)),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _type = v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _messageCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Message',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter broadcast message...',
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: _sending ? null : _sendBroadcast,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send, size: 18),
+                  label: Text(_sending ? 'Sending...' : 'Send Broadcast'),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const Divider(height: 1),
 
-          // Recipient count
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  const Icon(Icons.people, size: 20),
-                  const SizedBox(width: 8),
-                  const Text('Will notify all checked-in boats'),
-                ],
-              ),
+          // History
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                Text(
+                  'Broadcast History',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Send button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: _send,
-              icon: const Icon(Icons.send),
-              label: const Text('SEND BROADCAST',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Recent broadcasts
-          Text('Recent Broadcasts',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Consumer(builder: (context, ref, _) {
-            final broadcastsAsync =
-                ref.watch(broadcastsProvider(widget.eventId));
-            return broadcastsAsync.when(
+          Expanded(
+            child: broadcastsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Error: $e'),
+              error: (e, _) => Center(child: Text('Error: $e')),
               data: (broadcasts) {
                 if (broadcasts.isEmpty) {
-                  return const Text('No broadcasts sent yet.');
+                  return const Center(
+                    child: Text('No broadcasts for this event.',
+                        style: TextStyle(color: Colors.grey)),
+                  );
                 }
-                return Column(
-                  children: broadcasts.take(10).map((b) {
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: broadcasts.length,
+                  itemBuilder: (_, i) {
+                    final b = broadcasts[i];
                     return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        dense: true,
-                        leading: Icon(_iconForType(b.type), size: 20),
-                        title: Text(b.message, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        leading: Icon(
+                          _typeIcon(b.type),
+                          color: _typeColor(b.type),
+                        ),
+                        title: Text(b.message,
+                            style: const TextStyle(fontSize: 14)),
                         subtitle: Text(
-                          '${b.type.name} • ${b.sentBy} • ${b.deliveryCount} delivered',
+                          '${_typeLabel(b.type)} · ${DateFormat.jm().format(b.sentAt)} · ${b.deliveryCount} delivered',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade600),
                         ),
                       ),
                     );
-                  }).toList(),
+                  },
                 );
               },
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  String _templateMessage(BroadcastType type) => switch (type) {
-        BroadcastType.courseSelection =>
-          'MPYC RC: Course selected for today\'s racing.',
-        BroadcastType.postponement =>
-          'MPYC RC: Racing is postponed. Stand by for further signals.',
-        BroadcastType.abandonment =>
-          'MPYC RC: Race abandoned. Return to the harbor.',
-        BroadcastType.courseChange =>
-          'MPYC RC: Course has been changed.',
-        BroadcastType.generalRecall =>
-          'MPYC RC: General recall. New start sequence will begin shortly.',
-        BroadcastType.shortenedCourse =>
-          'MPYC RC: Shortened course. Finish at the next mark.',
-        BroadcastType.cancellation =>
-          'MPYC RC: Racing cancelled for today.',
-        BroadcastType.general => '',
-      };
-
-  IconData _iconForType(BroadcastType type) => switch (type) {
-        BroadcastType.courseSelection => Icons.route,
-        BroadcastType.postponement => Icons.pause_circle,
-        BroadcastType.abandonment => Icons.cancel,
-        BroadcastType.courseChange => Icons.swap_horiz,
-        BroadcastType.generalRecall => Icons.replay,
-        BroadcastType.shortenedCourse => Icons.content_cut,
-        BroadcastType.cancellation => Icons.block,
-        BroadcastType.general => Icons.message,
-      };
-
-  Future<void> _send() async {
-    final msg = _messageController.text.trim();
-    if (msg.isEmpty) return;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Send Broadcast?'),
-        content: Text(msg),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Send')),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    final broadcast = FleetBroadcast(
-      id: '',
-      eventId: widget.eventId,
-      sentBy: 'PRO',
-      message: msg,
-      type: _selectedType,
-      sentAt: DateTime.now(),
-      deliveryCount: 0,
-    );
-
-    await ref.read(coursesRepositoryProvider).sendBroadcast(broadcast);
-
-    if (mounted) {
-      _messageController.clear();
+  Future<void> _sendBroadcast() async {
+    final message = _messageCtrl.text.trim();
+    if (message.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Broadcast sent!')),
+        const SnackBar(content: Text('Please enter a message.')),
       );
+      return;
     }
+
+    setState(() => _sending = true);
+    try {
+      await ref.read(coursesRepositoryProvider).sendBroadcast(
+            FleetBroadcast(
+              id: '',
+              eventId: widget.eventId,
+              sentBy: 'RC', // TODO: use actual user
+              message: message,
+              type: _type,
+              sentAt: DateTime.now(),
+              deliveryCount: 0,
+            ),
+          );
+      _messageCtrl.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Broadcast sent.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  static String _typeLabel(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => 'Course Selection',
+      BroadcastType.postponement => 'Postponement',
+      BroadcastType.abandonment => 'Abandonment',
+      BroadcastType.courseChange => 'Course Change',
+      BroadcastType.generalRecall => 'General Recall',
+      BroadcastType.shortenedCourse => 'Shortened Course',
+      BroadcastType.cancellation => 'Cancellation',
+      BroadcastType.general => 'General',
+    };
+  }
+
+  static Color _typeColor(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => AppColors.primary,
+      BroadcastType.postponement => Colors.orange,
+      BroadcastType.abandonment => Colors.red,
+      BroadcastType.courseChange => Colors.blue,
+      BroadcastType.generalRecall => Colors.purple,
+      BroadcastType.shortenedCourse => Colors.teal,
+      BroadcastType.cancellation => Colors.red.shade800,
+      BroadcastType.general => Colors.grey,
+    };
+  }
+
+  static IconData _typeIcon(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => Icons.map,
+      BroadcastType.postponement => Icons.schedule,
+      BroadcastType.abandonment => Icons.cancel,
+      BroadcastType.courseChange => Icons.swap_horiz,
+      BroadcastType.generalRecall => Icons.replay,
+      BroadcastType.shortenedCourse => Icons.content_cut,
+      BroadcastType.cancellation => Icons.block,
+      BroadcastType.general => Icons.campaign,
+    };
   }
 }

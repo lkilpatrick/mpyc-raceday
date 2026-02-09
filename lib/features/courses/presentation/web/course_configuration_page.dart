@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/course_config.dart';
 import '../../data/models/mark.dart';
-import '../../data/models/mark_distance.dart';
+import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
+import '../widgets/nautical_chart_widget.dart';
+import 'mark_management_panel.dart';
 
 class CourseConfigurationPage extends ConsumerStatefulWidget {
   const CourseConfigurationPage({super.key});
@@ -18,58 +22,60 @@ class CourseConfigurationPage extends ConsumerStatefulWidget {
 class _CourseConfigurationPageState
     extends ConsumerState<CourseConfigurationPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  String _searchQuery = '';
+  String _filterBand = 'All';
+  CourseConfig? _selectedCourse;
+  late final TabController _tabCtrl;
+
+  static const _bands = [
+    'All',
+    'N',
+    'NE',
+    'E',
+    'SE',
+    'S',
+    'SW',
+    'W',
+    'NW',
+    'INFLATABLE',
+    'LONG',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 2, vsync: this);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            children: [
-              Text('Course Configuration',
-                  style: Theme.of(context).textTheme.headlineSmall),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: _seedCourses,
-                icon: const Icon(Icons.cloud_upload),
-                label: const Text('Seed Courses'),
-              ),
-            ],
-          ),
-        ),
+        // Tab bar
         TabBar(
-          controller: _tabController,
+          controller: _tabCtrl,
+          isScrollable: true,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: AppColors.primary,
           tabs: const [
-            Tab(text: 'All Courses'),
-            Tab(text: 'By Wind Direction'),
-            Tab(text: 'Marks & Distances'),
+            Tab(icon: Icon(Icons.route, size: 18), text: 'Courses'),
+            Tab(icon: Icon(Icons.pin_drop, size: 18), text: 'Race Marks'),
           ],
         ),
+        const SizedBox(height: 12),
         Expanded(
           child: TabBarView(
-            controller: _tabController,
+            controller: _tabCtrl,
             children: [
-              _AllCoursesTab(
-                searchQuery: _searchQuery,
-                onSearchChanged: (q) => setState(() => _searchQuery = q),
-              ),
-              const _ByWindTab(),
-              const _MarksTab(),
+              _buildCoursesTab(),
+              const MarkManagementPanel(),
             ],
           ),
         ),
@@ -77,472 +83,731 @@ class _CourseConfigurationPageState
     );
   }
 
-  Future<void> _seedCourses() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Seed Course Data?'),
-        content: const Text(
-            'This will populate Firestore with all 57 MPYC courses, marks, and distance data. Existing data will be overwritten.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Seed')),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    try {
-      final jsonStr = await DefaultAssetBundle.of(context)
-          .loadString('assets/courses_seed.json');
-      await ref.read(coursesRepositoryProvider).seedFromJson(jsonStr);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Course data seeded successfully!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Seed error: $e')),
-        );
-      }
-    }
-  }
-}
-
-class _AllCoursesTab extends ConsumerWidget {
-  const _AllCoursesTab({
-    required this.searchQuery,
-    required this.onSearchChanged,
-  });
-
-  final String searchQuery;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget _buildCoursesTab() {
     final coursesAsync = ref.watch(allCoursesProvider);
+    final distancesAsync = ref.watch(markDistancesProvider);
 
-    return coursesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (courses) {
-        var filtered = courses;
-        if (searchQuery.isNotEmpty) {
-          final q = searchQuery.toLowerCase();
-          filtered = courses
-              .where((c) =>
-                  c.courseNumber.toLowerCase().contains(q) ||
-                  c.courseName.toLowerCase().contains(q) ||
-                  c.windDirectionBand.toLowerCase().contains(q))
-              .toList();
-        }
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search courses...',
-                  prefixIcon: Icon(Icons.search),
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: onSearchChanged,
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('#')),
-                      DataColumn(label: Text('Mark Sequence')),
-                      DataColumn(label: Text('Dist (nm)')),
-                      DataColumn(label: Text('Wind Band')),
-                      DataColumn(label: Text('Finish At')),
-                      DataColumn(label: Text('x2/x3')),
-                      DataColumn(label: Text('Inflatable')),
-                    ],
-                    rows: filtered.map((c) {
-                      return DataRow(cells: [
-                        DataCell(Text(c.courseNumber,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold))),
-                        DataCell(
-                          SizedBox(
-                            width: 280,
-                            child: Text(c.markSequenceDisplay,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                        ),
-                        DataCell(Text(c.distanceNm.toStringAsFixed(1))),
-                        DataCell(_bandChip(c.windDirectionBand)),
-                        DataCell(Text(c.finishLocation == 'mark_x'
-                            ? 'Mark X'
-                            : 'CB')),
-                        DataCell(
-                            c.canMultiply
-                                ? const Icon(Icons.check,
-                                    size: 16, color: Colors.green)
-                                : const SizedBox.shrink()),
-                        DataCell(c.requiresInflatable
-                            ? Text(c.inflatableType ?? 'Yes',
-                                style: const TextStyle(
-                                    color: Colors.orange, fontSize: 12))
-                            : const SizedBox.shrink()),
-                      ]);
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _bandChip(String band) {
-    final (label, color) = switch (band) {
-      'S_SW' => ('S/SW', Colors.red),
-      'W' => ('W', Colors.orange),
-      'NW' => ('NW', Colors.blue),
-      'N' => ('N', Colors.purple),
-      'N_EXT' => ('N+', Colors.purple),
-      'INFLATABLE' => ('Infl.', Colors.teal),
-      'LONG' => ('Long', Colors.brown),
-      _ => (band, Colors.grey),
-    };
-    return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 10)),
-      backgroundColor: color.withValues(alpha: 0.15),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _ByWindTab extends ConsumerWidget {
-  const _ByWindTab();
-
-  static const _windBands = [
-    ('S_SW', 'S/SW (200-260°)', Colors.red),
-    ('W', 'W (260-295°)', Colors.orange),
-    ('NW', 'NW (295-320°)', Colors.blue),
-    ('N', 'N (320-020°)', Colors.purple),
-  ];
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final coursesAsync = ref.watch(allCoursesProvider);
-
-    return coursesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (courses) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Toolbar ──
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
             children: [
-              // Wind quadrants
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: _windBands.map((wb) {
-                  final (band, label, color) = wb;
-                  final bandCourses = courses
-                      .where((c) =>
-                          c.windDirectionBand == band ||
-                          (band == 'N' && c.windDirectionBand == 'N_EXT'))
-                      .toList()
-                    ..sort((a, b) =>
-                        a.distanceNm.compareTo(b.distanceNm));
-
-                  return SizedBox(
-                    width: 340,
-                    child: Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            color: color.withValues(alpha: 0.1),
-                            child: Text(label,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: color)),
-                          ),
-                          ...bandCourses.map((c) => ListTile(
-                                dense: true,
-                                title: Text(
-                                  '#${c.courseNumber} — ${c.distanceNm} nm',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                subtitle: Text(
-                                  c.markSequenceDisplay,
-                                  style: const TextStyle(fontSize: 11),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: c.requiresInflatable
-                                    ? const Icon(Icons.warning_amber,
-                                        size: 16, color: Colors.orange)
-                                    : null,
-                              )),
-                          if (bandCourses.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('No courses',
-                                  style: TextStyle(color: Colors.grey)),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+              Text(
+                'Course Configuration',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-
-              // Inflatable and Long sections
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            color: Colors.teal.withValues(alpha: 0.1),
-                            child: const Text('Inflatable Courses (A-E)',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal)),
-                          ),
-                          ...courses
-                              .where(
-                                  (c) => c.windDirectionBand == 'INFLATABLE')
-                              .map((c) => ListTile(
-                                    dense: true,
-                                    title: Text(
-                                        '#${c.courseNumber} — ${c.markSequenceDisplay}'),
-                                    subtitle: Text(
-                                        'Requires: ${c.inflatableType ?? "inflatables"}'),
-                                  )),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            color: Colors.brown.withValues(alpha: 0.1),
-                            child: const Text('Long Races (49-52)',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.brown)),
-                          ),
-                          ...courses
-                              .where((c) => c.windDirectionBand == 'LONG')
-                              .map((c) => ListTile(
-                                    dense: true,
-                                    title: Text(
-                                        '#${c.courseNumber} — ${c.distanceNm} nm'),
-                                    subtitle:
-                                        Text(c.markSequenceDisplay),
-                                  )),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              const Spacer(),
+              DropdownButton<String>(
+                value: _filterBand,
+                items: _bands
+                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                    .toList(),
+                onChanged: (v) => setState(() {
+                  _filterBand = v ?? 'All';
+                  _selectedCourse = null;
+                }),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: _seedFromAsset,
+                icon: const Icon(Icons.cloud_upload, size: 18),
+                label: const Text('Seed Data'),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: _addCourse,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Course'),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _MarksTab extends ConsumerWidget {
-  const _MarksTab();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final marksAsync = ref.watch(marksProvider);
-    final distancesAsync = ref.watch(markDistancesProvider);
-
-    return Row(
-      children: [
-        // Marks list
-        SizedBox(
-          width: 280,
-          child: Card(
-            margin: EdgeInsets.zero,
-            shape: const RoundedRectangleBorder(),
-            child: marksAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (marks) {
-                return ListView(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('Marks',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    ...marks.map((m) => ListTile(
-                          dense: true,
-                          leading: Icon(
-                            m.type == 'inflatable'
-                                ? Icons.circle
-                                : Icons.location_on,
-                            color: m.type == 'inflatable'
-                                ? Colors.orange
-                                : Colors.blue,
-                            size: 18,
-                          ),
-                          title: Text(m.name),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(m.type,
-                                  style: const TextStyle(fontSize: 11)),
-                              if (m.latitude != null)
-                                Text(
-                                  '${m.latitude!.toStringAsFixed(4)}°N, ${m.longitude!.toStringAsFixed(4)}°W',
-                                  style: const TextStyle(fontSize: 10),
-                                ),
-                              if (m.description != null)
-                                Text(m.description!,
-                                    style: const TextStyle(fontSize: 10)),
-                            ],
-                          ),
-                        )),
-                  ],
-                );
-              },
-            ),
-          ),
         ),
 
-        // Distance/heading table
+        // ── Content ──
         Expanded(
-          child: distancesAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
+          child: coursesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
-            data: (distances) {
-              // Build matrix
-              final markIds = <String>{};
-              for (final d in distances) {
-                markIds.add(d.fromMarkId);
-                markIds.add(d.toMarkId);
-              }
-              final sortedIds = markIds.toList()..sort();
+            data: (courses) {
+              final filtered = _filterBand == 'All'
+                  ? courses
+                  : courses
+                      .where((c) => c.windDirectionBand == _filterBand)
+                      .toList();
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Distance / Heading Chart',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Table(
-                        border: TableBorder.all(color: Colors.grey.shade300),
-                        defaultColumnWidth: const FixedColumnWidth(90),
-                        children: [
-                          // Header row
-                          TableRow(
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.all(6),
-                                child: Text('FROM \\ TO',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10)),
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Course list
+                  Expanded(
+                    flex: 2,
+                    child: Card(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Text('No courses found for this filter.'),
                               ),
-                              ...sortedIds.map((id) => Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: Text(id,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 10)),
-                                  )),
-                            ],
-                          ),
-                          // Data rows
-                          ...sortedIds.map((fromId) {
-                            return TableRow(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Text(fromId,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10)),
-                                ),
-                                ...sortedIds.map((toId) {
-                                  if (fromId == toId) {
-                                    return Container(
-                                      padding: const EdgeInsets.all(6),
-                                      color: Colors.grey.shade200,
-                                      child: const Text('—',
-                                          style: TextStyle(fontSize: 10)),
-                                    );
-                                  }
-                                  final dist = distances
-                                      .where((d) =>
-                                          d.fromMarkId == fromId &&
-                                          d.toMarkId == toId)
-                                      .firstOrNull;
-                                  return Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: dist != null
-                                        ? Text(
-                                            '${dist.distanceNm.toStringAsFixed(2)}\n${dist.headingMagnetic.toStringAsFixed(0)}°',
-                                            style:
-                                                const TextStyle(fontSize: 10),
-                                          )
-                                        : const Text('—',
-                                            style: TextStyle(fontSize: 10)),
-                                  );
-                                }),
-                              ],
-                            );
-                          }),
-                        ],
-                      ),
-                    ],
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(8),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (_, i) {
+                                final course = filtered[i];
+                                final isSelected =
+                                    _selectedCourse?.id == course.id;
+                                return _CourseListTile(
+                                  course: course,
+                                  isSelected: isSelected,
+                                  onTap: () => setState(
+                                      () => _selectedCourse = course),
+                                );
+                              },
+                            ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  // Detail panel
+                  Expanded(
+                    flex: 3,
+                    child: _selectedCourse != null
+                        ? _CourseDetailPanel(
+                            course: _selectedCourse!,
+                            distances:
+                                distancesAsync.valueOrNull ?? const [],
+                            marks: ref.watch(marksProvider).valueOrNull ?? const [],
+                            onEdit: () => _editCourse(_selectedCourse!),
+                            onDelete: () =>
+                                _deleteCourse(_selectedCourse!),
+                          )
+                        : const Card(
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.map, size: 48, color: Colors.grey),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Select a course to view details',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
               );
             },
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _seedFromAsset() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Seed Course Data'),
+        content: const Text(
+          'This will load all marks, distances, and courses from the '
+          'built-in course sheet into Firestore.\n\n'
+          'Existing data with matching IDs will be overwritten.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Seed Data'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/courses_seed.json');
+      await ref.read(coursesRepositoryProvider).seedFromJson(jsonString);
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Course data seeded successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Seed failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _addCourse() async {
+    final result = await showDialog<CourseConfig>(
+      context: context,
+      builder: (_) => const _CourseFormDialog(),
+    );
+    if (result == null) return;
+    await ref.read(coursesRepositoryProvider).saveCourse(result);
+  }
+
+  Future<void> _editCourse(CourseConfig course) async {
+    final result = await showDialog<CourseConfig>(
+      context: context,
+      builder: (_) => _CourseFormDialog(course: course),
+    );
+    if (result == null) return;
+    await ref.read(coursesRepositoryProvider).saveCourse(result);
+    setState(() => _selectedCourse = result);
+  }
+
+  Future<void> _deleteCourse(CourseConfig course) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Course'),
+        content:
+            Text('Delete "${course.courseName}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(coursesRepositoryProvider).deleteCourse(course.id);
+    setState(() => _selectedCourse = null);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Course List Tile
+// ═══════════════════════════════════════════════════════════════════
+
+class _CourseListTile extends StatelessWidget {
+  const _CourseListTile({
+    required this.course,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final CourseConfig course;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: AppColors.primary.withAlpha(20),
+      onTap: onTap,
+      leading: CircleAvatar(
+        backgroundColor: AppColors.primary,
+        radius: 18,
+        child: Text(
+          course.courseNumber,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      title: Text(
+        course.courseName,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        '${course.windDirectionBand} · ${course.distanceNm} nm · ${course.marks.length} marks',
+        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (course.requiresInflatable)
+            Tooltip(
+              message: 'Requires inflatable: ${course.inflatableType ?? ""}',
+              child: const Icon(Icons.circle, size: 10, color: Colors.orange),
+            ),
+          if (course.canMultiply)
+            const Tooltip(
+              message: 'Can multiply (x2)',
+              child: Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Icon(Icons.repeat, size: 14, color: Colors.blue),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Course Detail Panel
+// ═══════════════════════════════════════════════════════════════════
+
+class _CourseDetailPanel extends StatelessWidget {
+  const _CourseDetailPanel({
+    required this.course,
+    required this.distances,
+    required this.marks,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final CourseConfig course;
+  final List distances;
+  final List marks;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Course ${course.courseNumber}',
+                        style: theme.textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        course.courseName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit, size: 16),
+                  label: const Text('Edit'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                  label:
+                      const Text('Delete', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+
+            // Info chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _infoChip(Icons.explore, 'Wind: ${course.windDirectionBand}'),
+                _infoChip(Icons.straighten,
+                    '${course.distanceNm} nm'),
+                _infoChip(Icons.pin_drop,
+                    'Wind ${course.windDirMin}°–${course.windDirMax}°'),
+                _infoChip(Icons.flag, 'Finish: ${course.finishLocation}'),
+                if (course.canMultiply)
+                  _infoChip(Icons.repeat, 'Can multiply (x2)'),
+                if (course.requiresInflatable)
+                  _infoChip(Icons.circle,
+                      'Inflatable: ${course.inflatableType ?? "yes"}'),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Mark sequence
+            Text('Mark Sequence',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Text(
+                course.markSequenceDisplay,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Marks table
+            ...course.marks.map((m) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          '${m.order}.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.circle,
+                        size: 10,
+                        color: m.rounding == MarkRounding.port
+                            ? Colors.red
+                            : Colors.green,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${m.markName} (${m.rounding.name})',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      if (m.isFinish)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Chip(
+                            label: Text('FINISH',
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.green)),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                    ],
+                  ),
+                )),
+            const SizedBox(height: 20),
+
+            // Nautical chart with marks
+            Text('Nautical Chart',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            NauticalChartWidget(
+              marks: marks.cast(),
+              course: course,
+              height: 400,
+            ),
+            const SizedBox(height: 20),
+
+            // Course diagram
+            Text('Course Diagram',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: CourseMapDiagram(
+                  course: course,
+                  distances: distances.cast(),
+                  size: const Size(400, 400),
+                ),
+              ),
+            ),
+
+            if (course.notes.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text('Notes',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(course.notes,
+                  style: TextStyle(
+                      fontSize: 13, color: Colors.grey.shade700)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label) {
+    return Chip(
+      avatar: Icon(icon, size: 14),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Course Form Dialog
+// ═══════════════════════════════════════════════════════════════════
+
+class _CourseFormDialog extends StatefulWidget {
+  const _CourseFormDialog({this.course});
+
+  final CourseConfig? course;
+
+  @override
+  State<_CourseFormDialog> createState() => _CourseFormDialogState();
+}
+
+class _CourseFormDialogState extends State<_CourseFormDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _numberCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _distCtrl;
+  late final TextEditingController _notesCtrl;
+  late String _band;
+  late int _windMin;
+  late int _windMax;
+  late String _finish;
+  late bool _canMultiply;
+  late bool _requiresInflatable;
+  late String? _inflatableType;
+
+  bool get _isEditing => widget.course != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.course;
+    _numberCtrl = TextEditingController(text: c?.courseNumber ?? '');
+    _nameCtrl = TextEditingController(text: c?.courseName ?? '');
+    _distCtrl =
+        TextEditingController(text: c?.distanceNm.toString() ?? '');
+    _notesCtrl = TextEditingController(text: c?.notes ?? '');
+    _band = c?.windDirectionBand ?? 'N';
+    _windMin = c?.windDirMin ?? 0;
+    _windMax = c?.windDirMax ?? 360;
+    _finish = c?.finishLocation ?? 'committee_boat';
+    _canMultiply = c?.canMultiply ?? false;
+    _requiresInflatable = c?.requiresInflatable ?? false;
+    _inflatableType = c?.inflatableType;
+  }
+
+  @override
+  void dispose() {
+    _numberCtrl.dispose();
+    _nameCtrl.dispose();
+    _distCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: SizedBox(
+        width: 480,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isEditing ? 'Edit Course' : 'New Course',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: TextFormField(
+                          controller: _numberCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Number',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _nameCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Course Name',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _band,
+                          decoration: const InputDecoration(
+                            labelText: 'Wind Band',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'INFLATABLE', 'LONG']
+                              .map((b) =>
+                                  DropdownMenuItem(value: b, child: Text(b)))
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _band = v ?? _band),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _distCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Distance (nm)',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _finish,
+                    decoration: const InputDecoration(
+                      labelText: 'Finish Location',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['committee_boat', 'mark', 'shore']
+                        .map((f) =>
+                            DropdownMenuItem(value: f, child: Text(f)))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _finish = v ?? _finish),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _canMultiply,
+                        onChanged: (v) =>
+                            setState(() => _canMultiply = v ?? false),
+                      ),
+                      const Text('Can multiply (x2)'),
+                      const SizedBox(width: 24),
+                      Checkbox(
+                        value: _requiresInflatable,
+                        onChanged: (v) =>
+                            setState(() => _requiresInflatable = v ?? false),
+                      ),
+                      const Text('Requires inflatable'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notesCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _submit,
+                        child: Text(_isEditing ? 'Save' : 'Create'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    final existing = widget.course;
+    final course = CourseConfig(
+      id: existing?.id ?? '',
+      courseNumber: _numberCtrl.text.trim(),
+      courseName: _nameCtrl.text.trim(),
+      marks: existing?.marks ?? const [],
+      distanceNm: double.tryParse(_distCtrl.text.trim()) ?? 0,
+      windDirectionBand: _band,
+      windDirMin: _windMin,
+      windDirMax: _windMax,
+      finishLocation: _finish,
+      canMultiply: _canMultiply,
+      requiresInflatable: _requiresInflatable,
+      inflatableType: _requiresInflatable ? _inflatableType : null,
+      notes: _notesCtrl.text.trim(),
+    );
+    Navigator.pop(context, course);
   }
 }
