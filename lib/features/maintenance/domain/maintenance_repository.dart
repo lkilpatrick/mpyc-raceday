@@ -30,6 +30,9 @@ abstract class MaintenanceRepository {
   Stream<List<ScheduledMaintenance>> watchScheduledMaintenance();
   Future<void> saveScheduledMaintenance(ScheduledMaintenance item);
   Future<void> deleteScheduledMaintenance(String id);
+
+  // Seed
+  Future<void> seedScheduledMaintenance();
 }
 
 class ScheduledMaintenance {

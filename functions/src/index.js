@@ -790,94 +790,338 @@ exports.seedChecklistTemplates = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
 
-  const preRaceItems = [
-    // Safety Equipment
-    {id: "s1", title: "VHF radio check", description: "Test transmit/receive on Ch 16 and race channel", category: "Safety Equipment", isCritical: true, requiresPhoto: false, requiresNote: false, order: 1},
-    {id: "s2", title: "First aid kit", description: "Verify kit is stocked and accessible", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 2},
-    {id: "s3", title: "Fire extinguisher", description: "Check gauge is in green zone, pin intact", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 3},
-    {id: "s4", title: "Flares — check expiry", description: "Verify flares are within expiration date", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: true, order: 4},
-    {id: "s5", title: "Life jackets — count and condition", description: "Count PFDs, inspect for damage", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: true, order: 5},
-    {id: "s6", title: "Throwable PFD", description: "Verify throwable device is accessible", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 6},
-    {id: "s7", title: "Sound signal device", description: "Test horn/whistle", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 7},
-    {id: "s8", title: "Navigation lights test", description: "Test all nav lights", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 8},
-    // Race Equipment
-    {id: "r1", title: "Signal flags — full set inventory", description: "Verify all required flags present and in good condition", category: "Race Equipment", isCritical: true, requiresPhoto: false, requiresNote: false, order: 9},
-    {id: "r2", title: "Starting horn / sound signal", description: "Test starting horn", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 10},
-    {id: "r3", title: "Course board/display", description: "Verify course board is clean and markers available", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 11},
-    {id: "r4", title: "Binoculars", description: "Clean lenses, verify working", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 12},
-    {id: "r5", title: "Stopwatches/timing equipment", description: "Test timing equipment, fresh batteries", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 13},
-    {id: "r6", title: "Protest flags (red)", description: "Verify protest flags available", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 14},
-    {id: "r7", title: "Finish line markers/transit poles", description: "Check finish line equipment", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 15},
-    {id: "r8", title: "Race instructions copies aboard", description: "Current SI copies available for crew", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false, order: 16},
-    // Vessel Systems
-    {id: "v1", title: "Fuel level", description: "Check fuel gauge/dipstick, note level", category: "Vessel Systems", isCritical: false, requiresPhoto: true, requiresNote: true, order: 17},
-    {id: "v2", title: "Engine start and run check", description: "Start engine, verify smooth operation, check gauges", category: "Vessel Systems", isCritical: true, requiresPhoto: false, requiresNote: false, order: 18},
-    {id: "v3", title: "Bilge pump test", description: "Test bilge pump operation", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false, order: 19},
-    {id: "v4", title: "Anchor and rode — inspect condition", description: "Check anchor, shackle, and rode for wear", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false, order: 20},
-    {id: "v5", title: "Mooring lines", description: "Inspect lines for chafe and wear", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false, order: 21},
-    {id: "v6", title: "Battery voltage check", description: "Check battery voltage", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: true, order: 22},
-    {id: "v7", title: "Electrical panel check", description: "Verify all circuits functioning", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false, order: 23},
-    {id: "v8", title: "Through-hulls — verify closed/open as needed", description: "Check all through-hull fittings", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false, order: 24},
-    // Communications
-    {id: "c1", title: "VHF Ch 16 test call", description: "Radio check on Ch 16", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false, order: 25},
-    {id: "c2", title: "Race committee channel test", description: "Radio check on race channel (Ch 72 or club-specific)", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false, order: 26},
-    {id: "c3", title: "Cell phone backup charged", description: "Verify backup phone is charged", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false, order: 27},
-    {id: "c4", title: "Contact list aboard", description: "PRO, harbormaster, Coast Guard contacts available", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false, order: 28},
-    {id: "c5", title: "Weather radio check", description: "Verify NOAA weather radio reception", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false, order: 29},
-    // Navigation
-    {id: "n1", title: "GPS/chartplotter operational", description: "Power on and verify GPS fix", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false, order: 30},
-    {id: "n2", title: "Compass check", description: "Verify compass is functional", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false, order: 31},
-    {id: "n3", title: "Horn/bell operational", description: "Test horn and bell", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false, order: 32},
+  // ── Shared base items (all power boats) ──
+  const baseSafetyItems = [
+    {id: "s1", title: "VHF radio check", description: "Test transmit/receive on Ch 16 and race channel", category: "Safety Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "s2", title: "First aid kit", description: "Verify kit is stocked and accessible", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "s3", title: "Fire extinguisher", description: "Check gauge is in green zone, pin intact", category: "Safety Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "s4", title: "Flares — check expiry", description: "Verify flares are within expiration date", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "s5", title: "Life jackets — count and condition", description: "Count PFDs, inspect for damage", category: "Safety Equipment", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "s6", title: "Throwable PFD", description: "Verify throwable device is accessible", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "s7", title: "Sound signal device", description: "Test horn/whistle", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "s8", title: "Navigation lights test", description: "Test all nav lights (red, green, white stern, masthead)", category: "Safety Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
   ];
 
-  const postRaceItems = [
-    // Secure Vessel
-    {id: "sv1", title: "Engine off / fuel valve closed", description: "Shut down engine, close fuel valve", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 1},
-    {id: "sv2", title: "Lines secured — bow, stern, spring", description: "Secure all dock lines", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 2},
-    {id: "sv3", title: "Fenders positioned", description: "Position fenders for overnight", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 3},
-    {id: "sv4", title: "Bilge check — pump if needed", description: "Check bilge, pump if water present", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 4},
-    {id: "sv5", title: "Electrical panel — non-essential circuits off", description: "Turn off non-essential electrical circuits", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 5},
-    {id: "sv6", title: "Cabin locked", description: "Lock cabin and hatches", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 6},
-    {id: "sv7", title: "Canvas/covers on", description: "Install canvas covers", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false, order: 7},
-    // Equipment Stowage
-    {id: "es1", title: "Signal flags folded and stowed", description: "Fold and stow all signal flags", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 8},
-    {id: "es2", title: "Timing equipment secured in dry storage", description: "Store timing equipment in dry location", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 9},
-    {id: "es3", title: "Binoculars in case", description: "Return binoculars to case", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 10},
-    {id: "es4", title: "Race documents collected and filed", description: "Collect and file all race documents", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 11},
-    {id: "es5", title: "Course board cleared/stowed", description: "Clear and stow course board", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 12},
-    {id: "es6", title: "Protest flags collected", description: "Collect all protest flags", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false, order: 13},
-    // Reporting & Handoff
-    {id: "rh1", title: "Race results recorded/submitted", description: "Ensure race results are recorded and submitted", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: false, order: 14},
-    {id: "rh2", title: "Any incidents documented", description: "Document any incidents that occurred", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: false, order: 15},
-    {id: "rh3", title: "Maintenance issues reported", description: "Report any maintenance issues found (link to maintenance request)", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: false, order: 16},
-    {id: "rh4", title: "Fuel level noted for next use", description: "Record current fuel level for next crew", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true, order: 17},
-    {id: "rh5", title: "Next event crew notified of any issues", description: "Communicate any issues to next event's crew", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true, order: 18},
+  const baseVesselItems = [
+    {id: "v1", title: "Fuel level", description: "Check fuel gauge/dipstick, note level", category: "Vessel Systems", isCritical: false, requiresPhoto: true, requiresNote: true},
+    {id: "v2", title: "Engine oil level", description: "Check dipstick, top off if below min line", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "v3", title: "Engine coolant level", description: "Check coolant reservoir, verify level between min/max", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v4", title: "Engine start and run check", description: "Start engine, let idle 2 min, check gauges (oil pressure, temp, voltage)", category: "Vessel Systems", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "v5", title: "Raw water flow / tell-tale", description: "Verify cooling water discharge from exhaust", category: "Vessel Systems", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "v6", title: "Steering check", description: "Turn wheel/tiller full lock to lock, check for binding", category: "Vessel Systems", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "v7", title: "Throttle and shift check", description: "Verify smooth forward/neutral/reverse shifting at dock", category: "Vessel Systems", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "v8", title: "Bilge pump test", description: "Test bilge pump operation (auto and manual switch)", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v9", title: "Battery voltage check", description: "Check battery voltage (should be 12.6V+ at rest, 13.5V+ charging)", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "v10", title: "Electrical panel check", description: "Verify all circuits functioning, no tripped breakers", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v11", title: "Through-hulls — verify position", description: "Check all through-hull fittings are open/closed as needed", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v12", title: "Anchor and rode", description: "Check anchor, shackle pin wired, rode flaked and ready", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v13", title: "Mooring lines", description: "Inspect dock lines for chafe and wear", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "v14", title: "Prop check (visual)", description: "Look over the side — no lines/debris on prop", category: "Vessel Systems", isCritical: false, requiresPhoto: false, requiresNote: false},
   ];
+
+  const baseCommsItems = [
+    {id: "c1", title: "VHF Ch 16 test call", description: "Radio check on Ch 16 with another station", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "c2", title: "Race committee channel test", description: "Radio check on race channel (Ch 72 or club-specific)", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "c3", title: "Cell phone backup charged", description: "Verify backup phone is charged and in waterproof case", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "c4", title: "Contact list aboard", description: "PRO, harbormaster, Coast Guard, club office contacts available", category: "Communications", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  const baseNavItems = [
+    {id: "n1", title: "GPS/chartplotter operational", description: "Power on, verify GPS fix and chart display", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "n2", title: "Compass check", description: "Verify compass is functional and reads correctly", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "n3", title: "Depth sounder", description: "Verify depth sounder reading", category: "Navigation", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  // ── Signal Boat (RC / Committee Boat) specific items ──
+  const signalBoatRaceItems = [
+    {id: "r1", title: "Signal flags — full set inventory", description: "Verify all required flags: AP, N, 1st Sub, class flags, P, I, Z, Black, S, L, M, Y, X", category: "Race Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "r2", title: "Starting horn / sound signal", description: "Test starting horn — verify audible at 200m+", category: "Race Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "r3", title: "Course board/display", description: "Verify course board is clean, dry-erase markers available", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r4", title: "Binoculars", description: "Clean lenses, verify working — need 2 pairs minimum", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r5", title: "Stopwatches/timing equipment", description: "Test timing equipment, fresh batteries, sync all clocks", category: "Race Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "r6", title: "Finish line transit poles", description: "Check finish line transit poles/sighting equipment", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r7", title: "Race instructions copies aboard", description: "Current Sailing Instructions copies available for crew", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r8", title: "Protest flags (red) available", description: "Verify spare protest flags available for competitors", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r9", title: "Wind indicator / Windex", description: "Verify wind indicator at masthead is functional", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "r10", title: "Scoring sheets / clipboard", description: "Blank scoring sheets, pencils, clipboard ready", category: "Race Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  // ── Mark Boat specific items ──
+  const markBoatItems = [
+    {id: "mb1", title: "Race marks aboard — count", description: "Verify all required marks are aboard (windward, leeward, gate, offset)", category: "Mark Setting", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "mb2", title: "Mark anchors and rode", description: "Check all mark anchors, shackles, and rode — no tangles", category: "Mark Setting", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "mb3", title: "Mark lights (if applicable)", description: "Test mark lights for dusk racing", category: "Mark Setting", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "mb4", title: "Inflatable marks — check inflation", description: "Verify inflatable marks are fully inflated, no leaks", category: "Mark Setting", isCritical: false, requiresPhoto: true, requiresNote: false},
+    {id: "mb5", title: "Spare marks and anchors", description: "Verify spare mark and anchor aboard", category: "Mark Setting", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "mb6", title: "Mark retrieval gaff/hook", description: "Gaff or hook for mark retrieval is aboard", category: "Mark Setting", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "mb7", title: "GPS waypoints loaded", description: "Verify course mark GPS waypoints are loaded in chartplotter", category: "Mark Setting", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  // ── Safety Boat specific items ──
+  const safetyBoatItems = [
+    {id: "sb1", title: "Tow line — 50ft minimum", description: "Verify tow line is aboard, no chafe, proper length", category: "Rescue Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "sb2", title: "Rescue knife", description: "Sharp rescue knife accessible to helmsman", category: "Rescue Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "sb3", title: "Throw bag", description: "Throw bag accessible and line flaked", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sb4", title: "Swim ladder / boarding aid", description: "Verify swim ladder deploys properly for MOB recovery", category: "Rescue Equipment", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "sb5", title: "Thermal blankets", description: "Thermal/emergency blankets aboard for hypothermia", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sb6", title: "Paddle / oar", description: "Emergency paddle aboard", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sb7", title: "Bolt cutters (for rigging)", description: "Bolt cutters aboard for rigging emergencies", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sb8", title: "Extra PFDs for rescued sailors", description: "Minimum 4 extra PFDs for rescued crew", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "sb9", title: "Pump for swamped dinghies", description: "Manual or electric pump for bailing swamped boats", category: "Rescue Equipment", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  // ── Post-race items (shared) ──
+  const postRaceSecureItems = [
+    {id: "sv1", title: "Engine off / fuel valve closed", description: "Shut down engine, close fuel valve if equipped", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv2", title: "Lines secured — bow, stern, spring", description: "Secure all dock lines with proper cleating", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv3", title: "Fenders positioned", description: "Position fenders for overnight/weather", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv4", title: "Bilge check — pump if needed", description: "Check bilge, pump if water present, note amount", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv5", title: "Electrical panel — non-essential circuits off", description: "Turn off all non-essential electrical circuits, leave bilge pump on", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv6", title: "Battery switch position", description: "Set battery switch to correct position (off or charge)", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv7", title: "Cabin/console locked", description: "Lock cabin, console, and hatches", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv8", title: "Canvas/covers on", description: "Install canvas covers, snap all fasteners", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sv9", title: "Wash down hull and deck", description: "Rinse salt water from hull, deck, and hardware", category: "Secure Vessel", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  const postRaceStowageItems = [
+    {id: "es1", title: "Signal flags folded and stowed", description: "Fold and stow all signal flags in dry bag", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "es2", title: "Timing equipment secured", description: "Store timing equipment in dry, locked storage", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "es3", title: "Binoculars in case", description: "Return binoculars to padded case", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "es4", title: "Race documents collected", description: "Collect and file all race documents, scoring sheets", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "es5", title: "Course board cleared", description: "Clear and stow course board", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "es6", title: "Electronics powered down", description: "GPS, radio, instruments powered down", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+  ];
+
+  const postRaceReportItems = [
+    {id: "rh1", title: "Race results recorded/submitted", description: "Ensure race results are recorded and submitted to scoring", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "rh2", title: "Incidents documented", description: "Document any incidents, protests, or injuries", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "rh3", title: "Maintenance issues reported", description: "Report any maintenance issues found during use", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "rh4", title: "Fuel level noted", description: "Record current fuel level for next crew", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "rh5", title: "Engine hours noted", description: "Record engine hour meter reading", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "rh6", title: "Next crew notified of issues", description: "Communicate any issues to next event's crew", category: "Reporting & Handoff", isCritical: false, requiresPhoto: false, requiresNote: true},
+  ];
+
+  // ── Safety inspection checklist ──
+  const safetyInspectionItems = [
+    {id: "si1", title: "Hull integrity — below waterline", description: "Inspect hull for cracks, blisters, osmosis, damage below waterline", category: "Hull & Structure", isCritical: true, requiresPhoto: true, requiresNote: true},
+    {id: "si2", title: "Hull integrity — above waterline", description: "Inspect topsides for cracks, gelcoat damage, impact marks", category: "Hull & Structure", isCritical: false, requiresPhoto: true, requiresNote: true},
+    {id: "si3", title: "Transom condition", description: "Check transom for soft spots, delamination near engine mount", category: "Hull & Structure", isCritical: true, requiresPhoto: true, requiresNote: false},
+    {id: "si4", title: "Deck hardware secure", description: "Check all cleats, chocks, stanchions, rails for looseness", category: "Hull & Structure", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "si5", title: "Non-skid deck condition", description: "Inspect non-skid surfaces for wear", category: "Hull & Structure", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "si6", title: "Fire extinguisher — current inspection", description: "Verify inspection tag is current, gauge in green", category: "USCG Requirements", isCritical: true, requiresPhoto: true, requiresNote: true},
+    {id: "si7", title: "PFDs — USCG approved, correct count", description: "Verify correct number of USCG-approved PFDs for vessel capacity", category: "USCG Requirements", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "si8", title: "Visual distress signals current", description: "Verify flares/signals are not expired", category: "USCG Requirements", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "si9", title: "Sound producing device", description: "Horn or whistle functional", category: "USCG Requirements", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "si10", title: "Navigation lights functional", description: "Test all required navigation lights", category: "USCG Requirements", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "si11", title: "Registration/documentation current", description: "Verify vessel registration or documentation is current and aboard", category: "USCG Requirements", isCritical: true, requiresPhoto: true, requiresNote: true},
+    {id: "si12", title: "Engine mounts secure", description: "Check engine mount bolts for tightness", category: "Engine & Mechanical", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "si13", title: "Fuel system — no leaks", description: "Inspect fuel lines, connections, tank for leaks or corrosion", category: "Engine & Mechanical", isCritical: true, requiresPhoto: true, requiresNote: true},
+    {id: "si14", title: "Exhaust system", description: "Inspect exhaust hose, clamps, and riser for leaks or deterioration", category: "Engine & Mechanical", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "si15", title: "Battery secured and terminals clean", description: "Verify battery is secured, terminals clean and tight, no corrosion", category: "Electrical", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "si16", title: "Wiring — no chafe or exposed conductors", description: "Inspect visible wiring for chafe, corrosion, loose connections", category: "Electrical", isCritical: false, requiresPhoto: true, requiresNote: true},
+    {id: "si17", title: "Bilge pump operational", description: "Test bilge pump — auto float switch and manual", category: "Electrical", isCritical: true, requiresPhoto: false, requiresNote: false},
+    {id: "si18", title: "Through-hulls — condition and operation", description: "Inspect all through-hulls, exercise seacocks, check for weeping", category: "Hull & Structure", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "si19", title: "Steering system", description: "Inspect steering cables/hydraulics for wear, leaks, play", category: "Engine & Mechanical", isCritical: true, requiresPhoto: false, requiresNote: true},
+    {id: "si20", title: "Propeller condition", description: "Inspect prop for dings, bent blades, fishing line wrap", category: "Engine & Mechanical", isCritical: false, requiresPhoto: true, requiresNote: true},
+  ];
+
+  // ── Helper: add order field to items ──
+  function addOrder(items) {
+    return items.map((item, i) => ({...item, order: i + 1}));
+  }
 
   const now = admin.firestore.FieldValue.serverTimestamp();
+  const uid = request.auth.uid;
+  const batch = db.batch();
 
-  await db.collection("checklists").doc("pre_race_duncans_watch").set({
-    name: "Duncan's Watch Pre-Race Checkout",
+  // ── Duncan's Watch (Signal/Committee Boat) ──
+  const dwPreItems = addOrder([...baseSafetyItems, ...signalBoatRaceItems, ...baseVesselItems, ...baseCommsItems, ...baseNavItems]);
+  const dwPostItems = addOrder([...postRaceSecureItems, ...postRaceStowageItems, ...postRaceReportItems]);
+  batch.set(db.collection("checklists").doc("pre_race_duncans_watch"), {
+    name: "Duncan's Watch — Pre-Race Checkout",
     type: "preRace",
-    items: preRaceItems,
+    items: dwPreItems,
     version: 1,
-    lastModifiedBy: request.auth.uid,
+    lastModifiedBy: uid,
     lastModifiedAt: now,
     isActive: true,
   }, {merge: true});
-
-  await db.collection("checklists").doc("post_race_duncans_watch").set({
-    name: "Duncan's Watch Post-Race Securing",
+  batch.set(db.collection("checklists").doc("post_race_duncans_watch"), {
+    name: "Duncan's Watch — Post-Race Securing",
     type: "postRace",
-    items: postRaceItems,
+    items: dwPostItems,
     version: 1,
-    lastModifiedBy: request.auth.uid,
+    lastModifiedBy: uid,
     lastModifiedAt: now,
     isActive: true,
   }, {merge: true});
 
-  logger.info("Checklist templates seeded");
-  return {seeded: 2};
+  // ── Signal Boat ──
+  const sbPreItems = addOrder([...baseSafetyItems, ...signalBoatRaceItems, ...baseVesselItems, ...baseCommsItems, ...baseNavItems]);
+  const sbPostItems = addOrder([...postRaceSecureItems, ...postRaceStowageItems, ...postRaceReportItems]);
+  batch.set(db.collection("checklists").doc("pre_race_signal_boat"), {
+    name: "Signal Boat — Pre-Race Checkout",
+    type: "preRace",
+    items: sbPreItems,
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+  batch.set(db.collection("checklists").doc("post_race_signal_boat"), {
+    name: "Signal Boat — Post-Race Securing",
+    type: "postRace",
+    items: sbPostItems,
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+
+  // ── Mark Boat ──
+  const mbPreItems = addOrder([...baseSafetyItems, ...markBoatItems, ...baseVesselItems, ...baseCommsItems, ...baseNavItems]);
+  const mbPostItems = addOrder([
+    ...postRaceSecureItems,
+    {id: "mb_es1", title: "Marks retrieved and stowed", description: "All race marks retrieved, dried, and stowed", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: true},
+    {id: "mb_es2", title: "Mark anchors and rode coiled", description: "Coil and stow all mark anchor rode — no tangles", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "mb_es3", title: "Inflatable marks deflated/stowed", description: "Deflate and stow inflatable marks if applicable", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    ...postRaceReportItems,
+  ]);
+  batch.set(db.collection("checklists").doc("pre_race_mark_boat"), {
+    name: "Mark Boat — Pre-Race Checkout",
+    type: "preRace",
+    items: mbPreItems,
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+  batch.set(db.collection("checklists").doc("post_race_mark_boat"), {
+    name: "Mark Boat — Post-Race Securing",
+    type: "postRace",
+    items: addOrder(mbPostItems),
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+
+  // ── Safety Boat ──
+  const safPreItems = addOrder([...baseSafetyItems, ...safetyBoatItems, ...baseVesselItems, ...baseCommsItems, ...baseNavItems]);
+  const safPostItems = addOrder([
+    ...postRaceSecureItems,
+    {id: "sb_es1", title: "Tow line inspected and coiled", description: "Inspect tow line for chafe, coil and stow", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    {id: "sb_es2", title: "Rescue equipment stowed", description: "Stow throw bag, knife, blankets, extra PFDs", category: "Equipment Stowage", isCritical: false, requiresPhoto: false, requiresNote: false},
+    ...postRaceReportItems,
+  ]);
+  batch.set(db.collection("checklists").doc("pre_race_safety_boat"), {
+    name: "Safety Boat — Pre-Race Checkout",
+    type: "preRace",
+    items: safPreItems,
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+  batch.set(db.collection("checklists").doc("post_race_safety_boat"), {
+    name: "Safety Boat — Post-Race Securing",
+    type: "postRace",
+    items: addOrder(safPostItems),
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+
+  // ── Safety Inspection (annual/seasonal — all boats) ──
+  batch.set(db.collection("checklists").doc("safety_inspection"), {
+    name: "Annual Safety Inspection",
+    type: "safety",
+    items: addOrder(safetyInspectionItems),
+    version: 1,
+    lastModifiedBy: uid,
+    lastModifiedAt: now,
+    isActive: true,
+  }, {merge: true});
+
+  await batch.commit();
+  logger.info("Checklist templates seeded", {count: 9});
+  return {seeded: 9};
+});
+
+// ── Seed scheduled maintenance (typical power boat intervals) ──
+
+exports.seedScheduledMaintenance = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const boats = ["Duncan's Watch", "Signal Boat", "Mark Boat", "Safety Boat"];
+  const now = new Date();
+
+  // Typical power boat maintenance schedule items
+  const scheduleTemplates = [
+    // Engine
+    {title: "Engine oil & filter change", description: "Change engine oil and replace oil filter. Use manufacturer-recommended oil weight. Record engine hours.", intervalDays: 50, category: "engine"},
+    {title: "Fuel filter / water separator", description: "Replace fuel filter and drain water separator. Check for contamination.", intervalDays: 100, category: "engine"},
+    {title: "Raw water impeller replacement", description: "Replace raw water cooling impeller. Inspect housing for scoring. Carry spare aboard.", intervalDays: 180, category: "engine"},
+    {title: "Spark plugs (gas) / injectors (diesel)", description: "Inspect and replace spark plugs or clean/test fuel injectors per manufacturer schedule.", intervalDays: 200, category: "engine"},
+    {title: "Drive belt inspection", description: "Inspect alternator and water pump drive belts for cracks, glazing, tension. Replace if worn.", intervalDays: 90, category: "engine"},
+    {title: "Thermostat inspection", description: "Test thermostat operation, replace if engine runs hot or cold.", intervalDays: 365, category: "engine"},
+    {title: "Lower unit gear oil change", description: "Drain and replace lower unit gear oil. Check for water intrusion (milky oil = seal failure).", intervalDays: 100, category: "engine"},
+    {title: "Engine zincs / anodes", description: "Inspect and replace sacrificial zinc anodes on engine, outdrive, and hull.", intervalDays: 90, category: "engine"},
+
+    // Electrical
+    {title: "Battery load test", description: "Load test all batteries. Check terminal connections, clean corrosion. Verify charging voltage.", intervalDays: 90, category: "electrical"},
+    {title: "Navigation light check", description: "Test all navigation lights. Replace bulbs/LEDs as needed. Check wiring connections.", intervalDays: 30, category: "electrical"},
+    {title: "Bilge pump test & clean", description: "Test bilge pump auto float switch and manual override. Clean strainer. Check wiring.", intervalDays: 30, category: "electrical"},
+    {title: "VHF radio inspection", description: "Test VHF radio transmit/receive. Check antenna connections. Verify DSC registration.", intervalDays: 90, category: "electronics"},
+    {title: "GPS / chartplotter update", description: "Update chart data if available. Check GPS antenna. Verify waypoints.", intervalDays: 180, category: "electronics"},
+
+    // Hull
+    {title: "Bottom paint / antifouling", description: "Haul out, clean, and apply antifouling bottom paint. Inspect running gear.", intervalDays: 365, category: "hull"},
+    {title: "Hull cleaning (in-water)", description: "Dive or hire diver to clean hull bottom, prop, and running gear of growth.", intervalDays: 60, category: "hull"},
+    {title: "Through-hull inspection", description: "Inspect all through-hull fittings, seacocks, and hose clamps. Exercise seacocks.", intervalDays: 90, category: "hull"},
+    {title: "Gelcoat inspection & repair", description: "Inspect gelcoat for cracks, chips, crazing. Repair as needed to prevent water intrusion.", intervalDays: 180, category: "hull"},
+    {title: "Trailer inspection (if applicable)", description: "Inspect trailer bearings, tires, lights, winch, bunks/rollers. Grease bearings.", intervalDays: 90, category: "hull"},
+
+    // Safety
+    {title: "Fire extinguisher inspection", description: "Check gauge, inspection tag, pin, and tamper seal. Replace if expired or discharged.", intervalDays: 365, category: "safety"},
+    {title: "Flare expiration check", description: "Check all visual distress signals for expiration dates. Replace expired flares.", intervalDays: 180, category: "safety"},
+    {title: "PFD inspection", description: "Inspect all PFDs for tears, fading, buckle function. Test inflatable PFD cartridges.", intervalDays: 180, category: "safety"},
+    {title: "First aid kit restock", description: "Check first aid kit contents, replace used or expired items.", intervalDays: 90, category: "safety"},
+    {title: "Safety equipment inventory", description: "Full inventory: throw ring, paddle, anchor, whistle, mirror, flashlight, knife.", intervalDays: 90, category: "safety"},
+
+    // General
+    {title: "Canvas & cover inspection", description: "Inspect canvas covers, bimini, enclosures for tears, UV damage, zipper function.", intervalDays: 180, category: "general"},
+    {title: "Dock line replacement", description: "Inspect all dock lines for chafe, UV damage, stiffness. Replace as needed.", intervalDays: 180, category: "general"},
+    {title: "Steering system service", description: "Inspect steering cables/hydraulic lines. Check for play, leaks. Lubricate as needed.", intervalDays: 180, category: "general"},
+    {title: "Anchor rode inspection", description: "Inspect anchor chain and rode for wear, corrosion, chafe. Check shackle and swivel.", intervalDays: 180, category: "general"},
+  ];
+
+  const batch = db.batch();
+  let count = 0;
+
+  for (const boat of boats) {
+    for (const template of scheduleTemplates) {
+      const docId = `${boat.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}_${template.title.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}`;
+      const nextDue = new Date(now.getTime() + template.intervalDays * 24 * 60 * 60 * 1000);
+
+      batch.set(db.collection("scheduled_maintenance").doc(docId), {
+        boatName: boat,
+        title: template.title,
+        description: template.description,
+        intervalDays: template.intervalDays,
+        lastCompletedAt: null,
+        nextDueAt: admin.firestore.Timestamp.fromDate(nextDue),
+      }, {merge: true});
+      count++;
+    }
+  }
+
+  await batch.commit();
+  logger.info("Scheduled maintenance seeded", {count});
+  return {seeded: count};
 });
 
 // ── Seed test admin (development only) ──
