@@ -9,6 +9,9 @@ class WebScaffold extends StatelessWidget {
     required this.body,
     required this.isSidebarCollapsed,
     required this.onToggleSidebar,
+    this.userName,
+    this.userInitials,
+    this.onSignOut,
   });
 
   final String title;
@@ -16,6 +19,9 @@ class WebScaffold extends StatelessWidget {
   final Widget body;
   final bool isSidebarCollapsed;
   final VoidCallback onToggleSidebar;
+  final String? userName;
+  final String? userInitials;
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -54,18 +60,60 @@ class WebScaffold extends StatelessWidget {
             tooltip: 'Notifications',
           ),
           const SizedBox(width: 4),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: const [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.sidebarSelected,
-                  child: Icon(Icons.person, size: 16, color: Colors.white),
+          PopupMenuButton<String>(
+            offset: const Offset(0, 48),
+            onSelected: (value) {
+              if (value == 'sign_out') onSignOut?.call();
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                enabled: false,
+                child: Text(
+                  userName ?? 'User',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
-                SizedBox(width: 8),
-                Text('RC Admin', style: TextStyle(fontSize: 13)),
-              ],
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'sign_out',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Sign Out', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColors.primary,
+                    child: Text(
+                      userInitials ?? '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    userName ?? 'User',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_drop_down, size: 18),
+                ],
+              ),
             ),
           ),
         ],

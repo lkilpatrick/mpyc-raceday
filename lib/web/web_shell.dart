@@ -114,6 +114,31 @@ class _WebShellState extends ConsumerState<WebShell> {
     }
   }
 
+  Future<void> _handleSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(authRepositoryProvider).signOut();
+      if (mounted) context.go('/web-login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userRoles = ref.watch(currentRolesProvider);
@@ -135,15 +160,27 @@ class _WebShellState extends ConsumerState<WebShell> {
       orElse: () => webNavItems.first,
     );
 
+    final member = ref.watch(currentUserProvider).valueOrNull;
+    final userName = member != null
+        ? '${member.firstName} ${member.lastName}'.trim()
+        : null;
+    final userInitials = member != null
+        ? '${member.firstName.isNotEmpty ? member.firstName[0] : ''}${member.lastName.isNotEmpty ? member.lastName[0] : ''}'
+        : null;
+
     return WebScaffold(
       title: 'MPYC Admin',
       isSidebarCollapsed: _isCollapsed,
       onToggleSidebar: _toggleSidebar,
+      userName: userName,
+      userInitials: userInitials,
+      onSignOut: () => _handleSignOut(context),
       sidebar: WebSidebar(
         activeRoute: activeItem.route,
         isCollapsed: _isCollapsed,
         onSelected: (item) => context.go(item.route),
         userRoles: userRoles,
+        onSignOut: () => _handleSignOut(context),
       ),
       body: _buildBody(),
     );

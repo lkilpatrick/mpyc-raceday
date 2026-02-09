@@ -123,12 +123,14 @@ class WebSidebar extends StatelessWidget {
     required this.isCollapsed,
     required this.onSelected,
     required this.userRoles,
+    this.onSignOut,
   });
 
   final String activeRoute;
   final bool isCollapsed;
   final ValueChanged<WebNavItem> onSelected;
   final List<MemberRole> userRoles;
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -212,9 +214,48 @@ class WebSidebar extends StatelessWidget {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      children: widgets,
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            children: widgets,
+          ),
+        ),
+        if (onSignOut != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Divider(height: 1, color: Colors.white.withAlpha(30)),
+          ),
+          Tooltip(
+            message: isCollapsed ? 'Sign Out' : '',
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: ListTile(
+                dense: true,
+                visualDensity: const VisualDensity(vertical: -1),
+                leading: const Icon(Icons.logout, size: 20, color: Colors.red),
+                title: isCollapsed
+                    ? null
+                    : const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                onTap: onSignOut,
+                hoverColor: Colors.red.withAlpha(30),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
     );
   }
 }
