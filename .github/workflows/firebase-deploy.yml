@@ -6,32 +6,32 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── PR checks: analyze, test, build ──
   check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - run: flutter pub get
 
-      - name: Write service account key
-        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+      - name: Write Firebase config
+        run: echo "$FIREBASE_OPTIONS_DART" > lib/firebase_options.dart
         env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
         shell: bash
-
-      - name: Generate Firebase config
-        run: |
-          dart pub global activate flutterfire_cli
-          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
 
       - name: Generate code
         run: dart run build_runner build --delete-conflicting-outputs
@@ -49,33 +49,25 @@ jobs:
   build-and-deploy:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
-      - name: Install Flutter dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Write service account key
-        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+      - name: Write Firebase config
+        run: echo "$FIREBASE_OPTIONS_DART" > lib/firebase_options.dart
         env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
         shell: bash
 
-      - name: Generate Firebase config
-        run: |
-          dart pub global activate flutterfire_cli
-          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
-
-      - name: Generate code (freezed/json_serializable)
+      - name: Generate code
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Run tests
@@ -84,14 +76,20 @@ jobs:
       - name: Build Flutter web
         run: flutter build web --release
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
 
-      - name: Install Functions dependencies
-        run: npm ci
+      - run: npm ci
         working-directory: functions
+
+      - name: Write service account key
+        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        shell: bash
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0.9.0
