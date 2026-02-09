@@ -6,7 +6,7 @@ const {onSchedule} = require("firebase-functions/v2/scheduler");
 
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
 
-const functions = require("firebase-functions");
+const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
 
 
 
@@ -2828,15 +2828,11 @@ exports.createMemberPortalSession = onCall(async (request) => {
 
 // onCourseSelected — Firestore trigger when RaceEvent.courseId is updated
 
-exports.onCourseSelected = functions.firestore
+exports.onCourseSelected = onDocumentUpdated("race_events/{eventId}", async (event) => {
 
-  .document("race_events/{eventId}")
+  const before = event.data.before.data();
 
-  .onUpdate(async (change, context) => {
-
-  const before = change.before.data();
-
-  const after = change.after.data();
+  const after = event.data.after.data();
 
 
 
@@ -2846,7 +2842,7 @@ exports.onCourseSelected = functions.firestore
 
 
 
-  const eventId = context.params.eventId;
+  const eventId = event.params.eventId;
 
   const courseId = after.courseId;
 
@@ -3226,15 +3222,11 @@ exports.sendFleetBroadcast = onCall(async (request) => {
 
 // notifyIncidentReported — Firestore trigger when new incident is created
 
-exports.notifyIncidentReported = functions.firestore
+exports.notifyIncidentReported = onDocumentCreated("incidents/{incidentId}", async (event) => {
 
-  .document("incidents/{incidentId}")
+  const incidentId = event.params.incidentId;
 
-  .onCreate(async (snap, context) => {
-
-  const incidentId = context.params.incidentId;
-
-  const data = snap.data();
+  const data = event.data.data();
 
   if (!data) return;
 
@@ -3372,15 +3364,11 @@ exports.notifyIncidentReported = functions.firestore
 
 // notifyHearingScheduled — triggered when incident hearing is updated
 
-exports.notifyHearingScheduled = functions.firestore
+exports.notifyHearingScheduled = onDocumentUpdated("incidents/{incidentId}", async (event) => {
 
-  .document("incidents/{incidentId}")
+  const before = event.data.before.data();
 
-  .onUpdate(async (change, context) => {
-
-  const before = change.before.data();
-
-  const after = change.after.data();
+  const after = event.data.after.data();
 
 
 
@@ -3398,7 +3386,7 @@ exports.notifyHearingScheduled = functions.firestore
 
 
 
-  const incidentId = context.params.incidentId;
+  const incidentId = event.params.incidentId;
 
   const involvedBoats = after.involvedBoats || [];
 
