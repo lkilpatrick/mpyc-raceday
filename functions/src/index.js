@@ -857,6 +857,64 @@ exports.seedChecklistTemplates = onCall(async (request) => {
   return {seeded: 2};
 });
 
+// ── Seed test admin (development only) ──
+
+exports.seedTestAdmin = onCall(async (request) => {
+  const testEmail = "admin@mpyc.org";
+  const testPassword = "RaceDay2024!";
+
+  // Check if admin already exists in Auth
+  let uid;
+  try {
+    const existing = await admin.auth().getUserByEmail(testEmail);
+    uid = existing.uid;
+    // Update password in case it changed
+    await admin.auth().updateUser(uid, {password: testPassword});
+    logger.info("Test admin auth user already exists", {uid});
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      const newUser = await admin.auth().createUser({
+        email: testEmail,
+        password: testPassword,
+        displayName: "MPYC Admin",
+      });
+      uid = newUser.uid;
+      logger.info("Test admin auth user created", {uid});
+    } else {
+      throw new HttpsError("internal", "Failed to create auth user: " + err.message);
+    }
+  }
+
+  // Set custom claims
+  await admin.auth().setCustomUserClaims(uid, {role: "admin", memberId: "test-admin"});
+
+  // Create or update member document
+  await db.collection("members").doc("test-admin").set({
+    firstName: "MPYC",
+    lastName: "Admin",
+    email: testEmail,
+    mobileNumber: "",
+    memberNumber: "ADMIN-001",
+    membershipStatus: "active",
+    membershipCategory: "Staff",
+    memberTags: ["admin", "rc"],
+    clubspotId: "",
+    role: "admin",
+    firebaseUid: uid,
+    lastSynced: admin.firestore.FieldValue.serverTimestamp(),
+    lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+    emergencyContact: {name: "", phone: ""},
+  }, {merge: true});
+
+  logger.info("Test admin seeded", {uid, email: testEmail});
+  return {
+    email: testEmail,
+    password: testPassword,
+    uid,
+    message: "Test admin created. Sign in at the web dashboard.",
+  };
+});
+
 // ── Authentication: membership-number verification flow ──
 
 function generateVerificationCode() {
