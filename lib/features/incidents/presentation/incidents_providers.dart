@@ -14,7 +14,9 @@ final allIncidentsProvider = StreamProvider<List<RaceIncident>>((ref) {
 
 final eventIncidentsProvider =
     StreamProvider.family<List<RaceIncident>, String>((ref, eventId) {
-  return ref.watch(incidentsRepositoryProvider).watchIncidents(eventId: eventId);
+  return ref.watch(incidentsRepositoryProvider).watchIncidents(
+    eventId: eventId.isEmpty ? null : eventId,
+  );
 });
 
 final incidentDetailProvider =

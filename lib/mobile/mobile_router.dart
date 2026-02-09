@@ -25,6 +25,7 @@ import 'package:mpyc_raceday/features/incidents/presentation/mobile/incident_lis
 import 'package:mpyc_raceday/features/incidents/presentation/mobile/incident_detail_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
+import 'package:mpyc_raceday/features/auth/presentation/mobile/profile_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -192,6 +193,14 @@ final GoRouter mobileRouter = GoRouter(
         final eventId = state.pathParameters['eventId']!;
         return BoatCheckinScreen(eventId: eventId);
       },
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/incidents/browse',
+      builder: (context, state) => const IncidentListScreen(eventId: ''),
     ),
     GoRoute(
       path: '/incidents/:eventId',

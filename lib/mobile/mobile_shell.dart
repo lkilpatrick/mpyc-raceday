@@ -7,6 +7,7 @@ import 'package:mpyc_raceday/features/home/presentation/mobile/home_screen.dart'
 import 'package:mpyc_raceday/features/home/presentation/mobile/more_screen.dart';
 import 'package:mpyc_raceday/mobile/layouts/mobile_scaffold.dart';
 import 'package:mpyc_raceday/mobile/navigation/mobile_bottom_nav.dart';
+import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 
 class MobileShell extends StatefulWidget {
@@ -54,6 +55,7 @@ class _MobileShellState extends State<MobileShell> {
       0 => const HomeScreen(),
       1 => const MyScheduleScreen(),
       2 => const ChecklistListScreen(),
+      3 => const WeatherDashboardScreen(),
       4 => const MoreScreen(),
       _ => PlaceholderPage(title: item.label, subtitle: 'Mobile experience'),
     };

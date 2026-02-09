@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +26,7 @@ class MoreScreen extends StatelessWidget {
           icon: Icons.report,
           label: 'Incidents',
           subtitle: 'View reported incidents',
-          onTap: () => context.push('/incidents/all'),
+          onTap: () => context.push('/incidents/browse'),
         ),
         _MoreItem(
           icon: Icons.sailing,
@@ -38,16 +39,49 @@ class MoreScreen extends StatelessWidget {
           icon: Icons.person,
           label: 'Profile',
           subtitle: 'Your account & preferences',
-          onTap: () => context.push('/more'),
+          onTap: () => context.push('/profile'),
         ),
         _MoreItem(
-          icon: Icons.settings,
-          label: 'Settings',
-          subtitle: 'App settings & notifications',
-          onTap: () => context.push('/more'),
+          icon: Icons.history,
+          label: 'Checklist History',
+          subtitle: 'Past checklist completions',
+          onTap: () => context.push('/checklists/history'),
+        ),
+        const Divider(),
+        _MoreItem(
+          icon: Icons.logout,
+          label: 'Sign Out',
+          subtitle: 'Sign out of your account',
+          onTap: () => _handleSignOut(context),
+          color: Colors.red,
         ),
       ],
     );
+  }
+
+  Future<void> _handleSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) context.go('/login');
+    }
   }
 }
 
@@ -57,19 +91,21 @@ class _MoreItem extends StatelessWidget {
     required this.label,
     required this.subtitle,
     required this.onTap,
+    this.color,
   });
 
   final IconData icon;
   final String label;
   final String subtitle;
   final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: Icon(icon),
-        title: Text(label),
+        leading: Icon(icon, color: color),
+        title: Text(label, style: color != null ? TextStyle(color: color) : null),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
