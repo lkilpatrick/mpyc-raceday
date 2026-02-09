@@ -20,6 +20,19 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Write service account key
+        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        shell: bash
+
+      - name: Generate Firebase config
+        run: |
+          dart pub global activate flutterfire_cli
+          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
+
       - name: Generate code
         run: dart run build_runner build --delete-conflicting-outputs
 
@@ -49,6 +62,19 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Write service account key
+        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        shell: bash
+
+      - name: Generate Firebase config
+        run: |
+          dart pub global activate flutterfire_cli
+          flutterfire configure --project=mpyc-raceday --yes --platforms=android,ios,web
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
+
       - name: Generate code (freezed/json_serializable)
         run: dart run build_runner build --delete-conflicting-outputs
 
@@ -67,14 +93,8 @@ jobs:
         run: npm ci
         working-directory: functions
 
-      - name: Write service account key
-        run: echo "$FIREBASE_SA" > "$RUNNER_TEMP/gcloud.json"
-        env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        shell: bash
-
       - name: Deploy Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: FirebaseExtended/action-hosting-deploy@v0.9.0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
