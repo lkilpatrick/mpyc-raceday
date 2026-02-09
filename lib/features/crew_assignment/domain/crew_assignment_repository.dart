@@ -81,6 +81,12 @@ class RaceEvent {
     this.startTime,
     this.notes,
     this.crewSlots = const [],
+    this.description = '',
+    this.location = '',
+    this.contact = '',
+    this.extraInfo = '',
+    this.rcFleet = '',
+    this.raceCommittee = '',
   });
 
   final String id;
@@ -92,6 +98,12 @@ class RaceEvent {
   final TimeOfDay? startTime;
   final String? notes;
   final List<CrewSlot> crewSlots;
+  final String description;
+  final String location;
+  final String contact;
+  final String extraInfo;
+  final String rcFleet;
+  final String raceCommittee;
 
   int get confirmedCount => crewSlots
       .where((slot) => slot.status == ConfirmationStatus.confirmed)
@@ -107,6 +119,12 @@ class RaceEvent {
     TimeOfDay? startTime,
     String? notes,
     List<CrewSlot>? crewSlots,
+    String? description,
+    String? location,
+    String? contact,
+    String? extraInfo,
+    String? rcFleet,
+    String? raceCommittee,
   }) {
     return RaceEvent(
       id: id ?? this.id,
@@ -118,6 +136,12 @@ class RaceEvent {
       startTime: startTime ?? this.startTime,
       notes: notes ?? this.notes,
       crewSlots: crewSlots ?? this.crewSlots,
+      description: description ?? this.description,
+      location: location ?? this.location,
+      contact: contact ?? this.contact,
+      extraInfo: extraInfo ?? this.extraInfo,
+      rcFleet: rcFleet ?? this.rcFleet,
+      raceCommittee: raceCommittee ?? this.raceCommittee,
     );
   }
 }
@@ -186,6 +210,7 @@ abstract class CrewAssignmentRepository {
   Future<CalendarImportResult> importCalendar(
     List<Map<String, String>> mappedRows,
   );
+  Future<List<Map<String, String>>> exportCalendar();
   Future<void> notifyCrew({
     required String eventId,
     required bool onlyUnconfirmed,

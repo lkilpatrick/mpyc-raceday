@@ -106,6 +106,12 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
       startTime: startTime,
       notes: d['notes'] as String?,
       crewSlots: slots,
+      description: d['description'] as String? ?? '',
+      location: d['location'] as String? ?? '',
+      contact: d['contact'] as String? ?? '',
+      extraInfo: d['extraInfo'] as String? ?? '',
+      rcFleet: d['rcFleet'] as String? ?? '',
+      raceCommittee: d['raceCommittee'] as String? ?? '',
     );
   }
 
@@ -127,6 +133,12 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
                 'status': _confirmToString(s.status),
               })
           .toList(),
+      'description': event.description,
+      'location': event.location,
+      'contact': event.contact,
+      'extraInfo': event.extraInfo,
+      'rcFleet': event.rcFleet,
+      'raceCommittee': event.raceCommittee,
     };
   }
 
@@ -386,6 +398,79 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
     await batch.commit();
   }
 
+  /// Parse a time string like "1:00 PM", "6:00 PM", "TBD", "?" into a TimeOfDay.
+  static TimeOfDay? _parseTime(String? raw) {
+    if (raw == null) return null;
+    final s = raw.trim();
+    if (s.isEmpty || s == 'TBD' || s == '?') return null;
+
+    // Try "H:MM AM/PM" format
+    final match = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)', caseSensitive: false)
+        .firstMatch(s);
+    if (match != null) {
+      var hour = int.parse(match.group(1)!);
+      final minute = int.parse(match.group(2)!);
+      final amPm = match.group(3)!.toUpperCase();
+      if (amPm == 'PM' && hour != 12) hour += 12;
+      if (amPm == 'AM' && hour == 12) hour = 0;
+      return TimeOfDay(hour: hour, minute: minute);
+    }
+    return null;
+  }
+
+  /// Parse date strings like "Sunday, February 08, 2026" or "Saturday, June 6,2026"
+  static DateTime? _parseMpycDate(String? raw) {
+    if (raw == null) return null;
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+
+    // Remove leading day name (e.g. "Sunday, ")
+    final commaIdx = s.indexOf(',');
+    if (commaIdx > 0) {
+      s = s.substring(commaIdx + 1).trim();
+    }
+
+    // Normalize: "June 6,2026" -> "June 6, 2026"
+    s = s.replaceAll(RegExp(r',\s*'), ', ');
+
+    // Try "Month DD, YYYY"
+    final months = {
+      'january': 1, 'february': 2, 'march': 3, 'april': 4,
+      'may': 5, 'june': 6, 'july': 7, 'august': 8,
+      'september': 9, 'october': 10, 'november': 11, 'december': 12,
+    };
+
+    final match = RegExp(r'(\w+)\s+(\d{1,2}),?\s*(\d{4})').firstMatch(s);
+    if (match != null) {
+      final month = months[match.group(1)!.toLowerCase()];
+      final day = int.tryParse(match.group(2)!);
+      final year = int.tryParse(match.group(3)!);
+      if (month != null && day != null && year != null) {
+        return DateTime(year, month, day);
+      }
+    }
+
+    // Fallback to DateTime.tryParse
+    return DateTime.tryParse(raw);
+  }
+
+  /// Derive a series name from the event title.
+  static String _deriveSeries(String name, String description) {
+    final lower = name.toLowerCase();
+    if (lower.contains('sunset series')) return 'Sunset Series';
+    if (lower.contains('phrf spring')) return 'PHRF Spring';
+    if (lower.contains('phrf fall')) return 'PHRF Fall';
+    if (lower.contains('one design spring')) return 'One Design Spring';
+    if (lower.contains('one design summer')) return 'One Design Summer';
+    if (lower.contains('one design fall')) return 'One Design Fall';
+    if (lower.contains('mbyra')) return 'MBYRA';
+    if (lower.contains('commodore')) return 'Commodores Regatta';
+    if (lower.contains('national')) return 'Nationals';
+    if (lower.contains('youth') || lower.contains('junior')) return 'Youth';
+    if (lower.contains('clinic') || lower.contains('training')) return 'Training';
+    return 'Special Events';
+  }
+
   @override
   Future<CalendarImportResult> importCalendar(
     List<Map<String, String>> mappedRows,
@@ -396,24 +481,43 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
     final errors = <String>[];
 
     for (final row in mappedRows) {
-      final name = row['Event Name']?.trim();
-      final dateRaw = row['Date']?.trim();
-      final seriesName = row['Series']?.trim() ?? 'Uncategorized';
+      final name = (row['Title'] ?? row['Event Name'] ?? '').trim();
+      final dateRaw = (row['Start Date'] ?? row['Date'] ?? '').trim();
+      final timeRaw = (row['Start Time'] ?? '').trim();
+      final description = (row['Description'] ?? '').trim();
+      final location = (row['Location'] ?? '').trim();
+      final contact = (row['Contact'] ?? '').trim();
+      final extraInfo = (row['Extra Info'] ?? '').trim();
+      final rcFleet = (row['RC Fleet'] ?? '').trim();
+      final raceCommittee = (row['Race Committee'] ?? '').trim();
 
-      if (name == null || name.isEmpty || dateRaw == null || dateRaw.isEmpty) {
-        errors.add('Missing required value (Event Name/Date): $row');
+      // Skip empty/filler rows (month headers, blank rows)
+      if (name.isEmpty || dateRaw.isEmpty) {
+        if (name.isNotEmpty) {
+          // Might be a month header like "JANUARY" — skip silently
+        }
         skipped++;
         continue;
       }
 
-      final date = DateTime.tryParse(dateRaw);
+      // Skip the revision header row
+      if (name.toLowerCase().startsWith('revision')) {
+        skipped++;
+        continue;
+      }
+
+      final date = _parseMpycDate(dateRaw);
       if (date == null) {
-        errors.add('Invalid date format for "$name": $dateRaw');
+        errors.add('Invalid date for "$name": $dateRaw');
         skipped++;
         continue;
       }
 
-      // Check for duplicates
+      final startTime = _parseTime(timeRaw);
+      final seriesName = _deriveSeries(name, description);
+      final seriesId = seriesName.toLowerCase().replaceAll(' ', '_');
+
+      // Check for duplicates by name + date
       final dupSnap = await _eventsCol
           .where('name', isEqualTo: name)
           .get();
@@ -425,7 +529,19 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
       }).firstOrNull;
 
       if (duplicate != null) {
-        await _eventsCol.doc(duplicate.id).update({'seriesName': seriesName});
+        // Update existing event with all CSV fields
+        await _eventsCol.doc(duplicate.id).update({
+          'seriesId': seriesId,
+          'seriesName': seriesName,
+          'startTimeHour': startTime?.hour,
+          'startTimeMinute': startTime?.minute,
+          'description': description,
+          'location': location,
+          'contact': contact,
+          'extraInfo': extraInfo,
+          'rcFleet': rcFleet,
+          'raceCommittee': raceCommittee,
+        });
         updated++;
       } else {
         final id = 'import_${date.millisecondsSinceEpoch}_$created';
@@ -433,9 +549,16 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
           id: id,
           name: name,
           date: date,
-          seriesId: seriesName.toLowerCase().replaceAll(' ', '_'),
+          seriesId: seriesId,
           seriesName: seriesName,
           status: EventStatus.scheduled,
+          startTime: startTime,
+          description: description,
+          location: location,
+          contact: contact,
+          extraInfo: extraInfo,
+          rcFleet: rcFleet,
+          raceCommittee: raceCommittee,
           crewSlots: const [
             CrewSlot(role: CrewRole.pro),
             CrewSlot(role: CrewRole.signalBoat),
@@ -453,6 +576,52 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
       skipped: skipped,
       errors: errors,
     );
+  }
+
+  @override
+  Future<List<Map<String, String>>> exportCalendar() async {
+    final snap = await _eventsCol.orderBy('date').get();
+    final rows = <Map<String, String>>[];
+
+    for (final doc in snap.docs) {
+      final event = _eventFromDoc(doc);
+      final dateStr = _formatExportDate(event.date);
+      final timeStr = event.startTime != null
+          ? _formatExportTime(event.startTime!)
+          : '';
+
+      rows.add({
+        'Title': event.name,
+        'Start Date': dateStr,
+        'Start Time': timeStr,
+        'Description': event.description,
+        'Location': event.location,
+        'Contact': event.contact,
+        'Extra Info': event.extraInfo,
+        'RC Fleet': event.rcFleet,
+        'Race Committee': event.raceCommittee,
+      });
+    }
+    return rows;
+  }
+
+  static String _formatExportDate(DateTime d) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final dayName = days[d.weekday - 1];
+    final monthName = months[d.month];
+    final dayNum = d.day.toString().padLeft(2, '0');
+    return '$dayName, $monthName $dayNum, ${d.year}';
+  }
+
+  static String _formatExportTime(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final amPm = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $amPm';
   }
 
   @override

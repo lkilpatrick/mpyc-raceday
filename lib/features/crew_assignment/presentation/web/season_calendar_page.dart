@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../domain/crew_assignment_repository.dart';
 import '../crew_assignment_providers.dart';
 import 'calendar_import_dialog.dart';
+import 'csv_download_stub.dart' if (dart.library.html) 'csv_download_web.dart' as csv_dl;
 import 'series_management_dialog.dart';
 
 enum _CalendarViewMode { month, week, day }
@@ -54,7 +55,12 @@ class _SeasonCalendarPageState extends ConsumerState<SeasonCalendarPage> {
                 builder: (_) => const CalendarImportDialog(),
               ),
               icon: const Icon(Icons.upload_file),
-              label: const Text('Import from Excel'),
+              label: const Text('Import CSV'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _exportCalendar,
+              icon: const Icon(Icons.download),
+              label: const Text('Export CSV'),
             ),
             OutlinedButton.icon(
               onPressed: _addEvent,
@@ -164,6 +170,36 @@ class _SeasonCalendarPageState extends ConsumerState<SeasonCalendarPage> {
         ),
       ],
     );
+  }
+
+  Future<void> _exportCalendar() async {
+    final repo = ref.read(crewAssignmentRepositoryProvider);
+    final rows = await repo.exportCalendar();
+    if (rows.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No events to export.')),
+        );
+      }
+      return;
+    }
+
+    final headers = [
+      'Title', 'Start Date', 'Start Time', 'Description',
+      'Location', 'Contact', 'Extra Info', 'RC Fleet', 'Race Committee',
+    ];
+    final buffer = StringBuffer();
+    buffer.writeln(headers.join(','));
+    for (final row in rows) {
+      final line = headers.map((h) {
+        final val = row[h] ?? '';
+        // Quote fields that contain commas
+        return val.contains(',') ? '"$val"' : val;
+      }).join(',');
+      buffer.writeln(line);
+    }
+
+    csv_dl.downloadCsv(buffer.toString(), 'MPYC_RaceCalendar_Export.csv');
   }
 
   Future<void> _addEvent() async {
