@@ -101,16 +101,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Color _roleColor(MemberRole role) {
+    switch (role) {
+      case MemberRole.webAdmin:
+        return Colors.red;
+      case MemberRole.clubBoard:
+        return Colors.purple;
+      case MemberRole.rcChair:
+        return Colors.blue;
+      case MemberRole.skipper:
+        return Colors.teal;
+      case MemberRole.crew:
+        return Colors.grey;
+    }
+  }
+
   String _roleDisplayName(MemberRole role) {
     switch (role) {
-      case MemberRole.admin:
-        return 'Administrator';
-      case MemberRole.pro:
-        return 'PRO';
-      case MemberRole.rcCrew:
-        return 'RC Crew';
-      case MemberRole.member:
-        return 'Member';
+      case MemberRole.webAdmin:
+        return 'Web Admin';
+      case MemberRole.clubBoard:
+        return 'Club Board';
+      case MemberRole.rcChair:
+        return 'RC Chair';
+      case MemberRole.skipper:
+        return 'Skipper';
+      case MemberRole.crew:
+        return 'Crew';
     }
   }
 
@@ -163,21 +180,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        _roleDisplayName(member.role),
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                    Wrap(
+                      spacing: 6,
+                      children: member.roles.map((role) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _roleColor(role).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
+                        child: Text(
+                          _roleDisplayName(role),
+                          style: TextStyle(
+                            color: _roleColor(role),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )).toList(),
                     ),
                     const SizedBox(height: 4),
                     Text(

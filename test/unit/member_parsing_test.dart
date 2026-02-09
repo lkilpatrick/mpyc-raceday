@@ -3,41 +3,51 @@ import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 
 void main() {
   group('MemberRole parsing', () {
-    // Mirrors the logic in auth_repository_impl.dart _memberFromSnapshot
+    // Mirrors the logic in auth_repository_impl.dart _parseRole
 
-    MemberRole parseRole(String roleStr) {
-      return MemberRole.values.firstWhere(
-        (r) =>
-            r.name == roleStr ||
-            (roleStr == 'rc_crew' && r == MemberRole.rcCrew),
-        orElse: () => MemberRole.member,
-      );
-    }
+    const roleStringMap = {
+      'web_admin': MemberRole.webAdmin,
+      'webAdmin': MemberRole.webAdmin,
+      'club_board': MemberRole.clubBoard,
+      'clubBoard': MemberRole.clubBoard,
+      'rc_chair': MemberRole.rcChair,
+      'rcChair': MemberRole.rcChair,
+      'skipper': MemberRole.skipper,
+      'crew': MemberRole.crew,
+      // Legacy mappings
+      'admin': MemberRole.webAdmin,
+      'pro': MemberRole.rcChair,
+      'rc_crew': MemberRole.crew,
+      'member': MemberRole.crew,
+    };
 
-    test('parses "admin" role', () {
-      expect(parseRole('admin'), MemberRole.admin);
+    MemberRole? parseRole(String roleStr) => roleStringMap[roleStr];
+
+    test('parses new role names', () {
+      expect(parseRole('web_admin'), MemberRole.webAdmin);
+      expect(parseRole('club_board'), MemberRole.clubBoard);
+      expect(parseRole('rc_chair'), MemberRole.rcChair);
+      expect(parseRole('skipper'), MemberRole.skipper);
+      expect(parseRole('crew'), MemberRole.crew);
     });
 
-    test('parses "pro" role', () {
-      expect(parseRole('pro'), MemberRole.pro);
+    test('parses camelCase variants', () {
+      expect(parseRole('webAdmin'), MemberRole.webAdmin);
+      expect(parseRole('clubBoard'), MemberRole.clubBoard);
+      expect(parseRole('rcChair'), MemberRole.rcChair);
     });
 
-    test('parses "rcCrew" role (Dart enum name)', () {
-      expect(parseRole('rcCrew'), MemberRole.rcCrew);
+    test('legacy role names map to new roles', () {
+      expect(parseRole('admin'), MemberRole.webAdmin);
+      expect(parseRole('pro'), MemberRole.rcChair);
+      expect(parseRole('rc_crew'), MemberRole.crew);
+      expect(parseRole('member'), MemberRole.crew);
     });
 
-    test('parses "rc_crew" role (Firestore snake_case)', () {
-      expect(parseRole('rc_crew'), MemberRole.rcCrew);
-    });
-
-    test('parses "member" role', () {
-      expect(parseRole('member'), MemberRole.member);
-    });
-
-    test('unknown role defaults to member', () {
-      expect(parseRole('unknown'), MemberRole.member);
-      expect(parseRole(''), MemberRole.member);
-      expect(parseRole('superadmin'), MemberRole.member);
+    test('unknown role returns null', () {
+      expect(parseRole('unknown'), isNull);
+      expect(parseRole(''), isNull);
+      expect(parseRole('superadmin'), isNull);
     });
   });
 
@@ -146,20 +156,24 @@ void main() {
         membershipCategory: 'Full',
         memberTags: ['racer', 'volunteer'],
         clubspotId: 'cs1',
-        role: MemberRole.rcCrew,
+        roles: [MemberRole.rcChair, MemberRole.skipper],
         lastSynced: DateTime(2024, 6, 15),
         emergencyContact:
             const EmergencyContact(name: 'Jane', phone: '555-0200'),
       );
 
       expect(member.firstName, 'John');
-      expect(member.role, MemberRole.rcCrew);
+      expect(member.roles, contains(MemberRole.rcChair));
+      expect(member.roles, contains(MemberRole.skipper));
+      expect(member.isRCChair, true);
+      expect(member.isSkipperOrAbove, true);
       expect(member.memberTags, hasLength(2));
       expect(member.profilePhotoUrl, isNull);
+      expect(member.isActive, true);
+      expect(member.displayName, 'John Doe');
     });
 
     test('Member.fromJson roundtrip', () {
-      // Build JSON manually to match what Firestore/generated code expects
       final json = <String, dynamic>{
         'id': 'm1',
         'firstName': 'Alice',
@@ -171,18 +185,62 @@ void main() {
         'membershipCategory': 'Associate',
         'memberTags': <String>[],
         'clubspotId': 'cs2',
-        'role': 'admin',
+        'roles': ['web_admin', 'club_board'],
         'lastSynced': '2024-01-01T00:00:00.000',
         'profilePhotoUrl': null,
         'emergencyContact': {'name': 'Bob', 'phone': '555-0400'},
+        'signalNumber': '247',
+        'boatName': 'Pegasus',
+        'sailNumber': '34127',
+        'boatClass': 'CHB 34',
+        'phrfRating': 228,
+        'isActive': true,
       };
 
       final restored = Member.fromJson(json);
       expect(restored.firstName, 'Alice');
-      expect(restored.role, MemberRole.admin);
+      expect(restored.roles, contains(MemberRole.webAdmin));
+      expect(restored.roles, contains(MemberRole.clubBoard));
+      expect(restored.isWebAdmin, true);
+      expect(restored.isClubBoard, true);
+      expect(restored.canAccessWebDashboard, true);
       expect(restored.emergencyContact.name, 'Bob');
       expect(restored.emergencyContact.phone, '555-0400');
       expect(restored.memberTags, isEmpty);
+      expect(restored.signalNumber, '247');
+      expect(restored.boatName, 'Pegasus');
+      expect(restored.sailNumber, '34127');
+      expect(restored.boatClass, 'CHB 34');
+      expect(restored.phrfRating, 228);
+      expect(restored.isActive, true);
+    });
+
+    test('new fields default correctly', () {
+      final member = Member(
+        id: 'm2',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        mobileNumber: '',
+        memberNumber: '1',
+        membershipStatus: 'active',
+        membershipCategory: 'Full',
+        memberTags: [],
+        clubspotId: '',
+        roles: [MemberRole.crew],
+        lastSynced: DateTime(2024),
+        emergencyContact:
+            const EmergencyContact(name: '', phone: ''),
+      );
+
+      expect(member.signalNumber, isNull);
+      expect(member.boatName, isNull);
+      expect(member.sailNumber, isNull);
+      expect(member.boatClass, isNull);
+      expect(member.phrfRating, isNull);
+      expect(member.firebaseUid, isNull);
+      expect(member.lastLogin, isNull);
+      expect(member.isActive, true);
     });
   });
 

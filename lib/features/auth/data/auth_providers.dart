@@ -23,27 +23,38 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
   return authState.valueOrNull != null;
 });
 
-final currentMemberRoleProvider = Provider<MemberRole?>((ref) {
+final currentRolesProvider = Provider<List<MemberRole>>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user.valueOrNull?.role;
+  return user.valueOrNull?.roles ?? [];
 });
 
-final isAdminProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentMemberRoleProvider);
-  return role == MemberRole.admin;
+final isWebAdminProvider = Provider<bool>((ref) {
+  return ref.watch(currentRolesProvider).contains(MemberRole.webAdmin);
 });
 
-final isProProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentMemberRoleProvider);
-  return role == MemberRole.pro;
+final isClubBoardProvider = Provider<bool>((ref) {
+  return ref.watch(currentRolesProvider).any((r) =>
+      [MemberRole.webAdmin, MemberRole.clubBoard].contains(r));
 });
 
-final isRcCrewProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentMemberRoleProvider);
-  return role == MemberRole.rcCrew;
+final isRCChairProvider = Provider<bool>((ref) {
+  return ref.watch(currentRolesProvider).any((r) =>
+      [MemberRole.webAdmin, MemberRole.rcChair].contains(r));
 });
 
-final isAdminOrProProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentMemberRoleProvider);
-  return role == MemberRole.admin || role == MemberRole.pro;
+final isSkipperOrAboveProvider = Provider<bool>((ref) {
+  return ref.watch(currentRolesProvider).any((r) => [
+        MemberRole.webAdmin,
+        MemberRole.rcChair,
+        MemberRole.clubBoard,
+        MemberRole.skipper,
+      ].contains(r));
+});
+
+final canAccessWebDashboardProvider = Provider<bool>((ref) {
+  return ref.watch(currentRolesProvider).any((r) => [
+        MemberRole.webAdmin,
+        MemberRole.clubBoard,
+        MemberRole.rcChair,
+      ].contains(r));
 });

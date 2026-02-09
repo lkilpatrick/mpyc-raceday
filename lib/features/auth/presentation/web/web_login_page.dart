@@ -46,8 +46,8 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
 
       if (!mounted) return;
 
-      // Check if user has admin or pro role
-      if (member.role != MemberRole.admin && member.role != MemberRole.pro) {
+      // Check if user has web dashboard access (web_admin, club_board, or rc_chair)
+      if (!member.canAccessWebDashboard) {
         await repo.signOut();
         context.go('/no-access');
         return;

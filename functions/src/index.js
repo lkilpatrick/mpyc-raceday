@@ -1153,7 +1153,7 @@ exports.seedTestAdmin = onCall(async (request) => {
   }
 
   // Set custom claims
-  await admin.auth().setCustomUserClaims(uid, {role: "admin", memberId: "test-admin"});
+  await admin.auth().setCustomUserClaims(uid, {roles: ["web_admin"], memberId: "test-admin"});
 
   // Create or update member document
   await db.collection("members").doc("test-admin").set({
@@ -1162,15 +1162,17 @@ exports.seedTestAdmin = onCall(async (request) => {
     email: testEmail,
     mobileNumber: "",
     memberNumber: "ADMIN-001",
+    signalNumber: "001",
     membershipStatus: "active",
     membershipCategory: "Staff",
     memberTags: ["admin", "rc"],
     clubspotId: "",
-    role: "admin",
+    roles: ["web_admin"],
     firebaseUid: uid,
     lastSynced: admin.firestore.FieldValue.serverTimestamp(),
     lastLogin: admin.firestore.FieldValue.serverTimestamp(),
     emergencyContact: {name: "", phone: ""},
+    isActive: true,
   }, {merge: true});
 
   logger.info("Test admin seeded", {uid, email: testEmail});

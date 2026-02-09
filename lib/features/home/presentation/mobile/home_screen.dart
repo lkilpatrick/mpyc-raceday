@@ -17,10 +17,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final memberAsync = ref.watch(currentUserProvider);
-    final role = memberAsync.valueOrNull?.role ?? MemberRole.member;
-    final isProOrAdmin =
-        role == MemberRole.admin || role == MemberRole.pro;
-    final isRcCrew = role == MemberRole.rcCrew || isProOrAdmin;
+    final member = memberAsync.valueOrNull;
+    final isRCChair = member?.isRCChair ?? false;
+    final isProOrAdmin = isRCChair;
+    final isRcCrew = isRCChair;
 
     return RefreshIndicator(
       onRefresh: () async {

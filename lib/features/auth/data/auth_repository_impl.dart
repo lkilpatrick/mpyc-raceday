@@ -195,13 +195,21 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Member _memberFromSnapshot(String id, Map<String, dynamic> data) {
-    final roleStr = data['role'] as String? ?? 'member';
-    final role = MemberRole.values.firstWhere(
-      (r) =>
-          r.name == roleStr ||
-          (roleStr == 'rc_crew' && r == MemberRole.rcCrew),
-      orElse: () => MemberRole.member,
-    );
+    // Parse roles — support both new List<String> 'roles' and legacy single 'role'
+    final roles = <MemberRole>[];
+    final rolesRaw = data['roles'];
+    if (rolesRaw is List) {
+      for (final r in rolesRaw) {
+        final parsed = _parseRole(r as String);
+        if (parsed != null) roles.add(parsed);
+      }
+    } else {
+      // Legacy: single 'role' field
+      final roleStr = data['role'] as String? ?? 'crew';
+      final parsed = _parseRole(roleStr);
+      roles.add(parsed ?? MemberRole.crew);
+    }
+    if (roles.isEmpty) roles.add(MemberRole.crew);
 
     final emergencyData =
         data['emergencyContact'] as Map<String, dynamic>? ??
@@ -217,6 +225,14 @@ class AuthRepositoryImpl implements AuthRepository {
       lastSynced = DateTime.now();
     }
 
+    DateTime? lastLogin;
+    final lastLoginRaw = data['lastLogin'];
+    if (lastLoginRaw is Timestamp) {
+      lastLogin = lastLoginRaw.toDate();
+    } else if (lastLoginRaw is String) {
+      lastLogin = DateTime.tryParse(lastLoginRaw);
+    }
+
     return Member(
       id: id,
       firstName: data['firstName'] as String? ?? '',
@@ -228,13 +244,39 @@ class AuthRepositoryImpl implements AuthRepository {
       membershipCategory: data['membershipCategory'] as String? ?? '',
       memberTags: List<String>.from(data['memberTags'] ?? []),
       clubspotId: data['clubspotId'] as String? ?? '',
-      role: role,
+      roles: roles,
       lastSynced: lastSynced,
       profilePhotoUrl: data['profilePhotoUrl'] as String?,
       emergencyContact: EmergencyContact(
         name: emergencyData['name'] as String? ?? 'Unknown',
         phone: emergencyData['phone'] as String? ?? '',
       ),
+      signalNumber: data['signalNumber'] as String?,
+      boatName: data['boatName'] as String?,
+      sailNumber: data['sailNumber'] as String?,
+      boatClass: data['boatClass'] as String?,
+      phrfRating: (data['phrfRating'] as num?)?.toInt(),
+      firebaseUid: data['firebaseUid'] as String?,
+      lastLogin: lastLogin,
+      isActive: data['isActive'] as bool? ?? true,
     );
   }
+
+  static const _roleStringMap = {
+    'web_admin': MemberRole.webAdmin,
+    'webAdmin': MemberRole.webAdmin,
+    'club_board': MemberRole.clubBoard,
+    'clubBoard': MemberRole.clubBoard,
+    'rc_chair': MemberRole.rcChair,
+    'rcChair': MemberRole.rcChair,
+    'skipper': MemberRole.skipper,
+    'crew': MemberRole.crew,
+    // Legacy mappings
+    'admin': MemberRole.webAdmin,
+    'pro': MemberRole.rcChair,
+    'rc_crew': MemberRole.crew,
+    'member': MemberRole.crew,
+  };
+
+  static MemberRole? _parseRole(String roleStr) => _roleStringMap[roleStr];
 }

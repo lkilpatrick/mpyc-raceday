@@ -29,14 +29,31 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
   String _roleDisplayName(MemberRole role) {
     switch (role) {
-      case MemberRole.admin:
-        return 'Administrator';
-      case MemberRole.pro:
-        return 'PRO';
-      case MemberRole.rcCrew:
-        return 'RC Crew';
-      case MemberRole.member:
-        return 'Member';
+      case MemberRole.webAdmin:
+        return 'Web Admin';
+      case MemberRole.clubBoard:
+        return 'Club Board';
+      case MemberRole.rcChair:
+        return 'RC Chair';
+      case MemberRole.skipper:
+        return 'Skipper';
+      case MemberRole.crew:
+        return 'Crew';
+    }
+  }
+
+  Color _roleColor(MemberRole role) {
+    switch (role) {
+      case MemberRole.webAdmin:
+        return Colors.red;
+      case MemberRole.clubBoard:
+        return Colors.purple;
+      case MemberRole.rcChair:
+        return Colors.blue;
+      case MemberRole.skipper:
+        return Colors.teal;
+      case MemberRole.crew:
+        return Colors.grey;
     }
   }
 
@@ -149,17 +166,23 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                                   ?.copyWith(color: Colors.grey[600]),
                             ),
                             const SizedBox(height: 8),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
-                                _InfoChip(
-                                  label: _roleDisplayName(member.role),
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 8),
+                                ...member.roles.map((role) => _InfoChip(
+                                  label: _roleDisplayName(role),
+                                  color: _roleColor(role),
+                                )),
                                 _InfoChip(
                                   label: 'Member #${member.memberNumber}',
                                   color: AppColors.accent,
                                 ),
+                                if (member.signalNumber != null)
+                                  _InfoChip(
+                                    label: 'Signal #${member.signalNumber}',
+                                    color: AppColors.primary,
+                                  ),
                               ],
                             ),
                           ],

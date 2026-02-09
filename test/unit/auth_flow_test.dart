@@ -4,30 +4,67 @@ import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 void main() {
   group('MemberRole', () {
     test('all roles exist', () {
-      expect(MemberRole.values, hasLength(4));
-      expect(MemberRole.values, contains(MemberRole.admin));
-      expect(MemberRole.values, contains(MemberRole.pro));
-      expect(MemberRole.values, contains(MemberRole.rcCrew));
-      expect(MemberRole.values, contains(MemberRole.member));
+      expect(MemberRole.values, hasLength(5));
+      expect(MemberRole.values, contains(MemberRole.webAdmin));
+      expect(MemberRole.values, contains(MemberRole.clubBoard));
+      expect(MemberRole.values, contains(MemberRole.rcChair));
+      expect(MemberRole.values, contains(MemberRole.skipper));
+      expect(MemberRole.values, contains(MemberRole.crew));
     });
 
-    test('role hierarchy: admin > pro > rcCrew > member', () {
-      bool isAdminOrPro(MemberRole role) =>
-          role == MemberRole.admin || role == MemberRole.pro;
-      bool isRcOrAbove(MemberRole role) =>
-          role == MemberRole.admin ||
-          role == MemberRole.pro ||
-          role == MemberRole.rcCrew;
+    test('role-based access helpers on Member', () {
+      Member makeMember(List<MemberRole> roles) => Member(
+            id: 'test',
+            firstName: 'Test',
+            lastName: 'User',
+            email: 'test@test.com',
+            mobileNumber: '',
+            memberNumber: '1',
+            membershipStatus: 'active',
+            membershipCategory: 'Full',
+            memberTags: [],
+            clubspotId: '',
+            roles: roles,
+            lastSynced: DateTime.now(),
+            emergencyContact:
+                const EmergencyContact(name: '', phone: ''),
+          );
 
-      expect(isAdminOrPro(MemberRole.admin), true);
-      expect(isAdminOrPro(MemberRole.pro), true);
-      expect(isAdminOrPro(MemberRole.rcCrew), false);
-      expect(isAdminOrPro(MemberRole.member), false);
+      // web_admin has all access
+      final admin = makeMember([MemberRole.webAdmin]);
+      expect(admin.isWebAdmin, true);
+      expect(admin.isClubBoard, true);
+      expect(admin.isRCChair, true);
+      expect(admin.canAccessWebDashboard, true);
 
-      expect(isRcOrAbove(MemberRole.admin), true);
-      expect(isRcOrAbove(MemberRole.pro), true);
-      expect(isRcOrAbove(MemberRole.rcCrew), true);
-      expect(isRcOrAbove(MemberRole.member), false);
+      // club_board has board + web dashboard access
+      final board = makeMember([MemberRole.clubBoard]);
+      expect(board.isWebAdmin, false);
+      expect(board.isClubBoard, true);
+      expect(board.isRCChair, false);
+      expect(board.canAccessWebDashboard, true);
+
+      // rc_chair has RC + web dashboard access
+      final rc = makeMember([MemberRole.rcChair]);
+      expect(rc.isWebAdmin, false);
+      expect(rc.isRCChair, true);
+      expect(rc.canAccessWebDashboard, true);
+
+      // skipper has no web dashboard access
+      final skipper = makeMember([MemberRole.skipper]);
+      expect(skipper.isSkipperOrAbove, true);
+      expect(skipper.canAccessWebDashboard, false);
+
+      // crew has minimal access
+      final crew = makeMember([MemberRole.crew]);
+      expect(crew.isSkipperOrAbove, false);
+      expect(crew.canAccessWebDashboard, false);
+
+      // multi-role: skipper + club_board
+      final multi = makeMember([MemberRole.skipper, MemberRole.clubBoard]);
+      expect(multi.isClubBoard, true);
+      expect(multi.isSkipperOrAbove, true);
+      expect(multi.canAccessWebDashboard, true);
     });
   });
 
