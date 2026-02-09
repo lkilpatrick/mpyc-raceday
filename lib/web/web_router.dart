@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/no_access_page.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/web_login_page.dart';
@@ -24,121 +25,40 @@ final GoRouter webRouter = GoRouter(
       path: '/no-access',
       builder: (context, state) => const NoAccessPage(),
     ),
-    GoRoute(
-      path: '/dashboard',
-      builder: (context, state) => const WebShell(activeRoute: '/dashboard'),
-    ),
-    GoRoute(
-      path: '/season-calendar',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/season-calendar'),
-    ),
-    GoRoute(
-      path: '/crew-management',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/crew-management'),
-    ),
-    GoRoute(
-      path: '/members',
-      builder: (context, state) => const WebShell(activeRoute: '/members'),
-    ),
-    GoRoute(
-      path: '/sync-dashboard',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/sync-dashboard'),
-    ),
-    GoRoute(
-      path: '/race-events',
-      builder: (context, state) => const WebShell(activeRoute: '/race-events'),
-    ),
-    GoRoute(
-      path: '/courses',
-      builder: (context, state) => const WebShell(activeRoute: '/courses'),
-    ),
-    GoRoute(
-      path: '/checklists-admin',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/checklists-admin'),
-    ),
-    GoRoute(
-      path: '/checklists-history',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/checklists-history'),
-    ),
-    GoRoute(
-      path: '/checklists-compliance',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/checklists-compliance'),
-    ),
-    GoRoute(
-      path: '/maintenance',
-      builder: (context, state) => const WebShell(activeRoute: '/maintenance'),
-    ),
-    GoRoute(
-      path: '/maintenance-manage',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/maintenance-manage'),
-    ),
-    GoRoute(
-      path: '/maintenance-schedule',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/maintenance-schedule'),
-    ),
-    GoRoute(
-      path: '/maintenance-reports',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/maintenance-reports'),
-    ),
-    GoRoute(
-      path: '/rules-reference',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/rules-reference'),
-    ),
-    GoRoute(
-      path: '/course-config',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/course-config'),
-    ),
-    GoRoute(
-      path: '/fleet-broadcasts',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/fleet-broadcasts'),
-    ),
-    GoRoute(
-      path: '/incidents',
-      builder: (context, state) => const WebShell(activeRoute: '/incidents'),
-    ),
-    GoRoute(
-      path: '/fleet-management',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/fleet-management'),
-    ),
-    GoRoute(
-      path: '/event-checkins',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/event-checkins'),
-    ),
-    GoRoute(
-      path: '/weather-logs',
-      builder: (context, state) => const WebShell(activeRoute: '/weather-logs'),
-    ),
-    GoRoute(
-      path: '/weather-analytics',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/weather-analytics'),
-    ),
-    GoRoute(
-      path: '/reports',
-      builder: (context, state) => const WebShell(activeRoute: '/reports'),
-    ),
-    GoRoute(
-      path: '/system-settings',
-      builder: (context, state) =>
-          const WebShell(activeRoute: '/system-settings'),
-    ),
-    GoRoute(
-      path: '/settings',
-      builder: (context, state) => const WebShell(activeRoute: '/settings'),
+    ShellRoute(
+      builder: (context, state, child) {
+        return WebShell(
+          activeRoute: state.matchedLocation,
+          child: child,
+        );
+      },
+      routes: [
+        GoRoute(path: '/dashboard', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/season-calendar', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/crew-management', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/members', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/sync-dashboard', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/race-events', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/courses', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/checklists-admin', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/checklists-history', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/checklists-compliance', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/maintenance', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/maintenance-manage', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/maintenance-schedule', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/maintenance-reports', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/rules-reference', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/course-config', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/fleet-broadcasts', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/incidents', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/fleet-management', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/event-checkins', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/weather-logs', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/weather-analytics', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/reports', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/system-settings', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/settings', builder: (_, __) => const SizedBox()),
+      ],
     ),
   ],
 );

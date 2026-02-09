@@ -197,6 +197,7 @@ abstract class CrewAssignmentRepository {
   Stream<List<SeriesDefinition>> watchSeries();
 
   Future<void> saveEvent(RaceEvent event);
+  Future<void> deleteEvent(String eventId);
   Future<void> bulkCancelEvents(List<String> eventIds);
   Future<void> updateCrewSlots(String eventId, List<CrewSlot> slots);
   Future<void> updateConfirmation(

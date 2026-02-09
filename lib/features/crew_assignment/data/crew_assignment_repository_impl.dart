@@ -297,6 +297,11 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
   }
 
   @override
+  Future<void> deleteEvent(String eventId) async {
+    await _eventsCol.doc(eventId).delete();
+  }
+
+  @override
   Future<void> bulkCancelEvents(List<String> eventIds) async {
     final batch = _firestore.batch();
     for (final id in eventIds) {

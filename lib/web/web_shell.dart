@@ -29,9 +29,10 @@ import 'package:mpyc_raceday/web/layouts/web_scaffold.dart';
 import 'package:mpyc_raceday/web/navigation/web_sidebar.dart';
 
 class WebShell extends StatefulWidget {
-  const WebShell({super.key, required this.activeRoute});
+  const WebShell({super.key, required this.activeRoute, required this.child});
 
   final String activeRoute;
+  final Widget child;
 
   @override
   State<WebShell> createState() => _WebShellState();
