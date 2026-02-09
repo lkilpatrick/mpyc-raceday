@@ -132,6 +132,11 @@ final GoRouter webRouter = GoRouter(
       builder: (context, state) => const WebShell(activeRoute: '/reports'),
     ),
     GoRoute(
+      path: '/system-settings',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/system-settings'),
+    ),
+    GoRoute(
       path: '/settings',
       builder: (context, state) => const WebShell(activeRoute: '/settings'),
     ),
