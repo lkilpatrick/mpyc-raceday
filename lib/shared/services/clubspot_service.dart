@@ -116,7 +116,23 @@ class ClubspotService {
         final existingSnap = await docRef.get();
         final existing = existingSnap.data() ?? const <String, dynamic>{};
 
-        final resolvedRole = (existing['role'] ?? 'member').toString();
+        // Preserve roles — never overwrite from Clubspot
+        List<dynamic> roles;
+        final existingRoles = existing['roles'];
+        if (existingRoles is List && existingRoles.isNotEmpty) {
+          roles = existingRoles;
+        } else {
+          // Migrate legacy single 'role' field
+          final legacyRole = existing['role'] as String?;
+          const legacyMap = {
+            'admin': 'web_admin',
+            'pro': 'rc_chair',
+            'rc_crew': 'crew',
+            'member': 'crew',
+          };
+          roles = [legacyMap[legacyRole] ?? 'crew'];
+        }
+
         final mapped = <String, dynamic>{
           'id': memberDocId,
           'firstName': member.firstName,
@@ -131,8 +147,17 @@ class ClubspotService {
           'dob': member.dob.isNotEmpty ? member.dob : null,
           'clubspotId': member.id,
           'clubspotCreated': member.created,
-          'role': resolvedRole,
+          'roles': roles,
           'lastSynced': Timestamp.now(),
+          // Preserve locally-managed fields
+          'signalNumber': existing['signalNumber'],
+          'boatName': existing['boatName'],
+          'sailNumber': existing['sailNumber'],
+          'boatClass': existing['boatClass'],
+          'phrfRating': existing['phrfRating'],
+          'firebaseUid': existing['firebaseUid'],
+          'lastLogin': existing['lastLogin'],
+          'isActive': existing['isActive'] ?? true,
           'profilePhotoUrl': existing['profilePhotoUrl'],
           'emergencyContact':
               existing['emergencyContact'] ??

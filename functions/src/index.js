@@ -90,7 +90,15 @@ async function fetchMembers(clubId, {apiKey, primaryOnly = false, skip = 0} = {}
 }
 
 function mapClubspotMember(member, existing = {}) {
-  const role = existing.role || "member";
+  // Preserve roles — never overwrite from Clubspot
+  // If existing has 'roles' array, keep it; else migrate legacy 'role' to roles array
+  let roles = existing.roles;
+  if (!Array.isArray(roles) || roles.length === 0) {
+    const legacyRole = existing.role;
+    const legacyMap = {admin: "web_admin", pro: "rc_chair", rc_crew: "crew", member: "crew"};
+    roles = legacyRole ? [legacyMap[legacyRole] || "crew"] : ["crew"];
+  }
+
   // membership is a nested object: { id, status, category }
   const membership = member.membership || {};
   return {
@@ -107,8 +115,17 @@ function mapClubspotMember(member, existing = {}) {
     dob: member.dob ? String(member.dob) : null,
     clubspotId: String(member.id || member._id || ""),
     clubspotCreated: member.created || null,
-    role,
+    roles,
     lastSynced: admin.firestore.FieldValue.serverTimestamp(),
+    // Preserve fields that are managed locally, never overwritten by Clubspot
+    signalNumber: existing.signalNumber || null,
+    boatName: existing.boatName || null,
+    sailNumber: existing.sailNumber || null,
+    boatClass: existing.boatClass || null,
+    phrfRating: existing.phrfRating || null,
+    firebaseUid: existing.firebaseUid || null,
+    lastLogin: existing.lastLogin || null,
+    isActive: existing.isActive !== undefined ? existing.isActive : true,
     profilePhotoUrl: existing.profilePhotoUrl || null,
     emergencyContact: existing.emergencyContact || {name: "Unknown", phone: ""},
   };
@@ -1203,14 +1220,38 @@ exports.sendVerificationCode = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "memberNumber is required");
   }
 
-  const membersSnap = await db
+  const input = memberNumber.trim();
+
+  // Try to find member by: signal number, membership number, or email
+  let membersSnap;
+
+  // 1. Try signal number first (pure digits, short)
+  membersSnap = await db
     .collection("members")
-    .where("memberNumber", "==", memberNumber.trim())
+    .where("signalNumber", "==", input)
     .limit(1)
     .get();
 
+  // 2. Try membership number
   if (membersSnap.empty) {
-    throw new HttpsError("not-found", "No member found with that membership number");
+    membersSnap = await db
+      .collection("members")
+      .where("memberNumber", "==", input)
+      .limit(1)
+      .get();
+  }
+
+  // 3. Try email
+  if (membersSnap.empty && input.includes("@")) {
+    membersSnap = await db
+      .collection("members")
+      .where("email", "==", input.toLowerCase())
+      .limit(1)
+      .get();
+  }
+
+  if (membersSnap.empty) {
+    throw new HttpsError("not-found", "No member found. Try your signal #, membership #, or email.");
   }
 
   const memberDoc = membersSnap.docs[0];

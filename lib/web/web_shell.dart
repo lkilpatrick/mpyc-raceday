@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/admin/presentation/web/member_management_page.dart';
 import 'package:mpyc_raceday/features/admin/presentation/web/sync_dashboard_panel.dart';
+import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/admin_profile_page.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_compliance_dashboard.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_completion_history_page.dart';
@@ -28,17 +30,17 @@ import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 import 'package:mpyc_raceday/web/layouts/web_scaffold.dart';
 import 'package:mpyc_raceday/web/navigation/web_sidebar.dart';
 
-class WebShell extends StatefulWidget {
+class WebShell extends ConsumerStatefulWidget {
   const WebShell({super.key, required this.activeRoute, required this.child});
 
   final String activeRoute;
   final Widget child;
 
   @override
-  State<WebShell> createState() => _WebShellState();
+  ConsumerState<WebShell> createState() => _WebShellState();
 }
 
-class _WebShellState extends State<WebShell> {
+class _WebShellState extends ConsumerState<WebShell> {
   bool _isCollapsed = false;
   bool _autoCollapsed = false;
 
@@ -114,6 +116,8 @@ class _WebShellState extends State<WebShell> {
 
   @override
   Widget build(BuildContext context) {
+    final userRoles = ref.watch(currentRolesProvider);
+
     // Auto-collapse sidebar on tablet-width screens (<1024px)
     final width = MediaQuery.sizeOf(context).width;
     if (width < 1024 && !_isCollapsed && !_autoCollapsed) {
@@ -139,6 +143,7 @@ class _WebShellState extends State<WebShell> {
         activeRoute: activeItem.route,
         isCollapsed: _isCollapsed,
         onSelected: (item) => context.go(item.route),
+        userRoles: userRoles,
       ),
       body: _buildBody(),
     );
