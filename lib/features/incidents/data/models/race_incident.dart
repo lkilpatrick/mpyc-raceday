@@ -1,8 +1,3 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'race_incident.freezed.dart';
-part 'race_incident.g.dart';
-
 enum CourseLocationOnIncident {
   startLine,
   windwardMark,
@@ -14,17 +9,20 @@ enum CourseLocationOnIncident {
 
 enum BoatInvolvedRole { protesting, protested, witness }
 
-@freezed
-abstract class BoatInvolved with _$BoatInvolved {
-  const factory BoatInvolved({
-    required String sailNumber,
-    required String boatName,
-    required String skipperName,
-    required BoatInvolvedRole role,
-  }) = _BoatInvolved;
+class BoatInvolved {
+  const BoatInvolved({
+    required this.boatId,
+    required this.sailNumber,
+    required this.boatName,
+    required this.skipperName,
+    required this.role,
+  });
 
-  factory BoatInvolved.fromJson(Map<String, dynamic> json) =>
-      _$BoatInvolvedFromJson(json);
+  final String boatId;
+  final String sailNumber;
+  final String boatName;
+  final String skipperName;
+  final BoatInvolvedRole role;
 }
 
 enum RaceIncidentStatus {
@@ -36,27 +34,78 @@ enum RaceIncidentStatus {
   withdrawn,
 }
 
-@freezed
-abstract class RaceIncident with _$RaceIncident {
-  const factory RaceIncident({
-    required String id,
-    required String eventId,
-    required int raceNumber,
-    required DateTime reportedAt,
-    required String reportedBy,
-    required DateTime incidentTime,
-    required String description,
-    required CourseLocationOnIncident locationOnCourse,
-    required List<BoatInvolved> involvedBoats,
-    required List<String> rulesAlleged,
-    required RaceIncidentStatus status,
-    DateTime? hearingDate,
-    required String resolution,
-    required String penaltyApplied,
-    required List<String> witnesses,
-    required List<String> attachments,
-  }) = _RaceIncident;
+class IncidentComment {
+  const IncidentComment({
+    required this.id,
+    required this.authorId,
+    required this.authorName,
+    required this.text,
+    required this.createdAt,
+  });
 
-  factory RaceIncident.fromJson(Map<String, dynamic> json) =>
-      _$RaceIncidentFromJson(json);
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String text;
+  final DateTime createdAt;
+}
+
+class HearingInfo {
+  const HearingInfo({
+    this.scheduledAt,
+    this.location,
+    this.juryMembers = const [],
+    this.findingOfFact = '',
+    this.rulesBroken = const [],
+    this.penalty = '',
+    this.decisionNotes = '',
+  });
+
+  final DateTime? scheduledAt;
+  final String? location;
+  final List<String> juryMembers;
+  final String findingOfFact;
+  final List<String> rulesBroken;
+  final String penalty;
+  final String decisionNotes;
+}
+
+class RaceIncident {
+  const RaceIncident({
+    required this.id,
+    required this.eventId,
+    required this.raceNumber,
+    required this.reportedAt,
+    required this.reportedBy,
+    required this.incidentTime,
+    required this.description,
+    required this.locationOnCourse,
+    required this.involvedBoats,
+    this.rulesAlleged = const [],
+    required this.status,
+    this.hearing,
+    this.resolution = '',
+    this.penaltyApplied = '',
+    this.witnesses = const [],
+    this.attachments = const [],
+    this.comments = const [],
+  });
+
+  final String id;
+  final String eventId;
+  final int raceNumber;
+  final DateTime reportedAt;
+  final String reportedBy;
+  final DateTime incidentTime;
+  final String description;
+  final CourseLocationOnIncident locationOnCourse;
+  final List<BoatInvolved> involvedBoats;
+  final List<String> rulesAlleged;
+  final RaceIncidentStatus status;
+  final HearingInfo? hearing;
+  final String resolution;
+  final String penaltyApplied;
+  final List<String> witnesses;
+  final List<String> attachments;
+  final List<IncidentComment> comments;
 }

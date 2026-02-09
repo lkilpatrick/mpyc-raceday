@@ -19,6 +19,10 @@ import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_histor
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_selection_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_display_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/fleet_broadcast_screen.dart';
+import 'package:mpyc_raceday/features/boat_checkin/presentation/mobile/boat_checkin_screen.dart';
+import 'package:mpyc_raceday/features/incidents/presentation/mobile/quick_incident_screen.dart';
+import 'package:mpyc_raceday/features/incidents/presentation/mobile/incident_list_screen.dart';
+import 'package:mpyc_raceday/features/incidents/presentation/mobile/incident_detail_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
@@ -180,6 +184,34 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) {
         final eventId = state.pathParameters['eventId']!;
         return FleetBroadcastScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/checkin/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return BoatCheckinScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/incidents/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return IncidentListScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/incidents/report/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return QuickIncidentScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/incidents/detail/:incidentId',
+      builder: (context, state) {
+        final incidentId = state.pathParameters['incidentId']!;
+        return IncidentDetailScreen(incidentId: incidentId);
       },
     ),
   ],

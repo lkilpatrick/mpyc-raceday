@@ -15,6 +15,9 @@ import 'package:mpyc_raceday/features/weather/presentation/web/weather_analytics
 import 'package:mpyc_raceday/features/weather/presentation/web/weather_log_page.dart';
 import 'package:mpyc_raceday/features/courses/presentation/web/course_configuration_page.dart';
 import 'package:mpyc_raceday/features/courses/presentation/web/fleet_broadcast_history_page.dart';
+import 'package:mpyc_raceday/features/boat_checkin/presentation/web/fleet_management_page.dart';
+import 'package:mpyc_raceday/features/boat_checkin/presentation/web/event_checkin_page.dart';
+import 'package:mpyc_raceday/features/incidents/presentation/web/incident_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_availability_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
@@ -72,6 +75,12 @@ class _WebShellState extends State<WebShell> {
         return const CourseConfigurationPage();
       case '/fleet-broadcasts':
         return const FleetBroadcastHistoryPage();
+      case '/fleet-management':
+        return const FleetManagementPage();
+      case '/event-checkins':
+        return const EventCheckinPage();
+      case '/incidents':
+        return const IncidentManagementPage();
       case '/weather-logs':
         return const WeatherLogPage();
       case '/weather-analytics':

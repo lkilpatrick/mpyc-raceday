@@ -2,6 +2,7 @@ const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
+const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
 const twilio = require("twilio");
 
 if (!admin.apps.length) {
@@ -1233,5 +1234,171 @@ exports.sendFleetBroadcast = onCall(async (request) => {
     return { smsSent, pushSent, total: smsSent + pushSent };
   } catch (err) {
     throw new HttpsError("internal", err.message || "Failed to send fleet broadcast");
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// Incident & Protest Notifications
+// ══════════════════════════════════════════════════════
+
+// notifyIncidentReported — Firestore trigger when new incident is created
+exports.notifyIncidentReported = onDocumentCreated("incidents/{incidentId}", async (event) => {
+  const incidentId = event.params.incidentId;
+  const data = event.data.data();
+  if (!data) return;
+
+  const eventId = data.eventId || "";
+  const raceNumber = data.raceNumber || 0;
+  const description = data.description || "";
+  const boats = (data.involvedBoats || []).map(b => `${b.sailNumber} (${b.boatName})`).join(" vs ");
+  const rules = (data.rulesAlleged || []).map(r => r.split(" – ")[0]).join(", ");
+
+  logger.info("Incident reported", { incidentId, eventId, boats });
+
+  try {
+    // Notify all admins/PRO
+    const adminsSnap = await db.collection("members")
+      .where("role", "in", ["admin", "pro", "rc"])
+      .get();
+
+    let pushSent = 0;
+    let smsSent = 0;
+
+    const pushTitle = `Incident: ${boats}`;
+    const pushBody = `Race ${raceNumber} — ${description.substring(0, 100)}${description.length > 100 ? "..." : ""}`;
+    const smsMsg = `MPYC RC: Incident reported — ${boats}. Race ${raceNumber}. ${rules ? "Rules: " + rules + ". " : ""}${description.substring(0, 120)}`;
+
+    for (const adminDoc of adminsSnap.docs) {
+      const adminData = adminDoc.data();
+
+      // FCM push
+      if (adminData.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: adminData.fcmToken,
+            notification: { title: pushTitle, body: pushBody },
+            data: {
+              type: "incident_reported",
+              incidentId,
+              eventId,
+              screen: `/incidents/detail/${incidentId}`,
+            },
+          });
+          pushSent++;
+        } catch (pushErr) {
+          logger.error("Incident push failed", { adminId: adminDoc.id, error: pushErr.message });
+        }
+      }
+
+      // SMS
+      if (adminData.phone && twilioClient) {
+        try {
+          await twilioClient.messages.create({
+            body: smsMsg,
+            from: process.env.TWILIO_FROM_NUMBER,
+            to: adminData.phone,
+          });
+          smsSent++;
+        } catch (smsErr) {
+          logger.error("Incident SMS failed", { adminId: adminDoc.id, error: smsErr.message });
+        }
+      }
+    }
+
+    logger.info("Incident notification sent", { incidentId, pushSent, smsSent });
+  } catch (err) {
+    logger.error("notifyIncidentReported error", { error: err.message });
+  }
+});
+
+// notifyHearingScheduled — triggered when incident hearing is updated
+exports.notifyHearingScheduled = onDocumentUpdated("incidents/{incidentId}", async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+
+  // Only fire if hearing was just scheduled (scheduledAt changed)
+  const beforeScheduled = before.hearing?.scheduledAt;
+  const afterScheduled = after.hearing?.scheduledAt;
+
+  if (!afterScheduled) return;
+  if (beforeScheduled && beforeScheduled.toMillis() === afterScheduled.toMillis()) return;
+
+  const incidentId = event.params.incidentId;
+  const involvedBoats = after.involvedBoats || [];
+  const raceNumber = after.raceNumber || 0;
+
+  // Format hearing date
+  const hearingDate = afterScheduled.toDate();
+  const dateStr = hearingDate.toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const location = after.hearing?.location || "TBD";
+
+  logger.info("Hearing scheduled", { incidentId, hearingDate: dateStr });
+
+  try {
+    // Notify all involved boats' skippers
+    for (const boat of involvedBoats) {
+      const boatId = boat.boatId;
+      if (!boatId) continue;
+
+      // Look up skipper from boats collection
+      const boatDoc = await db.collection("boats").doc(boatId).get();
+      if (!boatDoc.exists) continue;
+      const boatData = boatDoc.data();
+      const ownerName = boatData.ownerName || boat.skipperName;
+
+      // Find member by name match (best effort)
+      const membersSnap = await db.collection("members")
+        .where("displayName", "==", ownerName)
+        .limit(1)
+        .get();
+
+      if (membersSnap.empty) continue;
+      const member = membersSnap.docs[0].data();
+
+      const roleLabel = boat.role === "protesting" ? "Protesting Party" :
+                         boat.role === "protested" ? "Protested Party" : "Witness";
+
+      const smsMsg = `MPYC Protest Hearing: ${roleLabel} — Race ${raceNumber}, ${boat.sailNumber} (${boat.boatName}). Hearing: ${dateStr} at ${location}. Please attend.`;
+
+      // FCM
+      if (member.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: member.fcmToken,
+            notification: {
+              title: "Protest Hearing Scheduled",
+              body: `${dateStr} at ${location} — Race ${raceNumber}`,
+            },
+            data: {
+              type: "hearing_scheduled",
+              incidentId,
+              screen: `/incidents/detail/${incidentId}`,
+            },
+          });
+        } catch (e) {
+          logger.error("Hearing push failed", { boatId, error: e.message });
+        }
+      }
+
+      // SMS
+      if (member.phone && twilioClient) {
+        try {
+          await twilioClient.messages.create({
+            body: smsMsg,
+            from: process.env.TWILIO_FROM_NUMBER,
+            to: member.phone,
+          });
+        } catch (e) {
+          logger.error("Hearing SMS failed", { boatId, error: e.message });
+        }
+      }
+    }
+
+    logger.info("Hearing notifications sent", { incidentId, boatCount: involvedBoats.length });
+  } catch (err) {
+    logger.error("notifyHearingScheduled error", { error: err.message });
   }
 });

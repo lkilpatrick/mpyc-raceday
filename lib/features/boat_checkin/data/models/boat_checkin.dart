@@ -1,25 +1,33 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+class BoatCheckin {
+  const BoatCheckin({
+    required this.id,
+    required this.eventId,
+    required this.boatId,
+    required this.sailNumber,
+    required this.boatName,
+    required this.skipperName,
+    required this.boatClass,
+    required this.checkedInAt,
+    required this.checkedInBy,
+    required this.crewCount,
+    this.crewNames = const [],
+    required this.safetyEquipmentVerified,
+    this.phrfRating,
+    this.notes = '',
+  });
 
-part 'boat_checkin.freezed.dart';
-part 'boat_checkin.g.dart';
-
-@freezed
-abstract class BoatCheckin with _$BoatCheckin {
-  const factory BoatCheckin({
-    required String id,
-    required String eventId,
-    required String sailNumber,
-    required String boatName,
-    required String skipperName,
-    required String boatClass,
-    required DateTime checkedInAt,
-    required String checkedInBy,
-    required int crewCount,
-    required List<String> crewNames,
-    required bool safetyEquipmentVerified,
-    int? phrfRating,
-  }) = _BoatCheckin;
-
-  factory BoatCheckin.fromJson(Map<String, dynamic> json) =>
-      _$BoatCheckinFromJson(json);
+  final String id;
+  final String eventId;
+  final String boatId;
+  final String sailNumber;
+  final String boatName;
+  final String skipperName;
+  final String boatClass;
+  final DateTime checkedInAt;
+  final String checkedInBy;
+  final int crewCount;
+  final List<String> crewNames;
+  final bool safetyEquipmentVerified;
+  final int? phrfRating;
+  final String notes;
 }
