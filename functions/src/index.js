@@ -1038,3 +1038,200 @@ exports.createMemberPortalSession = onCall(async (request) => {
     throw new HttpsError("internal", error.message || "Failed to create Clubspot portal session");
   }
 });
+
+// ══════════════════════════════════════════════════════
+// Course Selection & Fleet Notification
+// ══════════════════════════════════════════════════════
+
+// onCourseSelected — Firestore trigger when RaceEvent.courseId is updated
+exports.onCourseSelected = onDocumentUpdated("race_events/{eventId}", async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+
+  // Only fire if courseId changed
+  if (before.courseId === after.courseId) return;
+
+  const eventId = event.params.eventId;
+  const courseId = after.courseId;
+  if (!courseId) return;
+
+  logger.info("Course selected", { eventId, courseId });
+
+  try {
+    // Fetch course config
+    const courseDoc = await db.collection("courses").doc(courseId).get();
+    if (!courseDoc.exists) {
+      logger.error("Course not found", { courseId });
+      return;
+    }
+    const course = courseDoc.data();
+    const courseNum = course.courseNumber || "";
+    const markSeq = course.courseName || "";
+    const distance = course.distanceNm || 0;
+    const finishAt = course.finishLocation === "mark_x" ? "Mark X" : "Committee Boat";
+    const requiresInflatable = course.requiresInflatable || false;
+    const inflatableType = course.inflatableType || "";
+
+    // Build message
+    let smsMsg = `MPYC RC: Course ${courseNum} selected. ${markSeq}. ${distance}nm. Finish at ${finishAt}.`;
+    if (requiresInflatable && inflatableType) {
+      smsMsg += ` RC will set ${inflatableType} mark(s) before start.`;
+    }
+    if (course.finishLocation === "mark_x") {
+      smsMsg += " Finish at Mark X.";
+    }
+    if (before.courseId) {
+      smsMsg += ` Course CHANGED from ${before.courseId} to ${courseNum}.`;
+    }
+    smsMsg += " Good sailing!";
+
+    // Fetch checked-in boats for this event
+    const checkinsSnap = await db.collection("boat_checkins")
+      .where("eventId", "==", eventId)
+      .get();
+
+    let smsSent = 0;
+    let pushSent = 0;
+
+    for (const checkinDoc of checkinsSnap.docs) {
+      const checkin = checkinDoc.data();
+      const skipperId = checkin.skipperId;
+      if (!skipperId) continue;
+
+      // Look up member contact info
+      const memberDoc = await db.collection("members").doc(skipperId).get();
+      if (!memberDoc.exists) continue;
+      const member = memberDoc.data();
+
+      // Send SMS via Twilio
+      if (member.phone && twilioClient) {
+        try {
+          await twilioClient.messages.create({
+            body: smsMsg,
+            from: process.env.TWILIO_FROM_NUMBER,
+            to: member.phone,
+          });
+          smsSent++;
+        } catch (smsErr) {
+          logger.error("SMS send failed", { skipperId, error: smsErr.message });
+        }
+      }
+
+      // Send FCM push notification
+      if (member.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: member.fcmToken,
+            notification: {
+              title: `Course ${courseNum} Selected`,
+              body: `${markSeq} — ${distance}nm`,
+            },
+            data: {
+              type: "course_selected",
+              eventId,
+              courseId,
+              screen: `/courses/display/${courseId}`,
+            },
+          });
+          pushSent++;
+        } catch (pushErr) {
+          logger.error("Push send failed", { skipperId, error: pushErr.message });
+        }
+      }
+    }
+
+    // Create FleetBroadcast record
+    await db.collection("fleet_broadcasts").add({
+      eventId,
+      sentBy: "system",
+      message: smsMsg,
+      type: "courseSelection",
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      deliveryCount: smsSent + pushSent,
+    });
+
+    logger.info("Course notification sent", { courseNum, smsSent, pushSent });
+  } catch (err) {
+    logger.error("onCourseSelected error", { error: err.message });
+  }
+});
+
+// sendFleetBroadcast — callable Cloud Function for custom/template messages
+exports.sendFleetBroadcast = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { eventId, message, type } = request.data;
+  if (!eventId || !message) {
+    throw new HttpsError("invalid-argument", "eventId and message are required");
+  }
+
+  try {
+    // Fetch checked-in boats
+    const checkinsSnap = await db.collection("boat_checkins")
+      .where("eventId", "==", eventId)
+      .get();
+
+    let smsSent = 0;
+    let pushSent = 0;
+
+    for (const checkinDoc of checkinsSnap.docs) {
+      const checkin = checkinDoc.data();
+      const skipperId = checkin.skipperId;
+      if (!skipperId) continue;
+
+      const memberDoc = await db.collection("members").doc(skipperId).get();
+      if (!memberDoc.exists) continue;
+      const member = memberDoc.data();
+
+      // SMS
+      if (member.phone && twilioClient) {
+        try {
+          await twilioClient.messages.create({
+            body: message,
+            from: process.env.TWILIO_FROM_NUMBER,
+            to: member.phone,
+          });
+          smsSent++;
+        } catch (smsErr) {
+          logger.error("Fleet broadcast SMS failed", { skipperId, error: smsErr.message });
+        }
+      }
+
+      // FCM
+      if (member.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: member.fcmToken,
+            notification: {
+              title: "MPYC Race Committee",
+              body: message,
+            },
+            data: {
+              type: "fleet_broadcast",
+              eventId,
+            },
+          });
+          pushSent++;
+        } catch (pushErr) {
+          logger.error("Fleet broadcast push failed", { skipperId, error: pushErr.message });
+        }
+      }
+    }
+
+    // Log broadcast
+    await db.collection("fleet_broadcasts").add({
+      eventId,
+      sentBy: request.auth.uid,
+      message,
+      type: type || "general",
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      deliveryCount: smsSent + pushSent,
+    });
+
+    return { smsSent, pushSent, total: smsSent + pushSent };
+  } catch (err) {
+    throw new HttpsError("internal", err.message || "Failed to send fleet broadcast");
+  }
+});

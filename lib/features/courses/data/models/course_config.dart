@@ -1,40 +1,59 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'course_config.freezed.dart';
-part 'course_config.g.dart';
-
 enum MarkRounding { port, starboard }
 
-@freezed
-abstract class CourseMark with _$CourseMark {
-  const factory CourseMark({
-    required String name,
-    required int order,
-    required MarkRounding rounding,
-  }) = _CourseMark;
+class CourseMark {
+  const CourseMark({
+    required this.markId,
+    required this.markName,
+    required this.order,
+    required this.rounding,
+    this.isFinish = false,
+  });
 
-  factory CourseMark.fromJson(Map<String, dynamic> json) =>
-      _$CourseMarkFromJson(json);
+  final String markId;
+  final String markName;
+  final int order;
+  final MarkRounding rounding;
+  final bool isFinish;
 }
 
-@freezed
-abstract class CourseConfig with _$CourseConfig {
-  const factory CourseConfig({
-    required String id,
-    required String courseName,
-    required String courseNumber,
-    required String description,
-    String? diagramUrl,
-    required List<CourseMark> marks,
-    double? distanceNm,
-    required int windRangeMin,
-    required int windRangeMax,
-    required double windSpeedMin,
-    required double windSpeedMax,
-    required bool isActive,
-    required String notes,
-  }) = _CourseConfig;
+class CourseConfig {
+  const CourseConfig({
+    required this.id,
+    required this.courseNumber,
+    required this.courseName,
+    required this.marks,
+    required this.distanceNm,
+    required this.windDirectionBand,
+    required this.windDirMin,
+    required this.windDirMax,
+    required this.finishLocation,
+    this.canMultiply = false,
+    this.requiresInflatable = false,
+    this.inflatableType,
+    this.isActive = true,
+    this.notes = '',
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : createdAt = createdAt ?? null,
+        updatedAt = updatedAt ?? null;
 
-  factory CourseConfig.fromJson(Map<String, dynamic> json) =>
-      _$CourseConfigFromJson(json);
+  final String id;
+  final String courseNumber;
+  final String courseName;
+  final List<CourseMark> marks;
+  final double distanceNm;
+  final String windDirectionBand;
+  final int windDirMin;
+  final int windDirMax;
+  final String finishLocation;
+  final bool canMultiply;
+  final bool requiresInflatable;
+  final String? inflatableType;
+  final bool isActive;
+  final String notes;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  String get markSequenceDisplay =>
+      marks.map((m) => '${m.markName}${m.rounding == MarkRounding.port ? 'p' : 's'}${m.isFinish ? ' (Finish)' : ''}').join(' – ');
 }

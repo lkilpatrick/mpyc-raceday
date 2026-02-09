@@ -95,6 +95,16 @@ final GoRouter webRouter = GoRouter(
           const WebShell(activeRoute: '/rules-reference'),
     ),
     GoRoute(
+      path: '/course-config',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/course-config'),
+    ),
+    GoRoute(
+      path: '/fleet-broadcasts',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/fleet-broadcasts'),
+    ),
+    GoRoute(
       path: '/incidents',
       builder: (context, state) => const WebShell(activeRoute: '/incidents'),
     ),

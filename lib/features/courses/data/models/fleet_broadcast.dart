@@ -1,28 +1,30 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'fleet_broadcast.freezed.dart';
-part 'fleet_broadcast.g.dart';
-
 enum BroadcastType {
   courseSelection,
   postponement,
   abandonment,
   courseChange,
+  generalRecall,
+  shortenedCourse,
+  cancellation,
   general,
 }
 
-@freezed
-abstract class FleetBroadcast with _$FleetBroadcast {
-  const factory FleetBroadcast({
-    required String id,
-    required String eventId,
-    required String sentBy,
-    required String message,
-    required BroadcastType type,
-    required DateTime sentAt,
-    required int deliveryCount,
-  }) = _FleetBroadcast;
+class FleetBroadcast {
+  const FleetBroadcast({
+    required this.id,
+    required this.eventId,
+    required this.sentBy,
+    required this.message,
+    required this.type,
+    required this.sentAt,
+    required this.deliveryCount,
+  });
 
-  factory FleetBroadcast.fromJson(Map<String, dynamic> json) =>
-      _$FleetBroadcastFromJson(json);
+  final String id;
+  final String eventId;
+  final String sentBy;
+  final String message;
+  final BroadcastType type;
+  final DateTime sentAt;
+  final int deliveryCount;
 }
