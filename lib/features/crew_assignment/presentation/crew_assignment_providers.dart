@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/crew_assignment_repository_impl.dart';
@@ -9,7 +10,9 @@ final crewAssignmentRepositoryProvider = Provider<CrewAssignmentRepository>((
   return CrewAssignmentRepositoryImpl();
 });
 
-final currentUserIdProvider = Provider<String>((ref) => 'user_1');
+final currentUserIdProvider = Provider<String>((ref) {
+  return FirebaseAuth.instance.currentUser?.uid ?? '';
+});
 
 final upcomingEventsProvider = StreamProvider<List<RaceEvent>>((ref) {
   return ref.watch(crewAssignmentRepositoryProvider).watchUpcomingEvents();

@@ -402,6 +402,200 @@ exports.sendFleetNotification = onCall(async (request) => {
   return {deliveryCount, broadcastId: broadcastRef.id};
 });
 
+// ── Crew Assignment: notifications ──
+
+exports.sendCrewNotification = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+  const {eventId, onlyUnconfirmed} = request.data || {};
+  if (!eventId) {
+    throw new HttpsError("invalid-argument", "eventId is required");
+  }
+
+  const eventDoc = await db.collection("race_events").doc(eventId).get();
+  if (!eventDoc.exists) {
+    throw new HttpsError("not-found", "Event not found");
+  }
+  const eventData = eventDoc.data();
+  const crewSlots = eventData.crewSlots || [];
+
+  let notified = 0;
+  for (const slot of crewSlots) {
+    if (!slot.memberId) continue;
+    if (onlyUnconfirmed && slot.status === "confirmed") continue;
+
+    // Look up member to get contact info
+    const memberSnap = await db.collection("members")
+      .where("firebaseUid", "==", slot.memberId)
+      .limit(1)
+      .get();
+
+    if (memberSnap.empty) continue;
+    const member = memberSnap.docs[0].data();
+
+    const eventDate = eventData.date?.toDate
+      ? eventData.date.toDate()
+      : new Date(eventData.date);
+    const dateStr = eventDate.toLocaleDateString("en-US", {
+      weekday: "short", month: "short", day: "numeric",
+    });
+
+    const message = `MPYC Raceday: You're assigned to ${eventData.name} on ${dateStr} as ${slot.role}. Please confirm in the app.`;
+
+    // Send SMS if Twilio is configured and member has a mobile number
+    if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+      try {
+        const twilioClient = twilio(
+          process.env.TWILIO_ACCOUNT_SID,
+          process.env.TWILIO_AUTH_TOKEN,
+        );
+        await twilioClient.messages.create({
+          body: message,
+          from: process.env.TWILIO_FROM_NUMBER,
+          to: member.mobileNumber,
+        });
+      } catch (smsErr) {
+        logger.warn("SMS send failed", {memberId: slot.memberId, error: smsErr.message});
+      }
+    }
+
+    // Send push notification via FCM if member has tokens
+    try {
+      const tokensSnap = await db.collection("fcm_tokens")
+        .where("userId", "==", slot.memberId)
+        .get();
+      const tokens = tokensSnap.docs.map((d) => d.data().token).filter(Boolean);
+      if (tokens.length > 0) {
+        await admin.messaging().sendEachForMulticast({
+          tokens,
+          notification: {
+            title: `RC Duty: ${eventData.name}`,
+            body: `You're assigned as ${slot.role} on ${dateStr}`,
+          },
+          data: {eventId, role: slot.role || ""},
+        });
+      }
+    } catch (pushErr) {
+      logger.warn("Push notification failed", {memberId: slot.memberId, error: pushErr.message});
+    }
+
+    notified++;
+  }
+
+  logger.info("Crew notifications sent", {eventId, notified});
+  return {notified};
+});
+
+exports.sendCrewReminders = onSchedule(
+  {schedule: "every day 08:00", timeZone: "America/New_York"},
+  async () => {
+    const now = new Date();
+    const oneWeekOut = new Date(now);
+    oneWeekOut.setDate(oneWeekOut.getDate() + 7);
+    const oneDayOut = new Date(now);
+    oneDayOut.setDate(oneDayOut.getDate() + 1);
+
+    // Query upcoming events in the next 7 days
+    const eventsSnap = await db.collection("race_events")
+      .where("date", ">=", admin.firestore.Timestamp.fromDate(now))
+      .where("date", "<=", admin.firestore.Timestamp.fromDate(oneWeekOut))
+      .where("status", "==", "scheduled")
+      .get();
+
+    let totalSent = 0;
+
+    for (const eventDoc of eventsSnap.docs) {
+      const eventData = eventDoc.data();
+      const eventDate = eventData.date?.toDate
+        ? eventData.date.toDate()
+        : new Date(eventData.date);
+      const crewSlots = eventData.crewSlots || [];
+
+      const daysUntil = Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24));
+      let reminderType;
+      if (daysUntil <= 0) {
+        reminderType = "morning_of";
+      } else if (daysUntil <= 1) {
+        reminderType = "day_before";
+      } else if (daysUntil <= 7) {
+        reminderType = "week_before";
+      } else {
+        continue;
+      }
+
+      const dateStr = eventDate.toLocaleDateString("en-US", {
+        weekday: "short", month: "short", day: "numeric",
+      });
+
+      for (const slot of crewSlots) {
+        if (!slot.memberId || slot.status === "declined") continue;
+
+        const memberSnap = await db.collection("members")
+          .where("firebaseUid", "==", slot.memberId)
+          .limit(1)
+          .get();
+        if (memberSnap.empty) continue;
+        const member = memberSnap.docs[0].data();
+
+        let message;
+        switch (reminderType) {
+          case "morning_of":
+            message = `Race day! You're on ${slot.role} for ${eventData.name}. Report time: ${eventData.startTimeHour || "TBD"}:${String(eventData.startTimeMinute || 0).padStart(2, "0")}`;
+            break;
+          case "day_before":
+            message = `Reminder: RC duty tomorrow — ${eventData.name} as ${slot.role}`;
+            break;
+          case "week_before":
+            message = `You're assigned to RC for ${eventData.name} on ${dateStr} as ${slot.role}`;
+            break;
+        }
+
+        // Send SMS
+        if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+          try {
+            const twilioClient = twilio(
+              process.env.TWILIO_ACCOUNT_SID,
+              process.env.TWILIO_AUTH_TOKEN,
+            );
+            await twilioClient.messages.create({
+              body: message,
+              from: process.env.TWILIO_FROM_NUMBER,
+              to: member.mobileNumber,
+            });
+          } catch (err) {
+            logger.warn("Reminder SMS failed", {error: err.message});
+          }
+        }
+
+        // Send push
+        try {
+          const tokensSnap = await db.collection("fcm_tokens")
+            .where("userId", "==", slot.memberId)
+            .get();
+          const tokens = tokensSnap.docs.map((d) => d.data().token).filter(Boolean);
+          if (tokens.length > 0) {
+            await admin.messaging().sendEachForMulticast({
+              tokens,
+              notification: {
+                title: reminderType === "morning_of" ? "Race Day!" : "RC Duty Reminder",
+                body: message,
+              },
+              data: {eventId: eventDoc.id, role: slot.role || ""},
+            });
+          }
+        } catch (err) {
+          logger.warn("Reminder push failed", {error: err.message});
+        }
+
+        totalSent++;
+      }
+    }
+
+    logger.info("Crew reminders sent", {totalSent});
+  },
+);
+
 // ── Authentication: membership-number verification flow ──
 
 function generateVerificationCode() {
