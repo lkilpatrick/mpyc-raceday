@@ -82,6 +82,6 @@ jobs:
           projectId: mpyc-raceday
 
       - name: Deploy Functions & Firestore
-        run: npx firebase-tools deploy --only "functions,firestore" --project mpyc-raceday --force --no-set-invoker-policy
+        run: npx firebase-tools deploy --only "functions,firestore" --project mpyc-raceday --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud.json
