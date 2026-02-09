@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return isAuthenticated() ? request.auth.token.role : null;
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    function isPro() {
+      return role() == 'pro';
+    }
+
+    function isRcCrew() {
+      return role() == 'rc_crew';
+    }
+
+    function isMember() {
+      return role() == 'member';
+    }
+
+    function isRaceOperator() {
+      return isAdmin() || isPro();
+    }
+
+    function canReadRaceData() {
+      return isAuthenticated() && (isAdmin() || isPro() || isRcCrew());
+    }
+
+    function isOwnMemberDoc(memberId) {
+      return isAuthenticated() && request.auth.uid == memberId;
+    }
+
+    function isOwnBoatCheckin() {
+      return isAuthenticated() && request.resource.data.checkedInBy == request.auth.uid;
+    }
+
+    // Members
+    match /members/{memberId} {
+      allow read: if isAuthenticated() && (isAdmin() || isPro() || isRcCrew() || isOwnMemberDoc(memberId));
+      allow write: if isAuthenticated() && (isAdmin() || isOwnMemberDoc(memberId));
+    }
+
+    // Race operations
+    match /race_events/{docId} {
+      allow read: if canReadRaceData() || isMember();
+      allow write: if isRaceOperator();
+    }
+
+    match /season_series/{docId} {
+      allow read: if canReadRaceData() || isMember();
+      allow write: if isRaceOperator();
+    }
+
+    match /courses/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || isPro() || isRcCrew() || isMember());
+      allow write: if isRaceOperator();
+    }
+
+    match /fleet_broadcasts/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator();
+    }
+
+    match /timing/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator();
+    }
+
+    match /incidents/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator() || isRcCrew();
+    }
+
+    match /checklists/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator() || isRcCrew();
+    }
+
+    match /checklist_completions/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator() || isRcCrew();
+    }
+
+    match /weather_logs/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || isPro() || isRcCrew() || isMember());
+      allow write: if isRaceOperator() || isRcCrew();
+    }
+
+    // Operations support collections
+    match /boat_checkins/{docId} {
+      allow read: if canReadRaceData();
+      allow create: if isRaceOperator() || isRcCrew() || (isMember() && isOwnBoatCheckin());
+      allow update, delete: if isRaceOperator() || isRcCrew() ||
+        (isMember() && request.auth.uid == resource.data.checkedInBy && isOwnBoatCheckin());
+    }
+
+    match /maintenance_requests/{docId} {
+      allow read: if canReadRaceData();
+      allow write: if isRaceOperator() || isRcCrew();
+    }
+
+    // Audit logs: client reads only for admins, writes denied (Cloud Functions Admin SDK bypasses rules)
+    match /audit_logs/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

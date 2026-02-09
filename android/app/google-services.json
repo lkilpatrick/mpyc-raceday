@@ -1,22 +1,28 @@
 {
   "project_info": {
-    "project_number": "REPLACE_ME",
-    "project_id": "REPLACE_ME",
-    "storage_bucket": "REPLACE_ME"
+    "project_number": "856196031997",
+    "project_id": "mpyc-raceday",
+    "storage_bucket": "mpyc-raceday.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "REPLACE_ME",
+        "mobilesdk_app_id": "1:856196031997:android:a93b0985bea7e8b3dee594",
         "android_client_info": {
           "package_name": "com.example.mpyc_raceday"
         }
       },
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_ME"
+          "current_key": "AIzaSyBoUsNPkETrElHPra20C4rkvvuBfCFKDww"
         }
-      ]
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_availability_page.dart';
+import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
+import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 import 'package:mpyc_raceday/web/layouts/web_scaffold.dart';
 import 'package:mpyc_raceday/web/navigation/web_sidebar.dart';
@@ -22,6 +25,26 @@ class _WebShellState extends State<WebShell> {
     });
   }
 
+  Widget _buildBody() {
+    switch (widget.activeRoute) {
+      case '/season-calendar':
+        return const SeasonCalendarPage();
+      case '/crew-management':
+        return const CrewAvailabilityPage();
+      case '/race-events':
+        return const EventManagementPage();
+      default:
+        final activeItem = webNavItems.firstWhere(
+          (item) => item.route == widget.activeRoute,
+          orElse: () => webNavItems.first,
+        );
+        return PlaceholderPage(
+          title: activeItem.label,
+          subtitle: 'Web admin dashboard',
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeItem = webNavItems.firstWhere(
@@ -38,10 +61,7 @@ class _WebShellState extends State<WebShell> {
         isCollapsed: _isCollapsed,
         onSelected: (item) => context.go(item.route),
       ),
-      body: PlaceholderPage(
-        title: activeItem.label,
-        subtitle: 'Web admin dashboard',
-      ),
+      body: _buildBody(),
     );
   }
 }

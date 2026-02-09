@@ -61,12 +61,14 @@ class WebSidebar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       children: [
         for (final item in webNavItems)
-          ListTile(
-            selected: activeRoute == item.route,
-            leading: Icon(item.icon),
-            title: isCollapsed ? null : Text(item.label),
-            tooltip: isCollapsed ? item.label : null,
-            onTap: () => onSelected(item),
+          Tooltip(
+            message: isCollapsed ? item.label : '',
+            child: ListTile(
+              selected: activeRoute == item.route,
+              leading: Icon(item.icon),
+              title: isCollapsed ? null : Text(item.label),
+              onTap: () => onSelected(item),
+            ),
           ),
       ],
     );

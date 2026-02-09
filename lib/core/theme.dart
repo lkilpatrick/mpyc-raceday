@@ -37,7 +37,7 @@ class AppTheme {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         surfaceTintColor: Colors.white,
         color: Colors.white,
       ),
