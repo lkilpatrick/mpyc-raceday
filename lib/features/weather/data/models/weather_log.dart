@@ -12,7 +12,7 @@ enum Visibility { good, moderate, poor }
 enum Precipitation { none, light, moderate, heavy }
 
 @freezed
-class WeatherEntry with _$WeatherEntry {
+abstract class WeatherEntry with _$WeatherEntry {
   const factory WeatherEntry({
     required DateTime timestamp,
     required WeatherSource source,
@@ -34,7 +34,7 @@ class WeatherEntry with _$WeatherEntry {
 }
 
 @freezed
-class WeatherLog with _$WeatherLog {
+abstract class WeatherLog with _$WeatherLog {
   const factory WeatherLog({
     required String id,
     required String eventId,

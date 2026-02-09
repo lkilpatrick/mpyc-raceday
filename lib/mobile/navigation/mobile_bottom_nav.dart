@@ -21,7 +21,7 @@ const List<MobileNavItem> mobileNavItems = [
     icon: Icons.checklist,
   ),
   MobileNavItem(label: 'Weather', route: '/weather', icon: Icons.cloud),
-  MobileNavItem(label: 'More', route: '/more', icon: Icons.more_horiz),
+  MobileNavItem(label: 'Profile', route: '/more', icon: Icons.person),
 ];
 
 class MobileBottomNav extends StatelessWidget {

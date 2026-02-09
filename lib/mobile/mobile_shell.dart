@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/auth/presentation/mobile/profile_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/full_calendar_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/my_schedule_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/next_duty_home_screen.dart';
@@ -51,7 +52,7 @@ class _MobileShellState extends State<MobileShell> {
     final body = switch (_index) {
       0 => const NextDutyHomeScreen(),
       1 => const MyScheduleScreen(),
-      4 => const FullCalendarScreen(),
+      4 => const ProfileScreen(),
       _ => PlaceholderPage(title: item.label, subtitle: 'Mobile experience'),
     };
 

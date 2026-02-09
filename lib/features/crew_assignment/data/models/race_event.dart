@@ -14,7 +14,7 @@ enum CrewRole {
 }
 
 @freezed
-class CrewAssignment with _$CrewAssignment {
+abstract class CrewAssignment with _$CrewAssignment {
   const factory CrewAssignment({
     required String memberId,
     required String memberName,
@@ -31,7 +31,7 @@ class CrewAssignment with _$CrewAssignment {
 enum RaceEventStatus { upcoming, active, completed, cancelled }
 
 @freezed
-class RaceEvent with _$RaceEvent {
+abstract class RaceEvent with _$RaceEvent {
   const factory RaceEvent({
     required String id,
     required String eventName,

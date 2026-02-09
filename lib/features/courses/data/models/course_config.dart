@@ -6,7 +6,7 @@ part 'course_config.g.dart';
 enum MarkRounding { port, starboard }
 
 @freezed
-class CourseMark with _$CourseMark {
+abstract class CourseMark with _$CourseMark {
   const factory CourseMark({
     required String name,
     required int order,
@@ -18,7 +18,7 @@ class CourseMark with _$CourseMark {
 }
 
 @freezed
-class CourseConfig with _$CourseConfig {
+abstract class CourseConfig with _$CourseConfig {
   const factory CourseConfig({
     required String id,
     required String courseName,

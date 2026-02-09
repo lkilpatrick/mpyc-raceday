@@ -4,7 +4,7 @@ part 'boat_checkin.freezed.dart';
 part 'boat_checkin.g.dart';
 
 @freezed
-class BoatCheckin with _$BoatCheckin {
+abstract class BoatCheckin with _$BoatCheckin {
   const factory BoatCheckin({
     required String id,
     required String eventId,

@@ -39,6 +39,7 @@ dependencies:
   firebase_auth: any
   firebase_messaging: any
   firebase_storage: any
+  cloud_functions: any
   flutter_riverpod: any
   riverpod_annotation: any
   go_router: any

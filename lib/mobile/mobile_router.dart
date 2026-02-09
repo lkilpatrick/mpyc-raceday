@@ -1,10 +1,37 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/auth/presentation/mobile/login_screen.dart';
+import 'package:mpyc_raceday/features/auth/presentation/mobile/verification_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/event_detail_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
   initialLocation: '/home',
+  redirect: (context, state) {
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final isAuthRoute =
+        state.matchedLocation == '/login' || state.matchedLocation == '/verify';
+
+    if (!isLoggedIn && !isAuthRoute) return '/login';
+    if (isLoggedIn && state.matchedLocation == '/login') return '/home';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/verify',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return VerificationScreen(
+          maskedEmail: extra['maskedEmail'] as String? ?? '',
+          memberId: extra['memberId'] as String? ?? '',
+          memberNumber: extra['memberNumber'] as String? ?? '',
+        );
+      },
+    ),
     GoRoute(
       path: '/home',
       builder: (context, state) => const MobileShell(initialIndex: 0),

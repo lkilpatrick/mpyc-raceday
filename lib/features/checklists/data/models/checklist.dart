@@ -6,7 +6,7 @@ part 'checklist.g.dart';
 enum ChecklistType { preRace, postRace, safety, custom }
 
 @freezed
-class ChecklistItem with _$ChecklistItem {
+abstract class ChecklistItem with _$ChecklistItem {
   const factory ChecklistItem({
     required String id,
     required String title,
@@ -23,7 +23,7 @@ class ChecklistItem with _$ChecklistItem {
 }
 
 @freezed
-class Checklist with _$Checklist {
+abstract class Checklist with _$Checklist {
   const factory Checklist({
     required String id,
     required String name,
@@ -40,7 +40,7 @@ class Checklist with _$Checklist {
 }
 
 @freezed
-class CompletedItem with _$CompletedItem {
+abstract class CompletedItem with _$CompletedItem {
   const factory CompletedItem({
     required String itemId,
     required bool checked,
@@ -60,7 +60,7 @@ enum ChecklistCompletionStatus {
 }
 
 @freezed
-class ChecklistCompletion with _$ChecklistCompletion {
+abstract class ChecklistCompletion with _$ChecklistCompletion {
   const factory ChecklistCompletion({
     required String id,
     required String checklistId,

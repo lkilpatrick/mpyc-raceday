@@ -4,7 +4,7 @@ part 'member.freezed.dart';
 part 'member.g.dart';
 
 @freezed
-class EmergencyContact with _$EmergencyContact {
+abstract class EmergencyContact with _$EmergencyContact {
   const factory EmergencyContact({
     required String name,
     required String phone,
@@ -23,7 +23,7 @@ enum MemberRole {
 }
 
 @freezed
-class Member with _$Member {
+abstract class Member with _$Member {
   const factory Member({
     required String id,
     required String firstName,

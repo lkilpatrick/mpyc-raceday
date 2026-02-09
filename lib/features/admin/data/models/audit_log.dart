@@ -4,7 +4,7 @@ part 'audit_log.freezed.dart';
 part 'audit_log.g.dart';
 
 @freezed
-class AuditLog with _$AuditLog {
+abstract class AuditLog with _$AuditLog {
   const factory AuditLog({
     required String id,
     required String userId,

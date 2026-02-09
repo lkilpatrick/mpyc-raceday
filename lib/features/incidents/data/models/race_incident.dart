@@ -15,7 +15,7 @@ enum CourseLocationOnIncident {
 enum BoatInvolvedRole { protesting, protested, witness }
 
 @freezed
-class BoatInvolved with _$BoatInvolved {
+abstract class BoatInvolved with _$BoatInvolved {
   const factory BoatInvolved({
     required String sailNumber,
     required String boatName,
@@ -37,7 +37,7 @@ enum RaceIncidentStatus {
 }
 
 @freezed
-class RaceIncident with _$RaceIncident {
+abstract class RaceIncident with _$RaceIncident {
   const factory RaceIncident({
     required String id,
     required String eventId,

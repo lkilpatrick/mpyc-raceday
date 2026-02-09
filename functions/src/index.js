@@ -402,6 +402,165 @@ exports.sendFleetNotification = onCall(async (request) => {
   return {deliveryCount, broadcastId: broadcastRef.id};
 });
 
+// ── Authentication: membership-number verification flow ──
+
+function generateVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function maskEmail(email) {
+  if (!email || !email.includes("@")) return "***";
+  const [local, domain] = email.split("@");
+  const visible = local.length <= 2 ? local[0] : local.slice(0, 2);
+  return `${visible}***@${domain}`;
+}
+
+exports.sendVerificationCode = onCall(async (request) => {
+  const {memberNumber} = request.data || {};
+  if (!memberNumber || typeof memberNumber !== "string") {
+    throw new HttpsError("invalid-argument", "memberNumber is required");
+  }
+
+  const membersSnap = await db
+    .collection("members")
+    .where("memberNumber", "==", memberNumber.trim())
+    .limit(1)
+    .get();
+
+  if (membersSnap.empty) {
+    throw new HttpsError("not-found", "No member found with that membership number");
+  }
+
+  const memberDoc = membersSnap.docs[0];
+  const memberData = memberDoc.data();
+  const email = memberData.email;
+
+  if (!email) {
+    throw new HttpsError(
+      "failed-precondition",
+      "No email on file for this member. Contact the club for assistance.",
+    );
+  }
+
+  const code = generateVerificationCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await db.collection("verification_codes").doc(memberDoc.id).set({
+    code,
+    memberNumber: memberNumber.trim(),
+    memberId: memberDoc.id,
+    attempts: 0,
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // Send verification email via Firebase Admin SDK (using the built-in email action)
+  // For production, integrate SendGrid / Mailgun / SES. For now, log and use Firestore trigger or direct send.
+  // Using a simple approach: write to a mail collection that a mail-sending extension picks up,
+  // or log for development.
+  try {
+    await db.collection("mail").add({
+      to: [email],
+      message: {
+        subject: "MPYC Raceday - Verification Code",
+        text: `Your MPYC Raceday verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.`,
+        html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+          <h2 style="color:#1B3A5C">MPYC Raceday</h2>
+          <p>Your verification code is:</p>
+          <div style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;padding:16px;background:#F5F5F0;border-radius:8px;color:#1B3A5C">${code}</div>
+          <p style="color:#666;font-size:14px;margin-top:16px">This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
+        </div>`,
+      },
+    });
+  } catch (mailError) {
+    logger.error("Failed to queue verification email", {error: mailError.message});
+  }
+
+  logger.info("Verification code sent", {memberId: memberDoc.id, maskedEmail: maskEmail(email)});
+
+  return {
+    maskedEmail: maskEmail(email),
+    memberId: memberDoc.id,
+  };
+});
+
+exports.verifyCodeAndCreateToken = onCall(async (request) => {
+  const {memberId, code} = request.data || {};
+  if (!memberId || !code) {
+    throw new HttpsError("invalid-argument", "memberId and code are required");
+  }
+
+  const codeRef = db.collection("verification_codes").doc(memberId);
+  const codeSnap = await codeRef.get();
+
+  if (!codeSnap.exists) {
+    throw new HttpsError("not-found", "No verification code found. Please request a new one.");
+  }
+
+  const codeData = codeSnap.data();
+
+  if (codeData.attempts >= 5) {
+    await codeRef.delete();
+    throw new HttpsError("resource-exhausted", "Too many attempts. Please request a new code.");
+  }
+
+  const expiresAt = codeData.expiresAt?.toDate ? codeData.expiresAt.toDate() : new Date(codeData.expiresAt);
+  if (new Date() > expiresAt) {
+    await codeRef.delete();
+    throw new HttpsError("deadline-exceeded", "Verification code has expired. Please request a new one.");
+  }
+
+  if (codeData.code !== code.trim()) {
+    await codeRef.update({attempts: admin.firestore.FieldValue.increment(1)});
+    throw new HttpsError("permission-denied", "Invalid verification code");
+  }
+
+  // Code is valid — clean up
+  await codeRef.delete();
+
+  // Look up the member document
+  const memberSnap = await db.collection("members").doc(memberId).get();
+  if (!memberSnap.exists) {
+    throw new HttpsError("not-found", "Member record not found");
+  }
+  const memberData = memberSnap.data();
+  const email = memberData.email;
+
+  // Create or get Firebase Auth user
+  let uid;
+  try {
+    const existingUser = await admin.auth().getUserByEmail(email);
+    uid = existingUser.uid;
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      const newUser = await admin.auth().createUser({
+        email,
+        displayName: `${memberData.firstName || ""} ${memberData.lastName || ""}`.trim(),
+      });
+      uid = newUser.uid;
+    } else {
+      throw new HttpsError("internal", "Failed to resolve auth user");
+    }
+  }
+
+  // Set custom claims with role
+  const role = memberData.role || "member";
+  await admin.auth().setCustomUserClaims(uid, {role, memberId});
+
+  // Link Firebase Auth UID to the member document
+  await db.collection("members").doc(memberId).update({
+    firebaseUid: uid,
+    lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // Create a custom token for the client to sign in with
+  const customToken = await admin.auth().createCustomToken(uid, {role, memberId});
+
+  logger.info("Verification successful, token created", {uid, memberId, role});
+
+  return {customToken, role};
+});
+
 exports.createMemberPortalSession = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required");

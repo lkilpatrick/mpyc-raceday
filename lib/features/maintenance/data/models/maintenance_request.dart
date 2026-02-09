@@ -25,7 +25,7 @@ enum MaintenanceCategory {
 }
 
 @freezed
-class MaintenanceComment with _$MaintenanceComment {
+abstract class MaintenanceComment with _$MaintenanceComment {
   const factory MaintenanceComment({
     required String id,
     required String authorId,
@@ -40,7 +40,7 @@ class MaintenanceComment with _$MaintenanceComment {
 }
 
 @freezed
-class MaintenanceRequest with _$MaintenanceRequest {
+abstract class MaintenanceRequest with _$MaintenanceRequest {
   const factory MaintenanceRequest({
     required String id,
     required String title,

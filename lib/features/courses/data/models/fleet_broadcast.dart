@@ -12,7 +12,7 @@ enum BroadcastType {
 }
 
 @freezed
-class FleetBroadcast with _$FleetBroadcast {
+abstract class FleetBroadcast with _$FleetBroadcast {
   const factory FleetBroadcast({
     required String id,
     required String eventId,

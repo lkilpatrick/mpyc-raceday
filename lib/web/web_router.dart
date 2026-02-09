@@ -1,9 +1,29 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/auth/presentation/web/no_access_page.dart';
+import 'package:mpyc_raceday/features/auth/presentation/web/web_login_page.dart';
 import 'package:mpyc_raceday/web/web_shell.dart';
 
 final GoRouter webRouter = GoRouter(
   initialLocation: '/dashboard',
+  redirect: (context, state) {
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final isAuthRoute = state.matchedLocation == '/web-login' ||
+        state.matchedLocation == '/no-access';
+
+    if (!isLoggedIn && !isAuthRoute) return '/web-login';
+    if (isLoggedIn && state.matchedLocation == '/web-login') return '/dashboard';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/web-login',
+      builder: (context, state) => const WebLoginPage(),
+    ),
+    GoRoute(
+      path: '/no-access',
+      builder: (context, state) => const NoAccessPage(),
+    ),
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const WebShell(activeRoute: '/dashboard'),

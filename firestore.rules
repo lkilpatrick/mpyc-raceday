@@ -106,9 +106,43 @@ service cloud.firestore {
       allow write: if isRaceOperator() || isRcCrew();
     }
 
+    // Verification codes: deny all client access (Cloud Functions Admin SDK bypasses rules)
+    match /verification_codes/{docId} {
+      allow read, write: if false;
+    }
+
+    // Mail queue: deny all client access (Cloud Functions Admin SDK bypasses rules)
+    match /mail/{docId} {
+      allow read, write: if false;
+    }
+
     // Audit logs: client reads only for admins, writes denied (Cloud Functions Admin SDK bypasses rules)
     match /audit_logs/{docId} {
       allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+
+    // Sync logs: admin-only reads, writes denied (Cloud Functions Admin SDK bypasses rules)
+    match /memberSyncLogs/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+
+    // Admin notifications: admin-only reads
+    match /adminNotifications/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+
+    // SMS logs: admin-only reads
+    match /smsLogs/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+
+    // Fleet broadcasts
+    match /fleetBroadcasts/{docId} {
+      allow read: if canReadRaceData();
       allow write: if false;
     }
 
