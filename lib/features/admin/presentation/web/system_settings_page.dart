@@ -215,16 +215,19 @@ class _NotificationsTab extends StatefulWidget {
 }
 
 class _NotificationsTabState extends State<_NotificationsTab> {
-  final _twilioSidCtrl = TextEditingController();
-  final _twilioTokenCtrl = TextEditingController();
-  final _twilioFromCtrl = TextEditingController();
+  final _fromEmailCtrl = TextEditingController();
+  final _fromNameCtrl = TextEditingController();
   bool _loading = true;
+  bool _emailEnabled = true;
+  bool _pushEnabled = true;
   final Map<String, bool> _triggers = {
     'courseSelected': true,
     'incidentReported': true,
     'hearingScheduled': true,
     'maintenanceCritical': true,
     'crewAssigned': true,
+    'weeklyMaintenance': true,
+    'crewReminders': true,
   };
 
   @override
@@ -240,9 +243,10 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         .get();
     if (doc.exists) {
       final d = doc.data()!;
-      _twilioSidCtrl.text = d['twilioSid'] as String? ?? '';
-      _twilioTokenCtrl.text = d['twilioToken'] as String? ?? '';
-      _twilioFromCtrl.text = d['twilioFrom'] as String? ?? '';
+      _fromEmailCtrl.text = d['fromEmail'] as String? ?? '';
+      _fromNameCtrl.text = d['fromName'] as String? ?? 'MPYC Raceday';
+      _emailEnabled = d['emailEnabled'] as bool? ?? true;
+      _pushEnabled = d['pushEnabled'] as bool? ?? true;
       final t = d['triggers'] as Map<String, dynamic>? ?? {};
       for (final key in _triggers.keys) {
         _triggers[key] = t[key] as bool? ?? true;
@@ -256,9 +260,10 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         .collection('settings')
         .doc('notifications')
         .set({
-      'twilioSid': _twilioSidCtrl.text.trim(),
-      'twilioToken': _twilioTokenCtrl.text.trim(),
-      'twilioFrom': _twilioFromCtrl.text.trim(),
+      'fromEmail': _fromEmailCtrl.text.trim(),
+      'fromName': _fromNameCtrl.text.trim(),
+      'emailEnabled': _emailEnabled,
+      'pushEnabled': _pushEnabled,
       'triggers': _triggers,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -271,9 +276,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
   @override
   void dispose() {
-    _twilioSidCtrl.dispose();
-    _twilioTokenCtrl.dispose();
-    _twilioFromCtrl.dispose();
+    _fromEmailCtrl.dispose();
+    _fromNameCtrl.dispose();
     super.dispose();
   }
 
@@ -285,44 +289,56 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Twilio Configuration',
+          const Text('Email Notifications',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          Text(
+            'Emails are sent via the Firebase Trigger Email extension. '
+            'Install the extension in the Firebase console and configure '
+            'your SMTP provider (e.g. SendGrid, Mailgun, Gmail).',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 16),
           SizedBox(
-            width: 500,
+            width: 400,
             child: TextField(
-              controller: _twilioSidCtrl,
+              controller: _fromEmailCtrl,
               decoration: const InputDecoration(
-                labelText: 'Account SID',
+                labelText: 'From Email Address',
                 border: OutlineInputBorder(),
+                hintText: 'noreply@mpyc.org',
               ),
             ),
           ),
           const SizedBox(height: 12),
           SizedBox(
-            width: 500,
+            width: 400,
             child: TextField(
-              controller: _twilioTokenCtrl,
-              obscureText: true,
+              controller: _fromNameCtrl,
               decoration: const InputDecoration(
-                labelText: 'Auth Token',
+                labelText: 'From Display Name',
                 border: OutlineInputBorder(),
+                hintText: 'MPYC Raceday',
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: 300,
-            child: TextField(
-              controller: _twilioFromCtrl,
-              decoration: const InputDecoration(
-                labelText: 'From Number',
-                border: OutlineInputBorder(),
-                hintText: '+1XXXXXXXXXX',
-              ),
-            ),
+          const SizedBox(height: 16),
+          const Text('Notification Channels',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Email Notifications'),
+            subtitle: const Text('Send notifications via email'),
+            value: _emailEnabled,
+            onChanged: (v) => setState(() => _emailEnabled = v),
           ),
-          const SizedBox(height: 20),
+          SwitchListTile(
+            title: const Text('Push Notifications (FCM)'),
+            subtitle: const Text('Send push notifications to mobile devices'),
+            value: _pushEnabled,
+            onChanged: (v) => setState(() => _pushEnabled = v),
+          ),
+          const SizedBox(height: 16),
           const Text('Notification Triggers',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
@@ -333,6 +349,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               'hearingScheduled' => 'Hearing Scheduled',
               'maintenanceCritical' => 'Critical Maintenance',
               'crewAssigned' => 'Crew Assigned',
+              'weeklyMaintenance' => 'Weekly Maintenance Summary',
+              'crewReminders' => 'Crew Duty Reminders',
               _ => e.key,
             };
             return SwitchListTile(

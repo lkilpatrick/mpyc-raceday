@@ -3,7 +3,6 @@ const logger = require("firebase-functions/logger");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
 const functions = require("firebase-functions");
-const twilio = require("twilio");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -212,32 +211,30 @@ async function isAdminUser(decodedToken) {
   return role === "admin";
 }
 
-function twilioClient() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (!accountSid || !authToken) {
-    throw new Error("Missing Twilio configuration (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN)");
-  }
-  return twilio(accountSid, authToken);
-}
-
-async function sendSmsInternal({to, message, eventId}) {
-  const client = twilioClient();
-  const from = process.env.TWILIO_FROM_NUMBER;
-  if (!from) {
-    throw new Error("Missing TWILIO_FROM_NUMBER configuration");
-  }
-  const sms = await client.messages.create({to, from, body: message});
-  await db.collection("smsLogs").add({
-    to,
-    from,
+async function sendEmailInternal({to, subject, message, eventId}) {
+  if (!to) return null;
+  const ref = await db.collection("mail").add({
+    to: Array.isArray(to) ? to : [to],
+    message: {
+      subject: subject || "MPYC Raceday Notification",
+      text: message,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+        <h2 style="color:#1B3A5C">MPYC Raceday</h2>
+        <p>${message.replace(/\n/g, "<br>")}</p>
+        <p style="color:#666;font-size:12px;margin-top:24px">This is an automated notification from MPYC Raceday.</p>
+      </div>`,
+    },
+  });
+  await db.collection("notificationLogs").add({
+    to: Array.isArray(to) ? to : [to],
+    channel: "email",
     eventId: eventId || null,
+    subject: subject || "MPYC Raceday Notification",
     message,
-    status: sms.status,
-    sid: sms.sid,
+    mailDocId: ref.id,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  return sms;
+  return ref;
 }
 
 async function sendPushInternal({token, message, title = "MPYC Raceday", data = {}}) {
@@ -308,8 +305,8 @@ exports.manualMemberSync = onRequest({cors: true, timeoutSeconds: 540}, async (r
   }
 });
 
-exports.sendSms = onCall(async (request) => {
-  const {to, message, eventId} = request.data || {};
+exports.sendNotification = onCall(async (request) => {
+  const {to, message, subject, eventId} = request.data || {};
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
@@ -318,10 +315,10 @@ exports.sendSms = onCall(async (request) => {
   }
 
   try {
-    const result = await sendSmsInternal({to, message, eventId});
-    return {sid: result.sid, status: result.status};
+    const result = await sendEmailInternal({to, subject, message, eventId});
+    return {id: result?.id, status: "queued"};
   } catch (error) {
-    throw new HttpsError("internal", error.message || "SMS send failed");
+    throw new HttpsError("internal", error.message || "Email send failed");
   }
 });
 
@@ -355,15 +352,15 @@ exports.sendFleetNotification = onCall(async (request) => {
   for (const memberId of memberIds) {
     const snap = await db.collection("members").doc(memberId).get();
     const member = snap.data() || {};
-    const mobile = member.mobileNumber;
+    const email = member.email;
     const token = member.pushToken;
 
-    if (mobile) {
+    if (email) {
       try {
-        await sendSmsInternal({to: mobile, message, eventId});
+        await sendEmailInternal({to: email, subject: "MPYC Fleet Notification", message, eventId});
         deliveryCount += 1;
       } catch (error) {
-        logger.warn("SMS failed for member", {memberId, error: error.message || String(error)});
+        logger.warn("Email failed for member", {memberId, error: error.message || String(error)});
       }
     }
 
@@ -379,15 +376,6 @@ exports.sendFleetNotification = onCall(async (request) => {
       } catch (error) {
         logger.warn("Push failed for member", {memberId, error: error.message || String(error)});
       }
-    }
-  }
-
-  for (const phone of directPhones) {
-    try {
-      await sendSmsInternal({to: phone, message, eventId});
-      deliveryCount += 1;
-    } catch (error) {
-      logger.warn("Direct phone SMS failed", {phone, error: error.message || String(error)});
     }
   }
 
@@ -444,20 +432,17 @@ exports.sendCrewNotification = onCall(async (request) => {
 
     const message = `MPYC Raceday: You're assigned to ${eventData.name} on ${dateStr} as ${slot.role}. Please confirm in the app.`;
 
-    // Send SMS if Twilio is configured and member has a mobile number
-    if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+    // Send email notification
+    if (member.email) {
       try {
-        const twilioClient = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN,
-        );
-        await twilioClient.messages.create({
-          body: message,
-          from: process.env.TWILIO_FROM_NUMBER,
-          to: member.mobileNumber,
+        await sendEmailInternal({
+          to: member.email,
+          subject: `RC Duty Assignment: ${eventData.name}`,
+          message,
+          eventId,
         });
-      } catch (smsErr) {
-        logger.warn("SMS send failed", {memberId: slot.memberId, error: smsErr.message});
+      } catch (emailErr) {
+        logger.warn("Email send failed", {memberId: slot.memberId, error: emailErr.message});
       }
     }
 
@@ -552,20 +537,22 @@ exports.sendCrewReminders = onSchedule(
             break;
         }
 
-        // Send SMS
-        if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+        // Send email reminder
+        if (member.email) {
           try {
-            const twilioClient = twilio(
-              process.env.TWILIO_ACCOUNT_SID,
-              process.env.TWILIO_AUTH_TOKEN,
-            );
-            await twilioClient.messages.create({
-              body: message,
-              from: process.env.TWILIO_FROM_NUMBER,
-              to: member.mobileNumber,
+            const subjectMap = {
+              morning_of: `Race Day! ${eventData.name}`,
+              day_before: `Tomorrow: RC Duty — ${eventData.name}`,
+              week_before: `Upcoming RC Duty: ${eventData.name}`,
+            };
+            await sendEmailInternal({
+              to: member.email,
+              subject: subjectMap[reminderType] || "RC Duty Reminder",
+              message,
+              eventId: eventDoc.id,
             });
           } catch (err) {
-            logger.warn("Reminder SMS failed", {error: err.message});
+            logger.warn("Reminder email failed", {error: err.message});
           }
         }
 
@@ -627,20 +614,16 @@ exports.notifyMaintenanceAssignment = onCall(async (request) => {
   const member = memberSnap.docs[0].data();
   const message = `MPYC Maintenance: You've been assigned to "${reqData.title}" on ${reqData.boatName}. Priority: ${(reqData.priority || "").toUpperCase()}`;
 
-  // SMS
-  if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+  // Email
+  if (member.email) {
     try {
-      const twilioClient = twilio(
-        process.env.TWILIO_ACCOUNT_SID,
-        process.env.TWILIO_AUTH_TOKEN,
-      );
-      await twilioClient.messages.create({
-        body: message,
-        from: process.env.TWILIO_FROM_NUMBER,
-        to: member.mobileNumber,
+      await sendEmailInternal({
+        to: member.email,
+        subject: `Maintenance Assigned: ${reqData.boatName} — ${reqData.title}`,
+        message,
       });
     } catch (err) {
-      logger.warn("Maintenance SMS failed", {error: err.message});
+      logger.warn("Maintenance email failed", {error: err.message});
     }
   }
 
@@ -732,20 +715,16 @@ exports.weeklyMaintenanceSummary = onSchedule(
     let sent = 0;
     for (const adminDoc of adminsSnap.docs) {
       const adminData = adminDoc.data();
-      if (process.env.TWILIO_ACCOUNT_SID && adminData.mobileNumber) {
+      if (adminData.email) {
         try {
-          const twilioClient = twilio(
-            process.env.TWILIO_ACCOUNT_SID,
-            process.env.TWILIO_AUTH_TOKEN,
-          );
-          await twilioClient.messages.create({
-            body: summaryText,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: adminData.mobileNumber,
+          await sendEmailInternal({
+            to: adminData.email,
+            subject: `MPYC Weekly Maintenance Summary — ${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}`,
+            message: summaryText,
           });
           sent++;
         } catch (err) {
-          logger.warn("Weekly summary SMS failed", {error: err.message});
+          logger.warn("Weekly summary email failed", {error: err.message});
         }
       }
     }
@@ -1164,18 +1143,18 @@ exports.onCourseSelected = functions.firestore
       if (!memberDoc.exists) continue;
       const member = memberDoc.data();
 
-      // Send SMS via Twilio
-      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
+      // Send email notification
+      if (member.email) {
         try {
-          const client = twilioClient();
-          await client.messages.create({
-            body: smsMsg,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: member.mobileNumber || member.phone,
+          await sendEmailInternal({
+            to: member.email,
+            subject: `Course ${courseNum} Selected`,
+            message: smsMsg,
+            eventId,
           });
           smsSent++;
-        } catch (smsErr) {
-          logger.error("SMS send failed", { skipperId, error: smsErr.message });
+        } catch (emailErr) {
+          logger.error("Email send failed", { skipperId, error: emailErr.message });
         }
       }
 
@@ -1247,18 +1226,18 @@ exports.sendFleetBroadcast = onCall(async (request) => {
       if (!memberDoc.exists) continue;
       const member = memberDoc.data();
 
-      // SMS
-      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
+      // Email
+      if (member.email) {
         try {
-          const client = twilioClient();
-          await client.messages.create({
-            body: message,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: member.mobileNumber || member.phone,
+          await sendEmailInternal({
+            to: member.email,
+            subject: "MPYC Race Committee Broadcast",
+            message,
+            eventId,
           });
           smsSent++;
-        } catch (smsErr) {
-          logger.error("Fleet broadcast SMS failed", { skipperId, error: smsErr.message });
+        } catch (emailErr) {
+          logger.error("Fleet broadcast email failed", { skipperId, error: emailErr.message });
         }
       }
 
@@ -1354,23 +1333,23 @@ exports.notifyIncidentReported = functions.firestore
         }
       }
 
-      // SMS
-      if ((adminData.mobileNumber || adminData.phone) && process.env.TWILIO_ACCOUNT_SID) {
+      // Email
+      if (adminData.email) {
         try {
-          const client = twilioClient();
-          await client.messages.create({
-            body: smsMsg,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: adminData.mobileNumber || adminData.phone,
+          await sendEmailInternal({
+            to: adminData.email,
+            subject: `Incident Reported: ${boats}`,
+            message: smsMsg,
+            eventId,
           });
           smsSent++;
-        } catch (smsErr) {
-          logger.error("Incident SMS failed", { adminId: adminDoc.id, error: smsErr.message });
+        } catch (emailErr) {
+          logger.error("Incident email failed", { adminId: adminDoc.id, error: emailErr.message });
         }
       }
     }
 
-    logger.info("Incident notification sent", { incidentId, pushSent, smsSent });
+    logger.info("Incident notification sent", { incidentId, pushSent, emailSent: smsSent });
   } catch (err) {
     logger.error("notifyIncidentReported error", { error: err.message });
   }
@@ -1450,17 +1429,16 @@ exports.notifyHearingScheduled = functions.firestore
         }
       }
 
-      // SMS
-      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
+      // Email
+      if (member.email) {
         try {
-          const client = twilioClient();
-          await client.messages.create({
-            body: smsMsg,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: member.mobileNumber || member.phone,
+          await sendEmailInternal({
+            to: member.email,
+            subject: `Protest Hearing Scheduled — Race ${raceNumber}`,
+            message: smsMsg,
           });
         } catch (e) {
-          logger.error("Hearing SMS failed", { boatId, error: e.message });
+          logger.error("Hearing email failed", { boatId, error: e.message });
         }
       }
     }
