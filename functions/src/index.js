@@ -3890,3 +3890,148 @@ exports.syncClubspotLineItems = onCall(async (request) => {
 
 });
 
+
+
+// ══════════════════════════════════════════════════════════════════
+// AmbientWeather — Live Wind Data
+// ══════════════════════════════════════════════════════════════════
+
+const AMBIENT_BASE_URL = "https://api.ambientweather.net/v1";
+const WEATHER_DOC_PATH = "weather/mpyc_station";
+const MPH_TO_KTS = 0.868976;
+const MIN_FETCH_INTERVAL_MS = 8000; // 8 seconds rate limit
+
+// Station coordinates (MPYC weather station on the breakwater)
+const STATION_LAT = 36.6053;
+const STATION_LON = -121.8885;
+
+async function fetchAmbientData() {
+  const appKey = process.env.AMBIENT_APPLICATION_KEY;
+  const apiKey = process.env.AMBIENT_API_KEY;
+  const mac = process.env.AMBIENT_STATION_MAC;
+
+  if (!appKey || !apiKey || !mac) {
+    throw new Error("Missing AmbientWeather config: AMBIENT_APPLICATION_KEY, AMBIENT_API_KEY, or AMBIENT_STATION_MAC");
+  }
+
+  const url = `${AMBIENT_BASE_URL}/devices/${encodeURIComponent(mac)}?applicationKey=${encodeURIComponent(appKey)}&apiKey=${encodeURIComponent(apiKey)}&limit=1`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`AmbientWeather API error ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("No observations returned from AmbientWeather");
+  }
+
+  return data[0]; // latest observation
+}
+
+function normalizeObservation(obs) {
+  const speedMph = typeof obs.windspeedmph === "number" ? obs.windspeedmph : 0;
+  const gustMph = typeof obs.windgustmph === "number" ? obs.windgustmph : null;
+  const dirDeg = typeof obs.winddir === "number" ? obs.winddir : 0;
+
+  // Use dateutc (epoch ms) if available, else server time
+  let observedAt;
+  if (obs.dateutc && typeof obs.dateutc === "number") {
+    observedAt = admin.firestore.Timestamp.fromMillis(obs.dateutc);
+  } else if (obs.date) {
+    observedAt = admin.firestore.Timestamp.fromDate(new Date(obs.date));
+  } else {
+    observedAt = admin.firestore.Timestamp.now();
+  }
+
+  return {
+    dirDeg,
+    speedMph: Math.round(speedMph * 100) / 100,
+    speedKts: Math.round(speedMph * MPH_TO_KTS * 100) / 100,
+    gustMph: gustMph !== null ? Math.round(gustMph * 100) / 100 : null,
+    gustKts: gustMph !== null ? Math.round(gustMph * MPH_TO_KTS * 100) / 100 : null,
+    tempF: typeof obs.tempf === "number" ? Math.round(obs.tempf * 10) / 10 : null,
+    humidity: typeof obs.humidity === "number" ? obs.humidity : null,
+    pressureInHg: typeof obs.baromrelin === "number" ? Math.round(obs.baromrelin * 100) / 100 : null,
+    observedAt,
+    fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+    source: "ambient",
+    station: {
+      name: "MPYC Weather Station",
+      lat: STATION_LAT,
+      lon: STATION_LON,
+    },
+    error: null,
+  };
+}
+
+async function doWeatherFetch() {
+  // Rate limit: check last fetch time
+  const docRef = db.doc(WEATHER_DOC_PATH);
+  const existing = await docRef.get();
+
+  if (existing.exists) {
+    const lastFetched = existing.data()?.fetchedAt?.toMillis?.();
+    if (lastFetched && Date.now() - lastFetched < MIN_FETCH_INTERVAL_MS) {
+      logger.info("Weather fetch skipped — too recent", {
+        lastFetched: new Date(lastFetched).toISOString(),
+      });
+      return { skipped: true, data: existing.data() };
+    }
+  }
+
+  try {
+    const obs = await fetchAmbientData();
+    const normalized = normalizeObservation(obs);
+    await docRef.set(normalized, { merge: true });
+    logger.info("Weather updated", { speedKts: normalized.speedKts, dirDeg: normalized.dirDeg });
+    return { skipped: false, data: normalized };
+  } catch (error) {
+    // On error, keep last known data but record the error
+    logger.error("Weather fetch failed", { error: error.message });
+    await docRef.set(
+      {
+        error: error.message || "Unknown fetch error",
+        fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    return { skipped: false, error: error.message };
+  }
+}
+
+// Scheduled: runs every 1 minute
+exports.scheduledWeatherFetch = onSchedule(
+  {
+    schedule: "* * * * *",
+    timeZone: "America/Los_Angeles",
+    memory: "256MiB",
+    timeoutSeconds: 30,
+  },
+  async () => {
+    const result = await doWeatherFetch();
+    logger.info("scheduledWeatherFetch complete", result);
+  },
+);
+
+// Callable: on-demand refresh (rate-limited server-side)
+exports.refreshWeather = onCall(async (request) => {
+  // Auth optional — allow unauthenticated for public weather display
+  const result = await doWeatherFetch();
+  if (result.skipped && result.data) {
+    const d = result.data;
+    return {
+      dirDeg: d.dirDeg,
+      speedMph: d.speedMph,
+      speedKts: d.speedKts,
+      gustMph: d.gustMph,
+      gustKts: d.gustKts,
+      observedAt: d.observedAt?.toMillis?.() || null,
+      fetchedAt: d.fetchedAt?.toMillis?.() || null,
+      cached: true,
+    };
+  }
+  return { refreshed: !result.error, error: result.error || null };
+});
+

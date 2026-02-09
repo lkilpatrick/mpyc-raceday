@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:mpyc_raceday/features/weather/data/models/live_weather.dart';
+import 'package:mpyc_raceday/features/weather/presentation/live_weather_providers.dart';
+import 'package:mpyc_raceday/features/weather/presentation/widgets/wind_compass_widget.dart';
 
 class AdminDashboardPage extends ConsumerWidget {
   const AdminDashboardPage({super.key});
@@ -313,9 +316,12 @@ class _UpcomingEventsCard extends StatelessWidget {
   }
 }
 
-class _WeatherCard extends StatelessWidget {
+class _WeatherCard extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weatherAsync = ref.watch(liveWeatherProvider);
+    final unit = ref.watch(windSpeedUnitProvider);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -324,74 +330,130 @@ class _WeatherCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.cloud, size: 20),
+                const Icon(Icons.air, size: 20),
                 const SizedBox(width: 8),
-                Text('Current Weather',
+                Text('MPYC Live Wind',
                     style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
-                TextButton(
-                  onPressed: () => context.go('/weather-logs'),
-                  child: const Text('Details'),
+                // Unit toggle
+                SegmentedButton<WindSpeedUnit>(
+                  segments: const [
+                    ButtonSegment(value: WindSpeedUnit.kts, label: Text('kts')),
+                    ButtonSegment(value: WindSpeedUnit.mph, label: Text('mph')),
+                  ],
+                  selected: {unit},
+                  onSelectionChanged: (v) =>
+                      ref.read(windSpeedUnitProvider.notifier).state = v.first,
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: WidgetStatePropertyAll(
+                      Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
                 ),
               ],
             ),
             const Divider(),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('weather_entries')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (!snap.hasData || snap.data!.docs.isEmpty) {
+            weatherAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text('Error: $e'),
+              ),
+              data: (weather) {
+                if (weather == null) {
                   return const Padding(
                     padding: EdgeInsets.all(12),
-                    child: Text('No weather data'),
+                    child: Text('No weather data yet. Deploy Cloud Functions and set AmbientWeather secrets.'),
                   );
                 }
-                final d =
-                    snap.data!.docs.first.data() as Map<String, dynamic>;
-                final windSpeed = (d['windSpeedKts'] as num?)?.toDouble() ?? 0;
-                final windDir = (d['windDirectionDeg'] as num?)?.toDouble() ?? 0;
-                final temp = (d['temperatureF'] as num?)?.toDouble() ?? 0;
-                final desc = d['description'] as String? ?? '';
+
+                final speed = unit == WindSpeedUnit.kts
+                    ? weather.speedKts
+                    : weather.speedMph;
+                final gust = unit == WindSpeedUnit.kts
+                    ? weather.gustKts
+                    : weather.gustMph;
 
                 return Column(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.air,
-                            size: 36,
-                            color: windSpeed > 20
-                                ? Colors.red
-                                : Colors.blue),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    // Stale warning
+                    if (weather.isStale)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
                           children: [
+                            const Icon(Icons.warning_amber,
+                                size: 16, color: Colors.orange),
+                            const SizedBox(width: 6),
                             Text(
-                              '${windSpeed.toStringAsFixed(0)} kts',
+                              'Data is ${weather.staleness.inSeconds}s old',
                               style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold),
+                                  fontSize: 12, color: Colors.orange),
                             ),
-                            Text(
-                                'from ${windDir.toStringAsFixed(0)}°'),
                           ],
                         ),
-                        const Spacer(),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('${temp.toStringAsFixed(0)}°F',
-                                style: const TextStyle(fontSize: 18)),
-                            Text(desc,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall),
-                          ],
+                      ),
+                    // Error banner
+                    if (weather.error != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(6),
                         ),
+                        child: Text(
+                          'Fetch error: ${weather.error}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.red),
+                        ),
+                      ),
+                    WindCompassWidget(
+                      dirDeg: weather.dirDeg,
+                      speed: speed,
+                      unit: unit,
+                      gust: gust,
+                      size: 160,
+                    ),
+                    const SizedBox(height: 8),
+                    // Extra info row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (weather.tempF != null) ...[
+                          Text('${weather.tempF!.toStringAsFixed(0)}°F',
+                              style: const TextStyle(fontSize: 13)),
+                          const SizedBox(width: 12),
+                        ],
+                        if (weather.humidity != null) ...[
+                          Text('${weather.humidity!.toStringAsFixed(0)}% RH',
+                              style: const TextStyle(fontSize: 13)),
+                          const SizedBox(width: 12),
+                        ],
+                        if (weather.pressureInHg != null)
+                          Text('${weather.pressureInHg!.toStringAsFixed(2)}" Hg',
+                              style: const TextStyle(fontSize: 13)),
                       ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Updated ${_timeAgo(weather.fetchedAt)}',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade500),
                     ),
                   ],
                 );
@@ -401,6 +463,14 @@ class _WeatherCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 10) return 'just now';
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    return '${diff.inHours}h ago';
   }
 }
 

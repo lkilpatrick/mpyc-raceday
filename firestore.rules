@@ -122,7 +122,13 @@ service cloud.firestore {
         || (isAuthenticated() && resource.data.checkedInBy == request.auth.uid);
     }
 
-    // ── Weather ──
+    // ── Weather (live station data — written by Cloud Functions only) ──
+    match /weather/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ── Weather Logs (manual entries) ──
     match /weather_logs/{docId} {
       allow read: if isAuthenticated();
       allow write: if hasAnyRole(['web_admin', 'rc_chair']);

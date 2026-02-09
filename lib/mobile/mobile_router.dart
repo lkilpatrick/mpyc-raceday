@@ -26,6 +26,7 @@ import 'package:mpyc_raceday/features/incidents/presentation/mobile/incident_det
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/profile_screen.dart';
+import 'package:mpyc_raceday/features/weather/presentation/mobile/live_wind_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -197,6 +198,10 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/live-wind',
+      builder: (context, state) => const LiveWindScreen(),
     ),
     GoRoute(
       path: '/incidents/browse',

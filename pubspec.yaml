@@ -60,6 +60,7 @@ dependencies:
   flutter_dotenv: any
   shimmer: any
   connectivity_plus: any
+  geolocator: any
 
 dev_dependencies:
   flutter_test:

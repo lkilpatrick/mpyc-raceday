@@ -34,6 +34,12 @@ class MoreScreen extends StatelessWidget {
           subtitle: 'View course library',
           onTap: () => context.push('/courses/select/browse'),
         ),
+        _MoreItem(
+          icon: Icons.air,
+          label: 'Live Wind',
+          subtitle: 'Real-time wind from MPYC station',
+          onTap: () => context.push('/live-wind'),
+        ),
         const Divider(),
         _MoreItem(
           icon: Icons.person,
