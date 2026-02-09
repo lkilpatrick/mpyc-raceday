@@ -6,6 +6,10 @@ import 'package:mpyc_raceday/features/checklists/presentation/mobile/active_chec
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_history_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/event_detail_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_detail_screen.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/definitions_screen.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/rule_detail_screen.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/rules_home_screen.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/situation_advisor_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
@@ -89,6 +93,25 @@ final GoRouter mobileRouter = GoRouter(
         final requestId = state.pathParameters['requestId']!;
         return MaintenanceDetailScreen(requestId: requestId);
       },
+    ),
+    GoRoute(
+      path: '/rules',
+      builder: (context, state) => const RulesHomeScreen(),
+    ),
+    GoRoute(
+      path: '/rules/detail/:ruleNumber',
+      builder: (context, state) {
+        final ruleNumber = state.pathParameters['ruleNumber']!;
+        return RuleDetailScreen(ruleNumber: ruleNumber);
+      },
+    ),
+    GoRoute(
+      path: '/rules/advisor',
+      builder: (context, state) => const SituationAdvisorScreen(),
+    ),
+    GoRoute(
+      path: '/rules/definitions',
+      builder: (context, state) => const DefinitionsScreen(),
     ),
   ],
 );

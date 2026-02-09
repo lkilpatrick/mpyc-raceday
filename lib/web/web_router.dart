@@ -90,6 +90,11 @@ final GoRouter webRouter = GoRouter(
           const WebShell(activeRoute: '/maintenance-reports'),
     ),
     GoRoute(
+      path: '/rules-reference',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/rules-reference'),
+    ),
+    GoRoute(
       path: '/incidents',
       builder: (context, state) => const WebShell(activeRoute: '/incidents'),
     ),
