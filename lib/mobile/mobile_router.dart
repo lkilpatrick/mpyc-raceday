@@ -10,6 +10,10 @@ import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/definitio
 import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/rule_detail_screen.dart';
 import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/rules_home_screen.dart';
 import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/situation_advisor_screen.dart';
+import 'package:mpyc_raceday/features/timing/presentation/mobile/finish_recording_screen.dart';
+import 'package:mpyc_raceday/features/timing/presentation/mobile/start_sequence_screen.dart';
+import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_dashboard_screen.dart';
+import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_results_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
@@ -112,6 +116,34 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/rules/definitions',
       builder: (context, state) => const DefinitionsScreen(),
+    ),
+    GoRoute(
+      path: '/timing/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return TimingDashboardScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/timing/start/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return StartSequenceScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/timing/finish/:raceStartId',
+      builder: (context, state) {
+        final raceStartId = state.pathParameters['raceStartId']!;
+        return FinishRecordingScreen(raceStartId: raceStartId);
+      },
+    ),
+    GoRoute(
+      path: '/timing/results/:raceStartId',
+      builder: (context, state) {
+        final raceStartId = state.pathParameters['raceStartId']!;
+        return TimingResultsScreen(raceStartId: raceStartId);
+      },
     ),
   ],
 );

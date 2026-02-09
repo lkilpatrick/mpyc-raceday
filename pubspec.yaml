@@ -42,6 +42,7 @@ dependencies:
   cloud_functions: any
   image_picker: any
   shared_preferences: any
+  wakelock_plus: any
   flutter_riverpod: any
   riverpod_annotation: any
   go_router: any
