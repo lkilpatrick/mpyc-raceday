@@ -15,13 +15,9 @@ class WeatherDashboardScreen extends ConsumerWidget {
     final forecastAsync = ref.watch(marineForecastProvider);
     final pollingService = ref.watch(weatherPollingServiceProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Weather')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showManualEntry(context, ref, conditionsAsync.valueOrNull),
-        child: const Icon(Icons.edit),
-      ),
-      body: ListView(
+    return Stack(
+      children: [
+        ListView(
         padding: const EdgeInsets.all(12),
         children: [
           // Logging indicator
@@ -106,6 +102,15 @@ class WeatherDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            onPressed: () => _showManualEntry(context, ref, conditionsAsync.valueOrNull),
+            child: const Icon(Icons.edit),
+          ),
+        ),
+      ],
     );
   }
 

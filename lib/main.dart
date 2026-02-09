@@ -26,7 +26,9 @@ Future<void> main() async {
     }
   }
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
 
   // Enable Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(
