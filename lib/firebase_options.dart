@@ -21,28 +21,29 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    authDomain: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyChUG2sugQP69V8lVt1eFkJlpkaHL0Lr4s',
+    appId: '1:856196031997:web:eba232ffdb2cf0aedee594',
+    messagingSenderId: '856196031997',
+    projectId: 'mpyc-raceday',
+    authDomain: 'mpyc-raceday.firebaseapp.com',
+    storageBucket: 'mpyc-raceday.firebasestorage.app',
+    measurementId: 'G-Z80TDK5XGK',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyChUG2sugQP69V8lVt1eFkJlpkaHL0Lr4s',
+    appId: '1:856196031997:web:eba232ffdb2cf0aedee594',
+    messagingSenderId: '856196031997',
+    projectId: 'mpyc-raceday',
+    storageBucket: 'mpyc-raceday.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyChUG2sugQP69V8lVt1eFkJlpkaHL0Lr4s',
+    appId: '1:856196031997:web:eba232ffdb2cf0aedee594',
+    messagingSenderId: '856196031997',
+    projectId: 'mpyc-raceday',
+    storageBucket: 'mpyc-raceday.firebasestorage.app',
     iosBundleId: 'org.example.mpycRaceday',
   );
 }

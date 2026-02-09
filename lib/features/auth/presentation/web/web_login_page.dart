@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -90,6 +92,79 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
       );
     } catch (e) {
       setState(() => _errorMessage = 'Failed to send reset email.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _seedTestAdmin() async {
+    const testEmail = 'admin@mpyc.org';
+    const testPassword = 'RaceDay2024!';
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final firestore = FirebaseFirestore.instance;
+
+      // Create or get the auth user
+      UserCredential credential;
+      try {
+        credential = await auth.createUserWithEmailAndPassword(
+          email: testEmail,
+          password: testPassword,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'email-already-in-use') {
+          credential = await auth.signInWithEmailAndPassword(
+            email: testEmail,
+            password: testPassword,
+          );
+        } else {
+          rethrow;
+        }
+      }
+
+      final uid = credential.user!.uid;
+
+      // Create the member document
+      await firestore.collection('members').doc('test-admin').set({
+        'firstName': 'MPYC',
+        'lastName': 'Admin',
+        'email': testEmail,
+        'mobileNumber': '',
+        'memberNumber': 'ADMIN-001',
+        'membershipStatus': 'active',
+        'membershipCategory': 'Staff',
+        'memberTags': ['admin', 'rc'],
+        'clubspotId': '',
+        'role': 'admin',
+        'firebaseUid': uid,
+        'lastSynced': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
+        'emergencyContact': {'name': '', 'phone': ''},
+      }, SetOptions(merge: true));
+
+      // Sign out so user can sign in fresh
+      await auth.signOut();
+
+      if (!mounted) return;
+
+      // Pre-fill the login form
+      _emailController.text = testEmail;
+      _passwordController.text = testPassword;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Test admin created! Click Sign In to continue.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() => _errorMessage = 'Seed failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -287,6 +362,18 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
                           _showForgotPassword
                               ? 'Back to Sign In'
                               : 'Forgot Password?',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _seedTestAdmin,
+                        icon: const Icon(Icons.developer_mode, size: 16),
+                        label: const Text('Seed Test Admin (Dev)'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
                         ),
                       ),
                     ],
