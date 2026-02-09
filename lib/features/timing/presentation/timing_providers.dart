@@ -18,6 +18,11 @@ final raceStartsProvider =
   return ref.watch(timingRepositoryProvider).watchRaceStarts(eventId);
 });
 
+final raceStartByIdProvider =
+    StreamProvider.family<RaceStart?, String>((ref, raceStartId) {
+  return ref.watch(timingRepositoryProvider).watchRaceStartById(raceStartId);
+});
+
 final finishRecordsProvider =
     StreamProvider.family<List<FinishRecord>, String>((ref, raceStartId) {
   return ref.watch(timingRepositoryProvider).watchFinishRecords(raceStartId);

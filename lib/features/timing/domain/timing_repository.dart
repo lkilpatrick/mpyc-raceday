@@ -5,6 +5,7 @@ abstract class TimingRepository {
 
   // Race starts
   Stream<List<RaceStart>> watchRaceStarts(String eventId);
+  Stream<RaceStart?> watchRaceStartById(String raceStartId);
   Future<RaceStart> createRaceStart(RaceStart start);
   Future<void> updateRaceStart(RaceStart start);
 

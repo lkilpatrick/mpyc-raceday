@@ -379,20 +379,18 @@ class _RaceClockState extends ConsumerState<_RaceClock> {
 
   @override
   Widget build(BuildContext context) {
-    // Try to resolve start time from race starts
-    final startsAsync = ref.watch(raceStartsProvider(''));
+    // Watch the specific race start by its document ID
+    final startAsync = ref.watch(raceStartByIdProvider(widget.raceStartId));
 
     return StreamBuilder<int>(
       stream: _ticker,
       builder: (context, _) {
-        // Find start time from any available source
+        // Resolve start time from the race start document
         if (_startTime == null) {
-          startsAsync.whenData((starts) {
-            for (final s in starts) {
-              if (s.id == widget.raceStartId && s.startTime != null) {
-                _startTime = s.startTime;
-                widget.onStartTimeResolved(s.startTime!);
-              }
+          startAsync.whenData((start) {
+            if (start != null && start.startTime != null) {
+              _startTime = start.startTime;
+              widget.onStartTimeResolved(start.startTime!);
             }
           });
         }

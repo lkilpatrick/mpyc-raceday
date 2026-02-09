@@ -336,7 +336,7 @@ exports.sendFleetNotification = onCall(async (request) => {
   }
 
   const checkinsSnap = await db
-    .collection("boatCheckins")
+    .collection("boat_checkins")
     .where("eventId", "==", eventId)
     .get();
 
@@ -1107,12 +1107,13 @@ exports.onCourseSelected = functions.firestore
       const member = memberDoc.data();
 
       // Send SMS via Twilio
-      if (member.phone && twilioClient) {
+      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
         try {
-          await twilioClient.messages.create({
+          const client = twilioClient();
+          await client.messages.create({
             body: smsMsg,
             from: process.env.TWILIO_FROM_NUMBER,
-            to: member.phone,
+            to: member.mobileNumber || member.phone,
           });
           smsSent++;
         } catch (smsErr) {
@@ -1189,12 +1190,13 @@ exports.sendFleetBroadcast = onCall(async (request) => {
       const member = memberDoc.data();
 
       // SMS
-      if (member.phone && twilioClient) {
+      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
         try {
-          await twilioClient.messages.create({
+          const client = twilioClient();
+          await client.messages.create({
             body: message,
             from: process.env.TWILIO_FROM_NUMBER,
-            to: member.phone,
+            to: member.mobileNumber || member.phone,
           });
           smsSent++;
         } catch (smsErr) {
@@ -1295,12 +1297,13 @@ exports.notifyIncidentReported = functions.firestore
       }
 
       // SMS
-      if (adminData.phone && twilioClient) {
+      if ((adminData.mobileNumber || adminData.phone) && process.env.TWILIO_ACCOUNT_SID) {
         try {
-          await twilioClient.messages.create({
+          const client = twilioClient();
+          await client.messages.create({
             body: smsMsg,
             from: process.env.TWILIO_FROM_NUMBER,
-            to: adminData.phone,
+            to: adminData.mobileNumber || adminData.phone,
           });
           smsSent++;
         } catch (smsErr) {
@@ -1390,12 +1393,13 @@ exports.notifyHearingScheduled = functions.firestore
       }
 
       // SMS
-      if (member.phone && twilioClient) {
+      if ((member.mobileNumber || member.phone) && process.env.TWILIO_ACCOUNT_SID) {
         try {
-          await twilioClient.messages.create({
+          const client = twilioClient();
+          await client.messages.create({
             body: smsMsg,
             from: process.env.TWILIO_FROM_NUMBER,
-            to: member.phone,
+            to: member.mobileNumber || member.phone,
           });
         } catch (e) {
           logger.error("Hearing SMS failed", { boatId, error: e.message });

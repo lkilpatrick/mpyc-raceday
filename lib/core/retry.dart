@@ -8,6 +8,7 @@ Future<T> retryWithBackoff<T>(
   int maxAttempts = 3,
   Duration initialDelay = const Duration(seconds: 1),
   Duration maxDelay = const Duration(seconds: 30),
+  Duration timeout = const Duration(seconds: 10),
   bool Function(Object error)? retryIf,
 }) async {
   var attempt = 0;
@@ -16,7 +17,7 @@ Future<T> retryWithBackoff<T>(
   while (attempt < maxAttempts) {
     attempt++;
     try {
-      return await action().timeout(const Duration(seconds: 10));
+      return await action().timeout(timeout);
     } catch (error) {
       lastError = error;
       if (retryIf != null && !retryIf(error)) rethrow;
@@ -41,8 +42,9 @@ Future<T> retryUpload<T>(
   int maxAttempts = 3,
 }) {
   return retryWithBackoff(
-    () => action().timeout(const Duration(seconds: 30)),
+    action,
     maxAttempts: maxAttempts,
     initialDelay: const Duration(seconds: 2),
+    timeout: const Duration(seconds: 30),
   );
 }

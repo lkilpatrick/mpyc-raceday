@@ -54,7 +54,10 @@ class OfflineQueue {
     try {
       final prefs = await SharedPreferences.getInstance();
       final queue = prefs.getStringList(_queueKey) ?? [];
-      if (queue.isEmpty) return;
+      if (queue.isEmpty) {
+        _processing = false;
+        return;
+      }
 
       debugPrint('OfflineQueue: processing ${queue.length} queued writes');
       final failed = <String>[];

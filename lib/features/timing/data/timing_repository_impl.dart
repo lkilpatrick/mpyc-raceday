@@ -112,6 +112,14 @@ class TimingRepositoryImpl implements TimingRepository {
   }
 
   @override
+  Stream<RaceStart?> watchRaceStartById(String raceStartId) {
+    return _startsCol.doc(raceStartId).snapshots().map((snap) {
+      if (!snap.exists || snap.data() == null) return null;
+      return _startFromDoc(snap);
+    });
+  }
+
+  @override
   Future<RaceStart> createRaceStart(RaceStart start) async {
     final ref = await _startsCol.add(_startToMap(start));
     return start.copyWith(id: ref.id);

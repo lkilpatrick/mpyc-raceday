@@ -32,10 +32,9 @@ class CourseConfig {
     this.inflatableType,
     this.isActive = true,
     this.notes = '',
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  })  : createdAt = createdAt ?? null,
-        updatedAt = updatedAt ?? null;
+    this.createdAt,
+    this.updatedAt,
+  });
 
   final String id;
   final String courseNumber;
