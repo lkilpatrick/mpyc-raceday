@@ -6,6 +6,10 @@ import 'package:mpyc_raceday/features/auth/presentation/web/admin_profile_page.d
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_compliance_dashboard.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_completion_history_page.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_templates_page.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_dashboard_page.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_management_page.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_reports_panel.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_schedule_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_availability_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
@@ -49,6 +53,14 @@ class _WebShellState extends State<WebShell> {
         return const ChecklistCompletionHistoryPage();
       case '/checklists-compliance':
         return const ChecklistComplianceDashboard();
+      case '/maintenance':
+        return const MaintenanceDashboardPage();
+      case '/maintenance-manage':
+        return const MaintenanceManagementPage();
+      case '/maintenance-schedule':
+        return const MaintenanceSchedulePage();
+      case '/maintenance-reports':
+        return const MaintenanceReportsPanel();
       case '/settings':
         return const AdminProfilePage();
       default:

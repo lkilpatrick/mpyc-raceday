@@ -5,6 +5,9 @@ import 'package:mpyc_raceday/features/auth/presentation/mobile/verification_scre
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/active_checklist_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_history_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/event_detail_screen.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_detail_screen.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
+import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -71,6 +74,21 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/checklists/history',
       builder: (context, state) => const ChecklistHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/maintenance/report',
+      builder: (context, state) => const MaintenanceQuickReportScreen(),
+    ),
+    GoRoute(
+      path: '/maintenance/feed',
+      builder: (context, state) => const MaintenanceFeedScreen(),
+    ),
+    GoRoute(
+      path: '/maintenance/detail/:requestId',
+      builder: (context, state) {
+        final requestId = state.pathParameters['requestId']!;
+        return MaintenanceDetailScreen(requestId: requestId);
+      },
     ),
   ],
 );

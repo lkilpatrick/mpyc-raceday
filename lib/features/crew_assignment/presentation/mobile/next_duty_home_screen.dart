@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../maintenance/presentation/maintenance_providers.dart';
 import '../crew_assignment_formatters.dart';
 import '../crew_assignment_providers.dart';
 
@@ -13,9 +14,41 @@ class NextDutyHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nextDutyAsync = ref.watch(nextDutyProvider);
 
+    final criticalCount = ref.watch(criticalMaintenanceCountProvider);
+
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // Maintenance alerts
+        if (criticalCount.valueOrNull != null && criticalCount.valueOrNull! > 0)
+          Card(
+            color: Colors.red.shade50,
+            child: InkWell(
+              onTap: () => context.go('/maintenance/feed'),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.red.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${criticalCount.valueOrNull} critical maintenance issue${criticalCount.valueOrNull! > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (criticalCount.valueOrNull != null && criticalCount.valueOrNull! > 0)
+          const SizedBox(height: 4),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(14),

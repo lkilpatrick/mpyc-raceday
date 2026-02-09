@@ -596,6 +596,169 @@ exports.sendCrewReminders = onSchedule(
   },
 );
 
+// ── Maintenance: notifications ──
+
+exports.notifyMaintenanceAssignment = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+  const {requestId, assignedTo} = request.data || {};
+  if (!requestId || !assignedTo) {
+    throw new HttpsError("invalid-argument", "requestId and assignedTo required");
+  }
+
+  const reqDoc = await db.collection("maintenance_requests").doc(requestId).get();
+  if (!reqDoc.exists) {
+    throw new HttpsError("not-found", "Maintenance request not found");
+  }
+  const reqData = reqDoc.data();
+
+  // Look up assigned member
+  const memberSnap = await db.collection("members")
+    .where("firebaseUid", "==", assignedTo)
+    .limit(1)
+    .get();
+
+  if (memberSnap.empty) {
+    logger.warn("Assigned member not found", {assignedTo});
+    return {notified: false};
+  }
+  const member = memberSnap.docs[0].data();
+  const message = `MPYC Maintenance: You've been assigned to "${reqData.title}" on ${reqData.boatName}. Priority: ${(reqData.priority || "").toUpperCase()}`;
+
+  // SMS
+  if (process.env.TWILIO_ACCOUNT_SID && member.mobileNumber) {
+    try {
+      const twilioClient = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN,
+      );
+      await twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_FROM_NUMBER,
+        to: member.mobileNumber,
+      });
+    } catch (err) {
+      logger.warn("Maintenance SMS failed", {error: err.message});
+    }
+  }
+
+  // Push
+  try {
+    const tokensSnap = await db.collection("fcm_tokens")
+      .where("userId", "==", assignedTo)
+      .get();
+    const tokens = tokensSnap.docs.map((d) => d.data().token).filter(Boolean);
+    if (tokens.length > 0) {
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title: `Maintenance Assigned: ${reqData.boatName}`,
+          body: reqData.title,
+        },
+        data: {requestId, boatName: reqData.boatName || ""},
+      });
+    }
+  } catch (err) {
+    logger.warn("Maintenance push failed", {error: err.message});
+  }
+
+  logger.info("Maintenance assignment notification sent", {requestId, assignedTo});
+  return {notified: true};
+});
+
+exports.weeklyMaintenanceSummary = onSchedule(
+  {schedule: "every monday 09:00", timeZone: "America/New_York"},
+  async () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Open critical/high
+    const openSnap = await db.collection("maintenance_requests")
+      .where("status", "in", ["reported", "acknowledged", "inProgress", "awaitingParts"])
+      .get();
+    const openRequests = openSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+    const criticalHigh = openRequests.filter(
+      (r) => r.priority === "critical" || r.priority === "high",
+    );
+
+    // Older than 30 days
+    const stale = openRequests.filter((r) => {
+      const reported = r.reportedAt?.toDate ? r.reportedAt.toDate() : new Date(r.reportedAt);
+      return reported < thirtyDaysAgo;
+    });
+
+    // Completed this week
+    const completedSnap = await db.collection("maintenance_requests")
+      .where("status", "==", "completed")
+      .where("completedAt", ">=", admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+      .get();
+    const completedThisWeek = completedSnap.docs.length;
+
+    // Upcoming scheduled maintenance
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const schedSnap = await db.collection("scheduled_maintenance")
+      .where("nextDueAt", "<=", admin.firestore.Timestamp.fromDate(nextWeek))
+      .get();
+    const upcomingSched = schedSnap.docs.map((d) => d.data());
+
+    // Build summary
+    const lines = [
+      `MPYC Weekly Maintenance Summary — ${now.toLocaleDateString("en-US", {weekday: "long", month: "short", day: "numeric"})}`,
+      "",
+      `Open Critical/High: ${criticalHigh.length}`,
+      ...criticalHigh.slice(0, 5).map((r) => `  • [${r.priority.toUpperCase()}] ${r.boatName}: ${r.title}`),
+      "",
+      `Requests older than 30 days: ${stale.length}`,
+      ...stale.slice(0, 5).map((r) => `  • ${r.boatName}: ${r.title}`),
+      "",
+      `Completed this week: ${completedThisWeek}`,
+      "",
+      `Upcoming scheduled maintenance: ${upcomingSched.length}`,
+      ...upcomingSched.slice(0, 5).map((s) => `  • ${s.boatName}: ${s.title} (due ${s.nextDueAt?.toDate ? s.nextDueAt.toDate().toLocaleDateString() : "TBD"})`),
+    ];
+    const summaryText = lines.join("\n");
+
+    // Get admin members
+    const adminsSnap = await db.collection("members")
+      .where("role", "in", ["admin", "rc_chair"])
+      .get();
+
+    let sent = 0;
+    for (const adminDoc of adminsSnap.docs) {
+      const adminData = adminDoc.data();
+      if (process.env.TWILIO_ACCOUNT_SID && adminData.mobileNumber) {
+        try {
+          const twilioClient = twilio(
+            process.env.TWILIO_ACCOUNT_SID,
+            process.env.TWILIO_AUTH_TOKEN,
+          );
+          await twilioClient.messages.create({
+            body: summaryText,
+            from: process.env.TWILIO_FROM_NUMBER,
+            to: adminData.mobileNumber,
+          });
+          sent++;
+        } catch (err) {
+          logger.warn("Weekly summary SMS failed", {error: err.message});
+        }
+      }
+    }
+
+    logger.info("Weekly maintenance summary sent", {
+      criticalHigh: criticalHigh.length,
+      stale: stale.length,
+      completedThisWeek,
+      upcomingSched: upcomingSched.length,
+      adminsSent: sent,
+    });
+  },
+);
+
 // ── Checklist: seed default templates ──
 
 exports.seedChecklistTemplates = onCall(async (request) => {

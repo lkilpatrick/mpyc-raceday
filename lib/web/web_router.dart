@@ -75,6 +75,21 @@ final GoRouter webRouter = GoRouter(
       builder: (context, state) => const WebShell(activeRoute: '/maintenance'),
     ),
     GoRoute(
+      path: '/maintenance-manage',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/maintenance-manage'),
+    ),
+    GoRoute(
+      path: '/maintenance-schedule',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/maintenance-schedule'),
+    ),
+    GoRoute(
+      path: '/maintenance-reports',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/maintenance-reports'),
+    ),
+    GoRoute(
       path: '/incidents',
       builder: (context, state) => const WebShell(activeRoute: '/incidents'),
     ),
