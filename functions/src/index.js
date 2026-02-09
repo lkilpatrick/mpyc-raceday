@@ -91,17 +91,22 @@ async function fetchMembers(clubId, {apiKey, primaryOnly = false, skip = 0} = {}
 
 function mapClubspotMember(member, existing = {}) {
   const role = existing.role || "member";
+  // membership is a nested object: { id, status, category }
+  const membership = member.membership || {};
   return {
     id: String(member.id || member._id || member.membership_number || ""),
     firstName: String(member.first_name || ""),
     lastName: String(member.last_name || ""),
     email: String(member.email || ""),
-    mobileNumber: String(member.mobile || member.mobile_phone || ""),
+    mobileNumber: String(member.mobile_number || member.mobile || member.mobile_phone || ""),
     memberNumber: String(member.membership_number || member.member_number || ""),
-    membershipStatus: String(member.membership_status || ""),
-    membershipCategory: String(member.membership_category || ""),
-    memberTags: Array.isArray(member.tags) ? member.tags.map((t) => String(t)) : [],
+    membershipId: String(membership.id || ""),
+    membershipStatus: String(membership.status || member.membership_status || ""),
+    membershipCategory: String(membership.category || member.membership_category || ""),
+    memberTags: Array.isArray(member.member_tags) ? member.member_tags.map((t) => String(t)) : [],
+    dob: member.dob ? String(member.dob) : null,
     clubspotId: String(member.id || member._id || ""),
+    clubspotCreated: member.created || null,
     role,
     lastSynced: admin.firestore.FieldValue.serverTimestamp(),
     profilePhotoUrl: existing.profilePhotoUrl || null,
@@ -1483,5 +1488,172 @@ exports.notifyHearingScheduled = functions.firestore
     logger.info("Hearing notifications sent", { incidentId, boatCount: involvedBoats.length });
   } catch (err) {
     logger.error("notifyHearingScheduled error", { error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// Clubspot Scores Integration
+// ══════════════════════════════════════════════════════
+
+// submitScore — push a finish time to Clubspot for a regatta
+exports.submitClubspotScore = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { finishTime, registrationId, raceNumber, eventId } = request.data || {};
+  if (!finishTime || !registrationId || !raceNumber) {
+    throw new HttpsError(
+      "invalid-argument",
+      "finishTime, registrationId, and raceNumber are required",
+    );
+  }
+
+  const apiKey = process.env.CLUBSPOT_API_KEY;
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "CLUBSPOT_API_KEY not configured");
+  }
+
+  try {
+    const result = await clubspotRequest("/scores", {
+      apiKey,
+      method: "POST",
+      body: {
+        finish_time: finishTime,
+        registration_id: registrationId,
+        race_number: raceNumber,
+      },
+    });
+
+    // Log the score submission
+    await db.collection("clubspot_score_logs").add({
+      finishTime,
+      registrationId,
+      raceNumber,
+      eventId: eventId || null,
+      submittedBy: request.auth.uid,
+      clubspotResponse: result,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Clubspot score submitted", { registrationId, raceNumber });
+    return { success: true, data: result };
+  } catch (error) {
+    logger.error("Clubspot score submission failed", { error: error.message });
+    throw new HttpsError("internal", error.message || "Score submission failed");
+  }
+});
+
+// submitBatchScores — push multiple finish times at once
+exports.submitClubspotBatchScores = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { scores, eventId } = request.data || {};
+  if (!Array.isArray(scores) || scores.length === 0) {
+    throw new HttpsError("invalid-argument", "scores array is required");
+  }
+
+  const apiKey = process.env.CLUBSPOT_API_KEY;
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "CLUBSPOT_API_KEY not configured");
+  }
+
+  let submitted = 0;
+  const errors = [];
+
+  for (const score of scores) {
+    const { finishTime, registrationId, raceNumber } = score;
+    if (!finishTime || !registrationId || !raceNumber) {
+      errors.push(`Missing fields for registration ${registrationId || "unknown"}`);
+      continue;
+    }
+
+    try {
+      await clubspotRequest("/scores", {
+        apiKey,
+        method: "POST",
+        body: {
+          finish_time: finishTime,
+          registration_id: registrationId,
+          race_number: raceNumber,
+        },
+      });
+      submitted++;
+    } catch (error) {
+      errors.push(`${registrationId} R${raceNumber}: ${error.message}`);
+    }
+  }
+
+  // Log batch submission
+  await db.collection("clubspot_score_logs").add({
+    batchSize: scores.length,
+    submitted,
+    errors,
+    eventId: eventId || null,
+    submittedBy: request.auth.uid,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  logger.info("Clubspot batch scores submitted", { submitted, errors: errors.length });
+  return { submitted, errors };
+});
+
+// ══════════════════════════════════════════════════════
+// Clubspot Line Items (billing activity)
+// ══════════════════════════════════════════════════════
+
+exports.syncClubspotLineItems = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+
+  const { startDate, endDate } = request.data || {};
+  if (!startDate || !endDate) {
+    throw new HttpsError("invalid-argument", "startDate and endDate are required (ISO format)");
+  }
+
+  const apiKey = process.env.CLUBSPOT_API_KEY;
+  const clubId = process.env.CLUBSPOT_CLUB_ID;
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "CLUBSPOT_API_KEY not configured");
+  }
+
+  try {
+    const items = [];
+    let hasMore = true;
+    let skip = 0;
+
+    while (hasMore) {
+      const result = await clubspotRequest(
+        `/line-items?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&club_id=${encodeURIComponent(clubId || "")}&skip=${skip}`,
+        { apiKey },
+      );
+
+      const rows = result.line_items || result.data?.line_items || [];
+      items.push(...rows);
+      hasMore = result.has_more === true || (result.data?.has_more === true);
+      skip += rows.length;
+      if (rows.length === 0) hasMore = false;
+    }
+
+    // Store in Firestore
+    const batch = db.batch();
+    for (const item of items) {
+      const docId = item.id || `li_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const ref = db.collection("clubspot_line_items").doc(docId);
+      batch.set(ref, {
+        ...item,
+        syncedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    await batch.commit();
+
+    logger.info("Clubspot line items synced", { count: items.length });
+    return { synced: items.length };
+  } catch (error) {
+    logger.error("Clubspot line items sync failed", { error: error.message });
+    throw new HttpsError("internal", error.message || "Line items sync failed");
   }
 });

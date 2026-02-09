@@ -122,12 +122,15 @@ class ClubspotService {
           'firstName': member.firstName,
           'lastName': member.lastName,
           'email': member.email,
-          'mobileNumber': member.mobile,
+          'mobileNumber': member.mobileNumber,
           'memberNumber': member.membershipNumber,
+          'membershipId': member.membershipId,
           'membershipStatus': member.membershipStatus,
           'membershipCategory': member.membershipCategory,
-          'memberTags': member.tags,
+          'memberTags': member.memberTags,
+          'dob': member.dob.isNotEmpty ? member.dob : null,
           'clubspotId': member.id,
+          'clubspotCreated': member.created,
           'role': resolvedRole,
           'lastSynced': Timestamp.now(),
           'profilePhotoUrl': existing['profilePhotoUrl'],
@@ -214,6 +217,94 @@ class ClubspotService {
       );
     }
     return Uri.parse(url);
+  }
+
+  /// Submit a single score to Clubspot for a regatta race.
+  Future<Map<String, dynamic>> submitScore({
+    required int finishTime,
+    required String registrationId,
+    required int raceNumber,
+  }) async {
+    final uri = Uri.parse('$baseUrl/scores');
+    final response = await _requestWithRetry(
+      () => _client.post(
+        uri,
+        headers: _headers,
+        body: jsonEncode(<String, dynamic>{
+          'finish_time': finishTime,
+          'registration_id': registrationId,
+          'race_number': raceNumber,
+        }),
+      ),
+    );
+    return _decodeJson(response.body);
+  }
+
+  /// Submit multiple scores to Clubspot in sequence.
+  Future<({int submitted, List<String> errors})> submitBatchScores(
+    List<({int finishTime, String registrationId, int raceNumber})> scores,
+  ) async {
+    var submitted = 0;
+    final errors = <String>[];
+
+    for (final score in scores) {
+      try {
+        await submitScore(
+          finishTime: score.finishTime,
+          registrationId: score.registrationId,
+          raceNumber: score.raceNumber,
+        );
+        submitted++;
+      } catch (error) {
+        errors.add(
+          '${score.registrationId} R${score.raceNumber}: $error',
+        );
+      }
+    }
+
+    return (submitted: submitted, errors: errors);
+  }
+
+  /// Fetch line items (billing activity) from Clubspot for a date range.
+  Future<List<Map<String, dynamic>>> fetchLineItems({
+    required String startDate,
+    required String endDate,
+    String? clubId,
+  }) async {
+    final items = <Map<String, dynamic>>[];
+    var currentSkip = 0;
+    var hasMore = true;
+
+    while (hasMore) {
+      final queryParams = <String, String>{
+        'start_date': startDate,
+        'end_date': endDate,
+        'skip': '$currentSkip',
+      };
+      if (clubId != null && clubId.isNotEmpty) {
+        queryParams['club_id'] = clubId;
+      }
+
+      final uri = Uri.parse('$baseUrl/line-items').replace(
+        queryParameters: queryParams,
+      );
+      final response = await _requestWithRetry(
+        () => _client.get(uri, headers: _headers),
+      );
+      final jsonBody = _decodeJson(response.body);
+
+      final rows = (jsonBody['line_items'] as List?) ??
+          ((jsonBody['data'] as Map<String, dynamic>?)?['line_items'] as List?) ??
+          const <dynamic>[];
+      items.addAll(rows.whereType<Map<String, dynamic>>());
+
+      hasMore = jsonBody['has_more'] == true ||
+          (jsonBody['data'] as Map<String, dynamic>?)?['has_more'] == true;
+      currentSkip += rows.length;
+      if (rows.isEmpty) hasMore = false;
+    }
+
+    return items;
   }
 
   Future<http.Response> _requestWithRetry(

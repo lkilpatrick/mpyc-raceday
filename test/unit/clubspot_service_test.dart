@@ -31,10 +31,12 @@ void main() {
                   'first_name': 'John',
                   'last_name': 'Doe',
                   'email': 'john@example.com',
-                  'mobile': '+15551234567',
-                  'membership_status': 'active',
-                  'membership_category': 'Regular',
-                  'tags': ['RC Crew'],
+                  'mobile_number': '+15551234567',
+                  'membership': {
+                    'status': 'active',
+                    'category': 'Regular',
+                  },
+                  'member_tags': ['RC Crew'],
                 },
               ],
               'has_more': false,
@@ -52,8 +54,8 @@ void main() {
         expect(members.first.lastName, 'Doe');
         expect(members.first.fullName, 'John Doe');
         expect(members.first.email, 'john@example.com');
-        expect(members.first.mobile, '+15551234567');
-        expect(members.first.tags, ['RC Crew']);
+        expect(members.first.mobileNumber, '+15551234567');
+        expect(members.first.memberTags, ['RC Crew']);
       });
 
       test('handles pagination with has_more', () async {
@@ -137,7 +139,7 @@ void main() {
 
         expect(members, hasLength(1));
         expect(members.first.id, 'alt1');
-        expect(members.first.mobile, '+15559999999');
+        expect(members.first.mobileNumber, '+15559999999');
         expect(members.first.membershipNumber, '200');
       });
     });
@@ -219,7 +221,40 @@ void main() {
   });
 
   group('ClubspotMember.fromJson', () {
-    test('maps all fields correctly', () {
+    test('maps documented API format with nested membership', () {
+      final member = ClubspotMember.fromJson({
+        'id': 'plzCT8Bzrq',
+        'club_id': 'club1',
+        'first_name': 'Jamie',
+        'last_name': 'Tartt',
+        'email': 'jamie@theclubspot.com',
+        'mobile_number': '2144347216',
+        'dob': '2000-10-20T00:00:00.000Z',
+        'member_tags': ['Finance Committee', 'Football Committee'],
+        'membership': {
+          'id': 'LVConLFWyX',
+          'status': 'active',
+          'category': 'All Inclusive Full Membership',
+        },
+        'created': 1711675969449,
+      });
+
+      expect(member.id, 'plzCT8Bzrq');
+      expect(member.clubId, 'club1');
+      expect(member.membershipId, 'LVConLFWyX');
+      expect(member.firstName, 'Jamie');
+      expect(member.lastName, 'Tartt');
+      expect(member.fullName, 'Jamie Tartt');
+      expect(member.email, 'jamie@theclubspot.com');
+      expect(member.mobileNumber, '2144347216');
+      expect(member.dob, '2000-10-20T00:00:00.000Z');
+      expect(member.membershipStatus, 'active');
+      expect(member.membershipCategory, 'All Inclusive Full Membership');
+      expect(member.memberTags, ['Finance Committee', 'Football Committee']);
+      expect(member.created, 1711675969449);
+    });
+
+    test('maps legacy flat format for backward compat', () {
       final member = ClubspotMember.fromJson({
         'id': 'abc',
         'club_id': 'club1',
@@ -230,20 +265,13 @@ void main() {
         'mobile': '+15550001111',
         'membership_status': 'active',
         'membership_category': 'Full',
-        'tags': ['Skipper', 'RC'],
       });
 
       expect(member.id, 'abc');
-      expect(member.clubId, 'club1');
       expect(member.membershipNumber, '42');
-      expect(member.firstName, 'Jane');
-      expect(member.lastName, 'Smith');
-      expect(member.fullName, 'Jane Smith');
-      expect(member.email, 'jane@test.com');
-      expect(member.mobile, '+15550001111');
+      expect(member.mobileNumber, '+15550001111');
       expect(member.membershipStatus, 'active');
       expect(member.membershipCategory, 'Full');
-      expect(member.tags, ['Skipper', 'RC']);
     });
 
     test('handles missing fields gracefully', () {
@@ -252,7 +280,10 @@ void main() {
       expect(member.firstName, '');
       expect(member.lastName, '');
       expect(member.email, '');
-      expect(member.tags, isEmpty);
+      expect(member.mobileNumber, '');
+      expect(member.dob, '');
+      expect(member.memberTags, isEmpty);
+      expect(member.created, isNull);
     });
   });
 }
