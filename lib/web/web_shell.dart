@@ -39,10 +39,12 @@ class WebShell extends StatefulWidget {
 
 class _WebShellState extends State<WebShell> {
   bool _isCollapsed = false;
+  bool _autoCollapsed = false;
 
   void _toggleSidebar() {
     setState(() {
       _isCollapsed = !_isCollapsed;
+      _autoCollapsed = false; // manual override
     });
   }
 
@@ -110,6 +112,18 @@ class _WebShellState extends State<WebShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Auto-collapse sidebar on tablet-width screens (<1024px)
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 1024 && !_isCollapsed && !_autoCollapsed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() { _isCollapsed = true; _autoCollapsed = true; });
+      });
+    } else if (width >= 1024 && _autoCollapsed && _isCollapsed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() { _isCollapsed = false; _autoCollapsed = false; });
+      });
+    }
+
     final activeItem = webNavItems.firstWhere(
       (item) => item.route == widget.activeRoute,
       orElse: () => webNavItems.first,

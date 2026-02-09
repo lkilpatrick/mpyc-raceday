@@ -16,14 +16,15 @@ class ClubspotService {
     AppLogger? logger,
     String? apiKey,
   }) : _client = client ?? http.Client(),
-       _firestore = firestore ?? FirebaseFirestore.instance,
+       _firestoreOverride = firestore,
        _logger = logger ?? const AppLogger(),
        _apiKey = apiKey ?? _resolveApiKey();
 
   static const String baseUrl = 'https://api.theclubspot.com/api/v1';
 
   final http.Client _client;
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestoreOverride;
+  FirebaseFirestore get _firestore => _firestoreOverride ?? FirebaseFirestore.instance;
   final AppLogger _logger;
   final String? _apiKey;
 
