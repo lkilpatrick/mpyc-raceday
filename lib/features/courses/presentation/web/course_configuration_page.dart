@@ -28,14 +28,11 @@ class _CourseConfigurationPageState
 
   static const _bands = [
     'All',
-    'N',
-    'NE',
-    'E',
-    'SE',
-    'S',
-    'SW',
+    'S_SW',
     'W',
     'NW',
+    'N',
+    'N_EXT',
     'INFLATABLE',
     'LONG',
   ];
@@ -629,7 +626,7 @@ class _CourseFormDialogState extends State<_CourseFormDialog> {
     _distCtrl =
         TextEditingController(text: c?.distanceNm.toString() ?? '');
     _notesCtrl = TextEditingController(text: c?.notes ?? '');
-    _band = c?.windDirectionBand ?? 'N';
+    _band = c?.windDirectionBand ?? 'S_SW';
     _windMin = c?.windDirMin ?? 0;
     _windMax = c?.windDirMax ?? 360;
     _finish = c?.finishLocation ?? 'committee_boat';
@@ -704,7 +701,7 @@ class _CourseFormDialogState extends State<_CourseFormDialog> {
                             labelText: 'Wind Band',
                             border: OutlineInputBorder(),
                           ),
-                          items: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'INFLATABLE', 'LONG']
+                          items: ['S_SW', 'W', 'NW', 'N', 'N_EXT', 'INFLATABLE', 'LONG']
                               .map((b) =>
                                   DropdownMenuItem(value: b, child: Text(b)))
                               .toList(),
