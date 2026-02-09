@@ -14,6 +14,8 @@ import 'package:mpyc_raceday/features/timing/presentation/mobile/finish_recordin
 import 'package:mpyc_raceday/features/timing/presentation/mobile/start_sequence_screen.dart';
 import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_dashboard_screen.dart';
 import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_results_screen.dart';
+import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
+import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_history_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_feed_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
@@ -143,6 +145,17 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) {
         final raceStartId = state.pathParameters['raceStartId']!;
         return TimingResultsScreen(raceStartId: raceStartId);
+      },
+    ),
+    GoRoute(
+      path: '/weather',
+      builder: (context, state) => const WeatherDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/weather/history/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return WeatherHistoryScreen(eventId: eventId);
       },
     ),
   ],

@@ -103,6 +103,11 @@ final GoRouter webRouter = GoRouter(
       builder: (context, state) => const WebShell(activeRoute: '/weather-logs'),
     ),
     GoRoute(
+      path: '/weather-analytics',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/weather-analytics'),
+    ),
+    GoRoute(
       path: '/reports',
       builder: (context, state) => const WebShell(activeRoute: '/reports'),
     ),
