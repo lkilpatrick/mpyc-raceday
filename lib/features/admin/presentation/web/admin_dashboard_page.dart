@@ -368,7 +368,7 @@ class _WeatherCard extends ConsumerWidget {
                 if (weather == null) {
                   return const Padding(
                     padding: EdgeInsets.all(12),
-                    child: Text('No weather data yet. Deploy Cloud Functions and set AmbientWeather secrets.'),
+                    child: Text('No weather data available from NOAA. Check network connectivity.'),
                   );
                 }
 
