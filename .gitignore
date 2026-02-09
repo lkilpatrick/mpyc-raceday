@@ -51,7 +51,10 @@ app.*.map.json
 service-account-key.json
 *-service-account*.json
 
-# Firebase
+# Firebase config (regenerate locally with `flutterfire configure`)
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
 firebase-debug.log
 firebase-debug.*.log
 .firebase/

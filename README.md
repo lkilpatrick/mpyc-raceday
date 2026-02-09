@@ -14,7 +14,7 @@ Race Committee management system for **Monterey Peninsula Yacht Club**. Flutter 
 - **Maintenance** — Issue reporting with photos, priority tracking, scheduling, cost tracking
 - **Racing Rules** — RRS reference database, situation advisor
 - **Web Admin** — Dashboard with metrics, 7-tab reports module (fl_chart), system settings, audit log
-- **Notifications** — Twilio SMS + FCM push for course selection, incidents, hearings, crew reminders
+- **Notifications** — SMS (Firestore `sms` collection) + Email (Firestore `mail` collection) + FCM push for course selection, incidents, hearings, crew reminders
 - **Clubspot Integration** — Automated member sync with pagination, retry, and conflict resolution
 
 ## Architecture
@@ -44,7 +44,6 @@ Race Committee management system for **Monterey Peninsula Yacht Club**. Flutter 
        │  │ Clubspot    │  │
        │  │ NOAA        │  │
        │  │ OpenWeather │  │
-       │  │ Twilio      │  │
        │  └────────────┘  │
        └──────────────────┘
 ```
@@ -89,6 +88,23 @@ integration_test/      # End-to-end integration tests
 - Firebase CLI (`npm install -g firebase-tools`)
 - A Firebase project with Firestore, Auth, Storage, and Functions enabled
 
+### Firebase Configuration
+
+Firebase config files are **not committed** to the repo. Generate them locally:
+
+```bash
+# Install FlutterFire CLI if you haven't
+dart pub global activate flutterfire_cli
+
+# Generate firebase_options.dart, google-services.json, GoogleService-Info.plist
+flutterfire configure --project=mpyc-raceday
+```
+
+This creates:
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+- `ios/Runner/GoogleService-Info.plist`
+
 ### Environment Variables
 
 Create a `.env` file in the project root (mobile) or use `--dart-define` (web):
@@ -101,9 +117,6 @@ MANUAL_SYNC_URL=https://your-cloud-function-url
 For Cloud Functions, set secrets:
 
 ```bash
-firebase functions:secrets:set TWILIO_ACCOUNT_SID
-firebase functions:secrets:set TWILIO_AUTH_TOKEN
-firebase functions:secrets:set TWILIO_FROM_NUMBER
 firebase functions:secrets:set CLUBSPOT_API_KEY
 ```
 

@@ -1141,9 +1141,19 @@ exports.seedScheduledMaintenance = onCall(async (request) => {
   return {seeded: count};
 });
 
-// ── Seed test admin (development only) ──
+// ── Seed test admin (emulator / dev only) ──
 
 exports.seedTestAdmin = onCall(async (request) => {
+  // Block in production — only allow when running in the Firebase Emulator
+  const isEmulator = process.env.FUNCTIONS_EMULATOR === "true" ||
+    process.env.FIRESTORE_EMULATOR_HOST != null;
+  if (!isEmulator) {
+    throw new HttpsError(
+      "permission-denied",
+      "seedTestAdmin is only available in the emulator environment.",
+    );
+  }
+
   const testEmail = "admin@mpyc.org";
   const testPassword = "RaceDay2024!";
 
