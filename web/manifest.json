@@ -1,13 +1,14 @@
 {
-    "name": "mpyc_raceday",
-    "short_name": "mpyc_raceday",
+    "name": "MPYC RaceDay",
+    "short_name": "MPYC RC",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1B3A5C",
+    "theme_color": "#1B3A5C",
+    "description": "Monterey Peninsula Yacht Club Race Committee management system for race day operations, crew scheduling, boat check-in, timing, and incident tracking.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["sports", "productivity"],
     "icons": [
         {
             "src": "icons/Icon-192.png",
