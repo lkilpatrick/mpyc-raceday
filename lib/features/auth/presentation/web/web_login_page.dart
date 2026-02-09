@@ -1,5 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -98,64 +97,22 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
   }
 
   Future<void> _seedTestAdmin() async {
-    const testEmail = 'admin@mpyc.org';
-    const testPassword = 'RaceDay2024!';
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final auth = FirebaseAuth.instance;
-      final firestore = FirebaseFirestore.instance;
-
-      // Create or get the auth user
-      UserCredential credential;
-      try {
-        credential = await auth.createUserWithEmailAndPassword(
-          email: testEmail,
-          password: testPassword,
-        );
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'email-already-in-use') {
-          credential = await auth.signInWithEmailAndPassword(
-            email: testEmail,
-            password: testPassword,
-          );
-        } else {
-          rethrow;
-        }
-      }
-
-      final uid = credential.user!.uid;
-
-      // Create the member document
-      await firestore.collection('members').doc('test-admin').set({
-        'firstName': 'MPYC',
-        'lastName': 'Admin',
-        'email': testEmail,
-        'mobileNumber': '',
-        'memberNumber': 'ADMIN-001',
-        'membershipStatus': 'active',
-        'membershipCategory': 'Staff',
-        'memberTags': ['admin', 'rc'],
-        'clubspotId': '',
-        'role': 'admin',
-        'firebaseUid': uid,
-        'lastSynced': FieldValue.serverTimestamp(),
-        'lastLogin': FieldValue.serverTimestamp(),
-        'emergencyContact': {'name': '', 'phone': ''},
-      }, SetOptions(merge: true));
-
-      // Sign out so user can sign in fresh
-      await auth.signOut();
+      final callable =
+          FirebaseFunctions.instance.httpsCallable('seedTestAdmin');
+      final result = await callable.call<Map<String, dynamic>>({});
+      final data = result.data;
 
       if (!mounted) return;
 
-      // Pre-fill the login form
-      _emailController.text = testEmail;
-      _passwordController.text = testPassword;
+      // Pre-fill the login form with the returned credentials
+      _emailController.text = data['email'] as String? ?? '';
+      _passwordController.text = data['password'] as String? ?? '';
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
