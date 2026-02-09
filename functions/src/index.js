@@ -237,6 +237,29 @@ async function sendEmailInternal({to, subject, message, eventId}) {
   return ref;
 }
 
+// ── SMS via Firestore sms collection ──
+// Writes to the "sms" collection. A Firestore-triggered extension or
+// Cloud Function (e.g. Twilio, Vonage, MessageBird) picks up new docs
+// and delivers the SMS. Configure the provider in Firebase console.
+async function sendSmsInternal({to, message, eventId}) {
+  if (!to) return null;
+  const ref = await db.collection("sms").add({
+    to,
+    body: message,
+    status: "pending",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await db.collection("notificationLogs").add({
+    to: [to],
+    channel: "sms",
+    eventId: eventId || null,
+    message,
+    smsDocId: ref.id,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return ref;
+}
+
 async function sendPushInternal({token, message, title = "MPYC Raceday", data = {}}) {
   if (!token) return;
   await admin.messaging().send({
@@ -306,7 +329,7 @@ exports.manualMemberSync = onRequest({cors: true, timeoutSeconds: 540}, async (r
 });
 
 exports.sendNotification = onCall(async (request) => {
-  const {to, message, subject, eventId} = request.data || {};
+  const {to, message, subject, eventId, channel} = request.data || {};
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
@@ -315,10 +338,15 @@ exports.sendNotification = onCall(async (request) => {
   }
 
   try {
-    const result = await sendEmailInternal({to, subject, message, eventId});
-    return {id: result?.id, status: "queued"};
+    if (channel === "sms") {
+      const result = await sendSmsInternal({to, message, eventId});
+      return {id: result?.id, channel: "sms", status: "queued"};
+    } else {
+      const result = await sendEmailInternal({to, subject, message, eventId});
+      return {id: result?.id, channel: "email", status: "queued"};
+    }
   } catch (error) {
-    throw new HttpsError("internal", error.message || "Email send failed");
+    throw new HttpsError("internal", error.message || "Notification send failed");
   }
 });
 
@@ -352,15 +380,16 @@ exports.sendFleetNotification = onCall(async (request) => {
   for (const memberId of memberIds) {
     const snap = await db.collection("members").doc(memberId).get();
     const member = snap.data() || {};
-    const email = member.email;
+    const mobile = member.mobileNumber;
     const token = member.pushToken;
 
-    if (email) {
+    // SMS for race-day ops
+    if (mobile) {
       try {
-        await sendEmailInternal({to: email, subject: "MPYC Fleet Notification", message, eventId});
+        await sendSmsInternal({to: mobile, message, eventId});
         deliveryCount += 1;
       } catch (error) {
-        logger.warn("Email failed for member", {memberId, error: error.message || String(error)});
+        logger.warn("SMS failed for member", {memberId, error: error.message || String(error)});
       }
     }
 
@@ -376,6 +405,16 @@ exports.sendFleetNotification = onCall(async (request) => {
       } catch (error) {
         logger.warn("Push failed for member", {memberId, error: error.message || String(error)});
       }
+    }
+  }
+
+  // Also SMS any direct phone numbers from check-ins
+  for (const phone of directPhones) {
+    try {
+      await sendSmsInternal({to: phone, message, eventId});
+      deliveryCount += 1;
+    } catch (error) {
+      logger.warn("Direct phone SMS failed", {phone, error: error.message || String(error)});
     }
   }
 
@@ -1143,18 +1182,17 @@ exports.onCourseSelected = functions.firestore
       if (!memberDoc.exists) continue;
       const member = memberDoc.data();
 
-      // Send email notification
-      if (member.email) {
+      // SMS for race-day course selection
+      if (member.mobileNumber || member.phone) {
         try {
-          await sendEmailInternal({
-            to: member.email,
-            subject: `Course ${courseNum} Selected`,
+          await sendSmsInternal({
+            to: member.mobileNumber || member.phone,
             message: smsMsg,
             eventId,
           });
           smsSent++;
-        } catch (emailErr) {
-          logger.error("Email send failed", { skipperId, error: emailErr.message });
+        } catch (smsErr) {
+          logger.error("SMS send failed", { skipperId, error: smsErr.message });
         }
       }
 
@@ -1226,18 +1264,17 @@ exports.sendFleetBroadcast = onCall(async (request) => {
       if (!memberDoc.exists) continue;
       const member = memberDoc.data();
 
-      // Email
-      if (member.email) {
+      // SMS for race-day fleet broadcast
+      if (member.mobileNumber || member.phone) {
         try {
-          await sendEmailInternal({
-            to: member.email,
-            subject: "MPYC Race Committee Broadcast",
+          await sendSmsInternal({
+            to: member.mobileNumber || member.phone,
             message,
             eventId,
           });
           smsSent++;
-        } catch (emailErr) {
-          logger.error("Fleet broadcast email failed", { skipperId, error: emailErr.message });
+        } catch (smsErr) {
+          logger.error("Fleet broadcast SMS failed", { skipperId, error: smsErr.message });
         }
       }
 
