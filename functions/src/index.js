@@ -2,7 +2,7 @@ const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
-const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const functions = require("firebase-functions");
 const twilio = require("twilio");
 
 if (!admin.apps.length) {
@@ -1045,14 +1045,16 @@ exports.createMemberPortalSession = onCall(async (request) => {
 // ══════════════════════════════════════════════════════
 
 // onCourseSelected — Firestore trigger when RaceEvent.courseId is updated
-exports.onCourseSelected = onDocumentUpdated("race_events/{eventId}", async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
+exports.onCourseSelected = functions.firestore
+  .document("race_events/{eventId}")
+  .onUpdate(async (change, context) => {
+  const before = change.before.data();
+  const after = change.after.data();
 
   // Only fire if courseId changed
   if (before.courseId === after.courseId) return;
 
-  const eventId = event.params.eventId;
+  const eventId = context.params.eventId;
   const courseId = after.courseId;
   if (!courseId) return;
 
@@ -1242,9 +1244,11 @@ exports.sendFleetBroadcast = onCall(async (request) => {
 // ══════════════════════════════════════════════════════
 
 // notifyIncidentReported — Firestore trigger when new incident is created
-exports.notifyIncidentReported = onDocumentCreated("incidents/{incidentId}", async (event) => {
-  const incidentId = event.params.incidentId;
-  const data = event.data.data();
+exports.notifyIncidentReported = functions.firestore
+  .document("incidents/{incidentId}")
+  .onCreate(async (snap, context) => {
+  const incidentId = context.params.incidentId;
+  const data = snap.data();
   if (!data) return;
 
   const eventId = data.eventId || "";
@@ -1312,9 +1316,11 @@ exports.notifyIncidentReported = onDocumentCreated("incidents/{incidentId}", asy
 });
 
 // notifyHearingScheduled — triggered when incident hearing is updated
-exports.notifyHearingScheduled = onDocumentUpdated("incidents/{incidentId}", async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
+exports.notifyHearingScheduled = functions.firestore
+  .document("incidents/{incidentId}")
+  .onUpdate(async (change, context) => {
+  const before = change.before.data();
+  const after = change.after.data();
 
   // Only fire if hearing was just scheduled (scheduledAt changed)
   const beforeScheduled = before.hearing?.scheduledAt;
@@ -1323,7 +1329,7 @@ exports.notifyHearingScheduled = onDocumentUpdated("incidents/{incidentId}", asy
   if (!afterScheduled) return;
   if (beforeScheduled && beforeScheduled.toMillis() === afterScheduled.toMillis()) return;
 
-  const incidentId = event.params.incidentId;
+  const incidentId = context.params.incidentId;
   const involvedBoats = after.involvedBoats || [];
   const raceNumber = after.raceNumber || 0;
 
