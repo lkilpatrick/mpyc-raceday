@@ -40,6 +40,7 @@ dependencies:
   firebase_messaging: any
   firebase_storage: any
   cloud_functions: any
+  image_picker: any
   flutter_riverpod: any
   riverpod_annotation: any
   go_router: any

@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/login_screen.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/verification_screen.dart';
+import 'package:mpyc_raceday/features/checklists/presentation/mobile/active_checklist_screen.dart';
+import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_history_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/event_detail_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
@@ -58,6 +60,17 @@ final GoRouter mobileRouter = GoRouter(
         final eventId = state.pathParameters['eventId']!;
         return EventDetailScreen(eventId: eventId);
       },
+    ),
+    GoRoute(
+      path: '/checklists/active/:completionId',
+      builder: (context, state) {
+        final completionId = state.pathParameters['completionId']!;
+        return ActiveChecklistScreen(completionId: completionId);
+      },
+    ),
+    GoRoute(
+      path: '/checklists/history',
+      builder: (context, state) => const ChecklistHistoryScreen(),
     ),
   ],
 );

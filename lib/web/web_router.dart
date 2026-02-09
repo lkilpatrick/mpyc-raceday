@@ -61,6 +61,16 @@ final GoRouter webRouter = GoRouter(
           const WebShell(activeRoute: '/checklists-admin'),
     ),
     GoRoute(
+      path: '/checklists-history',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/checklists-history'),
+    ),
+    GoRoute(
+      path: '/checklists-compliance',
+      builder: (context, state) =>
+          const WebShell(activeRoute: '/checklists-compliance'),
+    ),
+    GoRoute(
       path: '/maintenance',
       builder: (context, state) => const WebShell(activeRoute: '/maintenance'),
     ),
