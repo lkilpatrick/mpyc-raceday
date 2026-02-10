@@ -3881,72 +3881,101 @@ exports.syncClubspotLineItems = onCall(async (request) => {
 
 
 // ══════════════════════════════════════════════════════════════════
-// AmbientWeather — Live Wind Data
+// NOAA Weather — Live Wind Data (free, no API key required)
 // ══════════════════════════════════════════════════════════════════
 
-const AMBIENT_BASE_URL = "https://api.ambientweather.net/v1";
+const NOAA_BASE_URL = "https://api.weather.gov";
+const NOAA_USER_AGENT = "MPYCRaceDay/1.0 (contact@mpyc.org)";
 const WEATHER_DOC_PATH = "weather/mpyc_station";
-const MPH_TO_KTS = 0.868976;
-const MIN_FETCH_INTERVAL_MS = 8000; // 8 seconds rate limit
+const MS_TO_KTS = 1.94384;
+const MIN_FETCH_INTERVAL_MS = 30000; // 30 seconds rate limit
 
-// Station coordinates (MPYC weather station on the breakwater)
-const STATION_LAT = 36.6053;
-const STATION_LON = -121.8885;
+// Monterey Bay area
+const STATION_LAT = 36.6002;
+const STATION_LON = -121.8947;
 
-async function fetchAmbientData() {
-  const appKey = process.env.AMBIENT_APPLICATION_KEY;
-  const apiKey = process.env.AMBIENT_API_KEY;
-  const mac = process.env.AMBIENT_STATION_MAC;
+const noaaHeaders = {
+  "User-Agent": NOAA_USER_AGENT,
+  "Accept": "application/geo+json",
+};
 
-  if (!appKey || !apiKey || !mac) {
-    throw new Error("Missing AmbientWeather config: AMBIENT_APPLICATION_KEY, AMBIENT_API_KEY, or AMBIENT_STATION_MAC");
+async function fetchNoaaData() {
+  // Step 1: Get nearest observation stations for this point
+  const pointUrl = `${NOAA_BASE_URL}/points/${STATION_LAT},${STATION_LON}`;
+  const pointResp = await fetch(pointUrl, { headers: noaaHeaders });
+  if (!pointResp.ok) {
+    throw new Error(`NOAA points API error ${pointResp.status}`);
   }
+  const pointData = await pointResp.json();
+  const stationsUrl = pointData?.properties?.observationStations;
+  if (!stationsUrl) throw new Error("No observation stations URL from NOAA");
 
-  const url = `${AMBIENT_BASE_URL}/devices/${encodeURIComponent(mac)}?applicationKey=${encodeURIComponent(appKey)}&apiKey=${encodeURIComponent(apiKey)}&limit=1`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`AmbientWeather API error ${response.status}: ${text}`);
+  // Step 2: Get station list
+  const stationsResp = await fetch(stationsUrl, { headers: noaaHeaders });
+  if (!stationsResp.ok) {
+    throw new Error(`NOAA stations API error ${stationsResp.status}`);
   }
-
-  const data = await response.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    throw new Error("No observations returned from AmbientWeather");
+  const stationsData = await stationsResp.json();
+  const features = stationsData?.features;
+  if (!features || features.length === 0) {
+    throw new Error("No NOAA observation stations found");
   }
+  const stationId = features[0]?.properties?.stationIdentifier;
+  const stationName = features[0]?.properties?.name || "NOAA Station";
+  if (!stationId) throw new Error("No station identifier from NOAA");
 
-  return data[0]; // latest observation
+  // Step 3: Get latest observation
+  const obsUrl = `${NOAA_BASE_URL}/stations/${stationId}/observations/latest`;
+  const obsResp = await fetch(obsUrl, { headers: noaaHeaders });
+  if (!obsResp.ok) {
+    throw new Error(`NOAA observation API error ${obsResp.status}`);
+  }
+  const obsData = await obsResp.json();
+  const obs = obsData?.properties;
+  if (!obs) throw new Error("No observation properties from NOAA");
+
+  return { obs, stationId, stationName };
 }
 
-function normalizeObservation(obs) {
-  const speedMph = typeof obs.windspeedmph === "number" ? obs.windspeedmph : 0;
-  const gustMph = typeof obs.windgustmph === "number" ? obs.windgustmph : null;
-  const dirDeg = typeof obs.winddir === "number" ? obs.winddir : 0;
+function normalizeNoaaObservation({ obs, stationName }) {
+  // NOAA returns SI units: wind in m/s (km/h for some), temp in °C, pressure in Pa
+  const windSpeedMs = obs.windSpeed?.value ?? 0;
+  const windGustMs = obs.windGust?.value ?? null;
+  const dirDeg = obs.windDirection?.value ?? 0;
+  const tempC = obs.temperature?.value ?? null;
+  const humidity = obs.relativeHumidity?.value ?? null;
+  const pressurePa = obs.barometricPressure?.value ?? null;
 
-  // Use dateutc (epoch ms) if available, else server time
-  let observedAt;
-  if (obs.dateutc && typeof obs.dateutc === "number") {
-    observedAt = admin.firestore.Timestamp.fromMillis(obs.dateutc);
-  } else if (obs.date) {
-    observedAt = admin.firestore.Timestamp.fromDate(new Date(obs.date));
-  } else {
-    observedAt = admin.firestore.Timestamp.now();
+  const speedKts = Math.round(windSpeedMs * MS_TO_KTS * 100) / 100;
+  const speedMph = Math.round(speedKts / 0.868976 * 100) / 100;
+  const gustKts = windGustMs !== null ? Math.round(windGustMs * MS_TO_KTS * 100) / 100 : null;
+  const gustMph = gustKts !== null ? Math.round(gustKts / 0.868976 * 100) / 100 : null;
+  const tempF = tempC !== null ? Math.round((tempC * 9 / 5 + 32) * 10) / 10 : null;
+  const pressureInHg = pressurePa !== null ? Math.round(pressurePa / 100 * 0.02953 * 100) / 100 : null;
+
+  // Parse observation timestamp
+  let observedAt = admin.firestore.Timestamp.now();
+  if (obs.timestamp) {
+    const dt = new Date(obs.timestamp);
+    if (!isNaN(dt.getTime())) {
+      observedAt = admin.firestore.Timestamp.fromDate(dt);
+    }
   }
 
   return {
-    dirDeg,
-    speedMph: Math.round(speedMph * 100) / 100,
-    speedKts: Math.round(speedMph * MPH_TO_KTS * 100) / 100,
-    gustMph: gustMph !== null ? Math.round(gustMph * 100) / 100 : null,
-    gustKts: gustMph !== null ? Math.round(gustMph * MPH_TO_KTS * 100) / 100 : null,
-    tempF: typeof obs.tempf === "number" ? Math.round(obs.tempf * 10) / 10 : null,
-    humidity: typeof obs.humidity === "number" ? obs.humidity : null,
-    pressureInHg: typeof obs.baromrelin === "number" ? Math.round(obs.baromrelin * 100) / 100 : null,
+    dirDeg: Math.round(dirDeg),
+    speedMph,
+    speedKts,
+    gustMph,
+    gustKts,
+    tempF,
+    humidity: humidity !== null ? Math.round(humidity) : null,
+    pressureInHg,
     observedAt,
     fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
-    source: "ambient",
+    source: "noaa",
     station: {
-      name: "MPYC Weather Station",
+      name: stationName,
       lat: STATION_LAT,
       lon: STATION_LON,
     },
@@ -3970,14 +3999,14 @@ async function doWeatherFetch() {
   }
 
   try {
-    const obs = await fetchAmbientData();
-    const normalized = normalizeObservation(obs);
+    const noaaResult = await fetchNoaaData();
+    const normalized = normalizeNoaaObservation(noaaResult);
     await docRef.set(normalized, { merge: true });
-    logger.info("Weather updated", { speedKts: normalized.speedKts, dirDeg: normalized.dirDeg });
+    logger.info("Weather updated from NOAA", { speedKts: normalized.speedKts, dirDeg: normalized.dirDeg });
     return { skipped: false, data: normalized };
   } catch (error) {
     // On error, keep last known data but record the error
-    logger.error("Weather fetch failed", { error: error.message });
+    logger.error("NOAA weather fetch failed", { error: error.message });
     await docRef.set(
       {
         error: error.message || "Unknown fetch error",
