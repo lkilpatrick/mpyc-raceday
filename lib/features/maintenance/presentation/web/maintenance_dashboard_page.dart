@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -187,7 +188,160 @@ class MaintenanceDashboardPage extends ConsumerWidget {
                   );
                 }).toList(),
               ),
+
+              const SizedBox(height: 24),
+
+              // ── Checklist History Per Boat ──
+              Text('Checklist History',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 12),
+              ..._boats.map((boat) => _BoatChecklistHistory(boatName: boat)),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BoatChecklistHistory extends StatelessWidget {
+  const _BoatChecklistHistory({required this.boatName});
+  final String boatName;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('checklist_completions')
+          .where('boatName', isEqualTo: boatName)
+          .orderBy('startedAt', descending: true)
+          .limit(10)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty && !snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.sailing, size: 20),
+                    const SizedBox(width: 8),
+                    Text(boatName,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    Text('${docs.length} checklist${docs.length != 1 ? 's' : ''}',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+                const Divider(height: 16),
+                if (snapshot.hasError)
+                  Text('Error loading checklists',
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 12))
+                else if (docs.isEmpty)
+                  Text('No completed checklists',
+                      style: Theme.of(context).textTheme.bodySmall)
+                else
+                  ...docs.map((doc) {
+                    final d = doc.data();
+                    final checklistName =
+                        d['checklistName'] as String? ?? d['checklistId'] as String? ?? 'Checklist';
+                    final status = d['status'] as String? ?? '';
+                    final items = d['items'] as List<dynamic>? ?? [];
+                    final checked = items.where((i) => (i as Map)['checked'] == true).length;
+                    final total = items.length;
+                    final pct = total > 0 ? (checked / total * 100).round() : 0;
+
+                    DateTime? startedAt;
+                    final startRaw = d['startedAt'];
+                    if (startRaw is Timestamp) {
+                      startedAt = startRaw.toDate();
+                    } else if (startRaw is String) {
+                      startedAt = DateTime.tryParse(startRaw);
+                    }
+
+                    DateTime? completedAt;
+                    final compRaw = d['completedAt'];
+                    if (compRaw is Timestamp) {
+                      completedAt = compRaw.toDate();
+                    } else if (compRaw is String) {
+                      completedAt = DateTime.tryParse(compRaw);
+                    }
+
+                    final (statusLabel, statusColor) = switch (status) {
+                      'signedOff' => ('Signed Off', Colors.green),
+                      'completedPendingSignoff' => ('Pending Sign-off', Colors.orange),
+                      'inProgress' => ('In Progress', Colors.blue),
+                      _ => (status, Colors.grey),
+                    };
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(checklistName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                if (startedAt != null)
+                                  Text(
+                                    DateFormat.yMMMd().add_jm().format(startedAt),
+                                    style: TextStyle(
+                                        fontSize: 11, color: Colors.grey.shade600),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 80,
+                            child: Column(
+                              children: [
+                                Text('$checked/$total',
+                                    style: const TextStyle(
+                                        fontSize: 12, fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                LinearProgressIndicator(
+                                  value: total > 0 ? checked / total : 0,
+                                  backgroundColor: Colors.grey.shade200,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(statusLabel,
+                                style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+              ],
+            ),
           ),
         );
       },

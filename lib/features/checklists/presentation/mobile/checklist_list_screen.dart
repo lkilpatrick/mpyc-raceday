@@ -76,7 +76,7 @@ class _ActiveCompletionCard extends StatelessWidget {
     final progress = total > 0 ? checked / total : 0.0;
 
     return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
+      color: Colors.blue.shade50,
       child: InkWell(
         onTap: () => context.go('/checklists/active/${completion.id}'),
         borderRadius: BorderRadius.circular(12),

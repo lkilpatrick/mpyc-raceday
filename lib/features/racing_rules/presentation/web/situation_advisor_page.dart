@@ -191,7 +191,7 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
               child: Card(
                 elevation: selected ? 4 : 1,
                 color: selected
-                    ? Theme.of(context).colorScheme.primaryContainer
+                    ? Colors.blue.shade50
                     : null,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -221,12 +221,13 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
                                 : Colors.grey),
                         const SizedBox(height: 8),
                         Text(label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 15)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15,
+                                color: selected ? Colors.blue.shade900 : null)),
                         const SizedBox(height: 4),
                         Text(desc,
                             style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600)),
+                                fontSize: 12, color: selected ? Colors.blue.shade700 : Colors.grey.shade600)),
                       ],
                     ),
                   ),
@@ -348,7 +349,7 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
       child: Card(
         elevation: selected ? 3 : 1,
         color: selected
-            ? Theme.of(context).colorScheme.primaryContainer
+            ? Colors.blue.shade50
             : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -362,7 +363,10 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
               color: selected
                   ? Theme.of(context).colorScheme.primary
                   : Colors.grey),
-          title: Text(label),
+          title: Text(label,
+              style: TextStyle(
+                  color: selected ? Colors.blue.shade900 : null)),
+          selectedTileColor: Colors.transparent,
           selected: selected,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -399,12 +403,14 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
           final checked = _additionalFactors.contains(label);
           return Card(
             color: checked
-                ? Theme.of(context).colorScheme.primaryContainer
+                ? Colors.blue.shade50
                 : null,
             child: CheckboxListTile(
               title: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(desc, style: const TextStyle(fontSize: 12)),
+                  style: TextStyle(fontWeight: FontWeight.w600,
+                      color: checked ? Colors.blue.shade900 : null)),
+              subtitle: Text(desc, style: TextStyle(fontSize: 12,
+                  color: checked ? Colors.blue.shade700 : null)),
               value: checked,
               onChanged: (v) {
                 setState(() {

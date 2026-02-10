@@ -87,7 +87,7 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
               // Situation Advisor button
               if (_query.isEmpty) ...[
                 Card(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: Colors.blue.shade50,
                   child: InkWell(
                     onTap: () => context.push('/rules/advisor'),
                     borderRadius: BorderRadius.circular(12),
@@ -98,9 +98,7 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                           Icon(
                             Icons.gavel,
                             size: 32,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
+                            color: Colors.blue.shade800,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -113,9 +111,7 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                                       .textTheme
                                       .titleMedium
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimaryContainer,
+                                        color: Colors.blue.shade900,
                                       ),
                                 ),
                                 Text(
@@ -124,15 +120,14 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimaryContainer,
+                                        color: Colors.blue.shade700,
                                       ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right),
+                          Icon(Icons.chevron_right,
+                              color: Colors.blue.shade800),
                         ],
                       ),
                     ),

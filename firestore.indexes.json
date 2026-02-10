@@ -57,6 +57,20 @@
       ]
     },
     {
+      "collectionGroup": "checklist_completions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "boatName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "startedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "boat_checkins",
       "queryScope": "COLLECTION",
       "fields": [

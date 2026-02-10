@@ -274,9 +274,65 @@ async function seed() {
     console.log(`  ✓ ${t.name} (${t.items.length} items)`);
   }
 
-  console.log(`\n=== Checklist Templates Seeded ===`);
+  // ── Seed sample completed checklists (with boatName for maintenance view) ──
+  const boats = ["Duncan's Watch", "Signal Boat", "Mark Boat", "Safety Boat"];
+  const boatTemplateMap = {
+    "Duncan's Watch": "pre_race_duncans_watch",
+    "Signal Boat": "pre_race_signal_boat",
+    "Mark Boat": "pre_race_mark_boat",
+    "Safety Boat": "pre_race_safety_boat",
+  };
+
+  const completions = [];
+  const now = Date.now();
+  const DAY = 86400000;
+
+  for (const boat of boats) {
+    const templateId = boatTemplateMap[boat];
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) continue;
+
+    // Create 3 completed checklists per boat, spread over recent weeks
+    for (let i = 0; i < 3; i++) {
+      const startedAt = new Date(now - (i * 7 + 1) * DAY + 28800000); // morning
+      const completedAt = new Date(startedAt.getTime() + 2400000); // 40 min later
+      const completionId = `${templateId}_completion_${i + 1}`;
+
+      const items = template.items.map((item) => ({
+        itemId: item.id,
+        checked: Math.random() > 0.05, // 95% checked
+        note: item.requiresNote ? "Checked OK" : null,
+        photoUrl: null,
+        timestamp: startedAt.toISOString(),
+      }));
+
+      completions.push({
+        id: completionId,
+        checklistId: templateId,
+        checklistName: template.name,
+        boatName: boat,
+        eventId: `event_${202600 + i}`,
+        completedBy: "admin@mpyc.org",
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        items,
+        signOffBy: i === 0 ? "admin@mpyc.org" : null,
+        signOffAt: i === 0 ? completedAt.toISOString() : null,
+        status: i === 0 ? "signedOff" : "completedPendingSignoff",
+      });
+    }
+  }
+
+  console.log(`\nSeeding ${completions.length} checklist completions...`);
+  for (const c of completions) {
+    await writeDoc(accessToken, "checklist_completions", c.id, c);
+    console.log(`  ✓ ${c.boatName} — ${c.checklistName} (${c.status})`);
+  }
+
+  console.log(`\n=== Checklist Data Seeded ===`);
   console.log(`  ${templates.length} templates`);
-  console.log(`=================================\n`);
+  console.log(`  ${completions.length} completions`);
+  console.log(`============================\n`);
   process.exit(0);
 }
 

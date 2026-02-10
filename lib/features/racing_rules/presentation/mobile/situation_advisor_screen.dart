@@ -84,13 +84,19 @@ class _SituationAdvisorScreenState
                   final (id, label, icon) = t;
                   return Card(
                     color: _encounterType == id
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
+                        ? Colors.blue.shade50
                         : null,
                     child: ListTile(
-                      leading: Icon(icon),
-                      title: Text(label),
+                      leading: Icon(icon,
+                          color: _encounterType == id
+                              ? Colors.blue.shade800
+                              : null),
+                      title: Text(label,
+                          style: TextStyle(
+                              color: _encounterType == id
+                                  ? Colors.blue.shade900
+                                  : null)),
+                      selectedTileColor: Colors.transparent,
                       selected: _encounterType == id,
                       onTap: () =>
                           setState(() => _encounterType = id),
@@ -226,13 +232,14 @@ class _SituationAdvisorScreenState
   }
 
   Widget _subOption(String value, String label) {
+    final sel = _subAnswer == value;
     return Card(
-      color: _subAnswer == value
-          ? Theme.of(context).colorScheme.primaryContainer
-          : null,
+      color: sel ? Colors.blue.shade50 : null,
       child: ListTile(
-        title: Text(label),
-        selected: _subAnswer == value,
+        title: Text(label,
+            style: TextStyle(color: sel ? Colors.blue.shade900 : null)),
+        selectedTileColor: Colors.transparent,
+        selected: sel,
         onTap: () => setState(() => _subAnswer = value),
       ),
     );
