@@ -74,6 +74,34 @@ dev_dependencies:
   mockito: any
   build_verify: any
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: any
+  flutter_native_splash: any
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/burgee.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/burgee.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/images/burgee.png"
+    background_color: "#FFFFFF"
+    theme_color: "#1B3A5C"
+  windows:
+    generate: true
+    image_path: "assets/images/burgee.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/images/burgee.png"
+  android: true
+  ios: true
+  web: true
+  android_12:
+    color: "#FFFFFF"
+    image: "assets/images/burgee.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

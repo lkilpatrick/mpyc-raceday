@@ -115,29 +115,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
-                  Container(
+                  // Burgee logo
+                  Image.asset(
+                    'assets/images/burgee.png',
                     width: 120,
                     height: 120,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'MPYC',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 32),
                   Text(
-                    'MPYC Raceday',
+                    'MPYC Race Day',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,

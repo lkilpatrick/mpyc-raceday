@@ -52,7 +52,7 @@ class MpycRacedayApp extends StatelessWidget {
     final router = kIsWeb ? webRouter : mobileRouter;
 
     return MaterialApp.router(
-      title: 'MPYC Raceday',
+      title: 'MPYC Race Day',
       debugShowCheckedModeBanner: false,
       theme: kIsWeb ? AppTheme.webTheme : AppTheme.mobileTheme,
       darkTheme: kIsWeb ? null : AppTheme.mobileDarkTheme,
