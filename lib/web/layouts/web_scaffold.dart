@@ -43,7 +43,7 @@ class WebScaffold extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             const Text(
-              'MPYC Raceday',
+              'MPYC Race Day',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 18,

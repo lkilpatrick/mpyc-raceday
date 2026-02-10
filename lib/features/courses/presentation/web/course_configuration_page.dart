@@ -32,7 +32,6 @@ class _CourseConfigurationPageState
     'W',
     'NW',
     'N',
-    'N_EXT',
     'INFLATABLE',
     'LONG',
   ];
@@ -335,7 +334,7 @@ class _CourseListTile extends StatelessWidget {
       selectedTileColor: AppColors.primary.withAlpha(20),
       onTap: onTap,
       leading: CircleAvatar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: _parseHex(course.windGroup?.color),
         radius: 18,
         child: Text(
           course.courseNumber,
@@ -351,7 +350,7 @@ class _CourseListTile extends StatelessWidget {
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        '${course.windDirectionBand} · ${course.distanceNm} nm · ${course.marks.length} marks',
+        '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"} · ${course.marks.length} marks',
         style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
       ),
       trailing: Row(
@@ -448,7 +447,7 @@ class _CourseDetailPanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _infoChip(Icons.explore, 'Wind: ${course.windDirectionBand}'),
+                _infoChip(Icons.explore, 'Wind: ${course.windGroup?.label ?? course.windDirectionBand}'),
                 _infoChip(Icons.straighten,
                     '${course.distanceNm} nm'),
                 _infoChip(Icons.pin_drop,
@@ -502,29 +501,38 @@ class _CourseDetailPanel extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Icon(
-                        Icons.circle,
-                        size: 10,
-                        color: m.rounding == MarkRounding.port
-                            ? Colors.red
-                            : Colors.green,
-                      ),
+                      if (m.isStart || m.isFinish)
+                        Icon(
+                          m.isStart ? Icons.flag : Icons.sports_score,
+                          size: 12,
+                          color: m.isStart ? Colors.blue : Colors.green,
+                        )
+                      else
+                        Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: m.rounding == MarkRounding.port
+                              ? Colors.red
+                              : Colors.green,
+                        ),
                       const SizedBox(width: 6),
                       Text(
-                        '${m.markName} (${m.rounding.name})',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                      if (m.isFinish)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Chip(
-                            label: Text('FINISH',
-                                style: TextStyle(
-                                    fontSize: 10, color: Colors.green)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          ),
+                        m.isStart
+                            ? 'START (at Mark 1)'
+                            : m.isFinish
+                                ? 'FINISH (at ${m.markName})'
+                                : '${m.markName} (${m.rounding.name})',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: (m.isStart || m.isFinish)
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
+                      ),
+                      if (m.isStart)
+                        _badge('START', Colors.blue),
+                      if (m.isFinish)
+                        _badge('FINISH', Colors.green),
                     ],
                   ),
                 )),
@@ -586,6 +594,32 @@ class _CourseDetailPanel extends StatelessWidget {
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
+
+  Widget _badge(String label, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+Color _parseHex(String? hex) {
+  if (hex != null && hex.startsWith('#') && hex.length == 7) {
+    return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+  }
+  return AppColors.primary;
 }
 
 // ═══════════════════════════════════════════════════════════════════
