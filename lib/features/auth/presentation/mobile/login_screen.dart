@@ -12,18 +12,22 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _memberNumberController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
+  bool _showForgotPassword = false;
 
   @override
   void dispose() {
-    _memberNumberController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSignIn() async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -33,40 +37,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
-      final result = await repo.sendVerificationCode(
-        _memberNumberController.text.trim(),
+      await repo.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
+
       if (!mounted) return;
-      context.go(
-        '/verify',
-        extra: {
-          'maskedEmail': result.maskedEmail,
-          'memberId': result.memberId,
-          'memberNumber': _memberNumberController.text.trim(),
-        },
-      );
+      context.go('/home');
     } catch (e) {
       setState(() {
         _errorMessage = _parseError(e);
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _errorMessage = 'Enter your email address first.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.sendPasswordReset(email);
+      if (!mounted) return;
+      setState(() {
+        _showForgotPassword = false;
+        _errorMessage = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset email sent. Check your inbox.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() => _errorMessage = 'Failed to send reset email.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   String _parseError(Object e) {
     final msg = e.toString();
-    if (msg.contains('not-found')) {
-      return 'No member found with that membership number.';
+    if (msg.contains('wrong-password') || msg.contains('invalid-credential')) {
+      return 'Invalid email or password.';
     }
-    if (msg.contains('failed-precondition')) {
-      return 'No email on file for this member. Contact the club for assistance.';
+    if (msg.contains('user-not-found')) {
+      return 'No account found with this email.';
     }
-    return 'Something went wrong. Please try again.';
+    if (msg.contains('too-many-requests')) {
+      return 'Too many attempts. Please try again later.';
+    }
+    if (msg.contains('No member record')) {
+      return 'No member record linked to this account.';
+    }
+    return 'Sign in failed. Please try again.';
   }
 
   @override
@@ -81,7 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo placeholder
+                  // Logo
                   Container(
                     width: 120,
                     height: 120,
@@ -111,29 +145,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sign in with your membership number',
+                    'Sign in with your email and password',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),
                   const SizedBox(height: 40),
+
+                  // Email field
                   TextFormField(
-                    controller: _memberNumberController,
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.done,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Membership Number',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                      hintText: 'Enter your membership number',
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your membership number';
+                        return 'Please enter your email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Please enter a valid email';
                       }
                       return null;
                     },
-                    onFieldSubmitted: (_) => _handleSignIn(),
                   ),
+
+                  // Password field (hidden in forgot-password mode)
+                  if (!_showForgotPassword) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(
+                                () => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                      onFieldSubmitted: (_) => _handleLogin(),
+                    ),
+                  ],
+
+                  // Error message
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 16),
                     Container(
@@ -161,11 +232,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                   const SizedBox(height: 24),
+
+                  // Sign In / Reset button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignIn,
+                      onPressed: _isLoading
+                          ? null
+                          : (_showForgotPassword
+                              ? _handleForgotPassword
+                              : _handleLogin),
                       child: _isLoading
                           ? const SizedBox(
                               width: 20,
@@ -175,13 +252,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Sign In',
-                              style: TextStyle(fontSize: 16),
+                          : Text(
+                              _showForgotPassword
+                                  ? 'Send Reset Email'
+                                  : 'Sign In',
+                              style: const TextStyle(fontSize: 16),
                             ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+
+                  // Forgot password toggle
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _showForgotPassword = !_showForgotPassword;
+                        _errorMessage = null;
+                      });
+                    },
+                    child: Text(
+                      _showForgotPassword
+                          ? 'Back to Sign In'
+                          : 'Forgot Password?',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     'Contact the club for access',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

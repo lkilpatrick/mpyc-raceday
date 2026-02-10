@@ -11,16 +11,28 @@ class MoreScreen extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       children: [
         _MoreItem(
+          icon: Icons.event,
+          label: 'Schedule',
+          subtitle: 'Race calendar & crew assignments',
+          onTap: () => context.push('/schedule/event/browse'),
+        ),
+        _MoreItem(
+          icon: Icons.checklist,
+          label: 'Checklists',
+          subtitle: 'Pre-race checklists',
+          onTap: () => context.push('/checklists'),
+        ),
+        _MoreItem(
           icon: Icons.gavel,
           label: 'Racing Rules',
           subtitle: 'RRS reference & situation advisor',
           onTap: () => context.push('/rules'),
         ),
         _MoreItem(
-          icon: Icons.build,
-          label: 'Maintenance',
-          subtitle: 'Report issues & view requests',
-          onTap: () => context.push('/maintenance/feed'),
+          icon: Icons.air,
+          label: 'Live Wind',
+          subtitle: 'Real-time wind from NOAA with GPS',
+          onTap: () => context.push('/live-wind'),
         ),
         _MoreItem(
           icon: Icons.report,
@@ -29,16 +41,10 @@ class MoreScreen extends StatelessWidget {
           onTap: () => context.push('/incidents/browse'),
         ),
         _MoreItem(
-          icon: Icons.sailing,
-          label: 'Courses',
-          subtitle: 'View course library',
-          onTap: () => context.push('/courses/select/browse'),
-        ),
-        _MoreItem(
-          icon: Icons.air,
-          label: 'Live Wind',
-          subtitle: 'Real-time wind from NOAA',
-          onTap: () => context.push('/live-wind'),
+          icon: Icons.build,
+          label: 'Maintenance Feed',
+          subtitle: 'View all maintenance requests',
+          onTap: () => context.push('/maintenance/feed'),
         ),
         const Divider(),
         _MoreItem(

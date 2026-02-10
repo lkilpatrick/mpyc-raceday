@@ -14,13 +14,9 @@ class MobileNavItem {
 
 const List<MobileNavItem> mobileNavItems = [
   MobileNavItem(label: 'Home', route: '/home', icon: Icons.home),
-  MobileNavItem(label: 'Schedule', route: '/schedule', icon: Icons.event),
-  MobileNavItem(
-    label: 'Checklists',
-    route: '/checklists',
-    icon: Icons.checklist,
-  ),
+  MobileNavItem(label: 'Course', route: '/course', icon: Icons.map),
   MobileNavItem(label: 'Weather', route: '/weather', icon: Icons.cloud),
+  MobileNavItem(label: 'Report', route: '/report', icon: Icons.flag),
   MobileNavItem(label: 'More', route: '/more', icon: Icons.menu),
 ];
 

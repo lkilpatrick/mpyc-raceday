@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/my_schedule_screen.dart';
-import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_list_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/home_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/more_screen.dart';
+import 'package:mpyc_raceday/features/courses/presentation/mobile/course_tab_screen.dart';
+import 'package:mpyc_raceday/features/reporting/presentation/mobile/report_tab_screen.dart';
 import 'package:mpyc_raceday/mobile/layouts/mobile_scaffold.dart';
 import 'package:mpyc_raceday/mobile/navigation/mobile_bottom_nav.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
@@ -53,9 +53,9 @@ class _MobileShellState extends State<MobileShell> {
     final item = mobileNavItems[_index];
     final body = switch (_index) {
       0 => const HomeScreen(),
-      1 => const MyScheduleScreen(),
-      2 => const ChecklistListScreen(),
-      3 => const WeatherDashboardScreen(),
+      1 => const CourseTabScreen(),
+      2 => const WeatherDashboardScreen(),
+      3 => const ReportTabScreen(),
       4 => const MoreScreen(),
       _ => PlaceholderPage(title: item.label, subtitle: 'Mobile experience'),
     };

@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/login_screen.dart';
-import 'package:mpyc_raceday/features/auth/presentation/mobile/verification_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/active_checklist_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_history_screen.dart';
+import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_list_screen.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/mobile/event_detail_screen.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_detail_screen.dart';
 import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/definitions_screen.dart';
@@ -14,7 +14,6 @@ import 'package:mpyc_raceday/features/timing/presentation/mobile/finish_recordin
 import 'package:mpyc_raceday/features/timing/presentation/mobile/start_sequence_screen.dart';
 import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_dashboard_screen.dart';
 import 'package:mpyc_raceday/features/timing/presentation/mobile/timing_results_screen.dart';
-import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_history_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_selection_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_display_screen.dart';
@@ -33,8 +32,7 @@ final GoRouter mobileRouter = GoRouter(
   initialLocation: '/home',
   redirect: (context, state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isAuthRoute =
-        state.matchedLocation == '/login' || state.matchedLocation == '/verify';
+    final isAuthRoute = state.matchedLocation == '/login';
 
     if (!isLoggedIn && !isAuthRoute) return '/login';
     if (isLoggedIn && state.matchedLocation == '/login') return '/home';
@@ -46,30 +44,19 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
-      path: '/verify',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        return VerificationScreen(
-          maskedEmail: extra['maskedEmail'] as String? ?? '',
-          memberId: extra['memberId'] as String? ?? '',
-          memberNumber: extra['memberNumber'] as String? ?? '',
-        );
-      },
-    ),
-    GoRoute(
       path: '/home',
       builder: (context, state) => const MobileShell(initialIndex: 0),
     ),
     GoRoute(
-      path: '/schedule',
+      path: '/course',
       builder: (context, state) => const MobileShell(initialIndex: 1),
     ),
     GoRoute(
-      path: '/checklists',
+      path: '/weather',
       builder: (context, state) => const MobileShell(initialIndex: 2),
     ),
     GoRoute(
-      path: '/weather',
+      path: '/report',
       builder: (context, state) => const MobileShell(initialIndex: 3),
     ),
     GoRoute(
@@ -82,6 +69,10 @@ final GoRouter mobileRouter = GoRouter(
         final eventId = state.pathParameters['eventId']!;
         return EventDetailScreen(eventId: eventId);
       },
+    ),
+    GoRoute(
+      path: '/checklists',
+      builder: (context, state) => const ChecklistListScreen(),
     ),
     GoRoute(
       path: '/checklists/active/:completionId',
@@ -155,10 +146,6 @@ final GoRouter mobileRouter = GoRouter(
         final raceStartId = state.pathParameters['raceStartId']!;
         return TimingResultsScreen(raceStartId: raceStartId);
       },
-    ),
-    GoRoute(
-      path: '/weather',
-      builder: (context, state) => const WeatherDashboardScreen(),
     ),
     GoRoute(
       path: '/weather/history/:eventId',

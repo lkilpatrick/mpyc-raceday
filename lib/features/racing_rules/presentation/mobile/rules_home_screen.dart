@@ -89,7 +89,7 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                 Card(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   child: InkWell(
-                    onTap: () => context.go('/rules/advisor'),
+                    onTap: () => context.push('/rules/advisor'),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -143,7 +143,7 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => context.go('/rules/definitions'),
+                        onPressed: () => context.push('/rules/definitions'),
                         icon: const Icon(Icons.menu_book),
                         label: const Text('Definitions'),
                       ),
@@ -226,6 +226,6 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
   void _openRule(String ruleNumber) {
     ref.read(racingRulesServiceProvider).addRecentLookup(ruleNumber);
     ref.invalidate(recentLookupsProvider);
-    context.go('/rules/detail/$ruleNumber');
+    context.push('/rules/detail/$ruleNumber');
   }
 }
