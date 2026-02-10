@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/admin/presentation/web/member_management_page.dart';
 import 'package:mpyc_raceday/features/admin/presentation/web/sync_dashboard_panel.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
+import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/admin_profile_page.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_compliance_dashboard.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/web/checklist_completion_history_page.dart';
@@ -51,7 +52,64 @@ class _WebShellState extends ConsumerState<WebShell> {
     });
   }
 
+  // Route-level RBAC: maps every route to the roles that can access it.
+  // null = any authenticated web user; empty list would deny all (not used).
+  static const _routeRoles = <String, List<MemberRole>?>{
+    '/dashboard': null,
+    '/season-calendar': null,
+    '/settings': null,
+    // Race operations — web_admin + rc_chair
+    '/race-events': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/crew-management': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/courses': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/course-config': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/checklists-admin': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/checklists-history': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/checklists-compliance': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/incidents': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/rules-reference': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/weather-logs': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/weather-analytics': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/fleet-broadcasts': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/fleet-management': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/event-checkins': [MemberRole.webAdmin, MemberRole.rcChair],
+    // Maintenance — web_admin + rc_chair
+    '/maintenance': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/maintenance-manage': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/maintenance-schedule': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/maintenance-reports': [MemberRole.webAdmin, MemberRole.rcChair],
+    // Reports — web_admin + club_board
+    '/reports': [MemberRole.webAdmin, MemberRole.clubBoard],
+    // Admin only
+    '/members': [MemberRole.webAdmin],
+    '/sync-dashboard': [MemberRole.webAdmin],
+    '/system-settings': [MemberRole.webAdmin],
+  };
+
+  bool _hasRouteAccess(String route, List<MemberRole> userRoles) {
+    final allowed = _routeRoles[route];
+    if (allowed == null) return true; // null = any web user
+    return userRoles.any((r) =>
+        allowed.contains(r) || r == MemberRole.webAdmin);
+  }
+
   Widget _buildBody() {
+    // Route-level role enforcement
+    final userRoles = ref.read(currentRolesProvider);
+    if (!_hasRouteAccess(widget.activeRoute, userRoles)) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 48, color: Colors.grey),
+            SizedBox(height: 12),
+            Text('You do not have permission to access this page.',
+                style: TextStyle(fontSize: 16, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
     switch (widget.activeRoute) {
       case '/season-calendar':
         return const SeasonCalendarPage();
@@ -142,6 +200,16 @@ class _WebShellState extends ConsumerState<WebShell> {
   @override
   Widget build(BuildContext context) {
     final userRoles = ref.watch(currentRolesProvider);
+    final memberAsync = ref.watch(currentUserProvider);
+
+    // Role guard: once member data loads, verify web dashboard access
+    final member = memberAsync.value;
+    if (member != null && !member.canAccessWebDashboard) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/no-access');
+      });
+      return const SizedBox.shrink();
+    }
 
     // Auto-collapse sidebar on tablet-width screens (<1024px)
     final width = MediaQuery.sizeOf(context).width;
@@ -160,7 +228,6 @@ class _WebShellState extends ConsumerState<WebShell> {
       orElse: () => webNavItems.first,
     );
 
-    final member = ref.watch(currentUserProvider).value;
     final userName = member != null
         ? '${member.firstName} ${member.lastName}'.trim()
         : null;

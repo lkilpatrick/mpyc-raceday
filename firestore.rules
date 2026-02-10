@@ -114,6 +114,12 @@ service cloud.firestore {
       allow update: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
+    // ── Boats (Fleet) ──
+    match /boats/{boatId} {
+      allow read: if isAuthenticated();
+      allow write: if isWebAdmin();
+    }
+
     // ── Boat Check-ins ──
     match /boat_checkins/{checkinId} {
       allow read: if isAuthenticated();
