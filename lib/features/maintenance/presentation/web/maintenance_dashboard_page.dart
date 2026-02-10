@@ -285,58 +285,65 @@ class _BoatChecklistHistory extends StatelessWidget {
                       _ => (status, Colors.grey),
                     };
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(checklistName,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600, fontSize: 13)),
-                                if (startedAt != null)
-                                  Text(
-                                    DateFormat.yMMMd().add_jm().format(startedAt),
-                                    style: TextStyle(
-                                        fontSize: 11, color: Colors.grey.shade600),
+                    return InkWell(
+                      onTap: () => _showCompletionDetail(context, d, checklistName),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(checklistName,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600, fontSize: 13)),
+                                  if (startedAt != null)
+                                    Text(
+                                      DateFormat.yMMMd().add_jm().format(startedAt),
+                                      style: TextStyle(
+                                          fontSize: 11, color: Colors.grey.shade600),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 80,
+                              child: Column(
+                                children: [
+                                  Text('$checked/$total',
+                                      style: const TextStyle(
+                                          fontSize: 12, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 2),
+                                  LinearProgressIndicator(
+                                    value: total > 0 ? checked / total : 0,
+                                    backgroundColor: Colors.grey.shade200,
                                   ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 80,
-                            child: Column(
-                              children: [
-                                Text('$checked/$total',
-                                    style: const TextStyle(
-                                        fontSize: 12, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 2),
-                                LinearProgressIndicator(
-                                  value: total > 0 ? checked / total : 0,
-                                  backgroundColor: Colors.grey.shade200,
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(statusLabel,
+                                  style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold)),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(statusLabel,
-                                style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right,
+                                size: 16, color: Colors.grey.shade400),
+                          ],
+                        ),
                       ),
                     );
                   }),
@@ -345,6 +352,245 @@ class _BoatChecklistHistory extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  static void _showCompletionDetail(
+    BuildContext context,
+    Map<String, dynamic> data,
+    String checklistName,
+  ) {
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
+    final checked = items.where((i) => i['checked'] == true).length;
+    final total = items.length;
+    final completedBy = data['completedBy'] as String? ?? '';
+    final signOffBy = data['signOffBy'] as String?;
+    final boatName = data['boatName'] as String? ?? '';
+    final status = data['status'] as String? ?? '';
+
+    DateTime? startedAt;
+    final startRaw = data['startedAt'];
+    if (startRaw is Timestamp) {
+      startedAt = startRaw.toDate();
+    } else if (startRaw is String) {
+      startedAt = DateTime.tryParse(startRaw);
+    }
+
+    DateTime? completedAt;
+    final compRaw = data['completedAt'];
+    if (compRaw is Timestamp) {
+      completedAt = compRaw.toDate();
+    } else if (compRaw is String) {
+      completedAt = DateTime.tryParse(compRaw);
+    }
+
+    final checklistId = data['checklistId'] as String? ?? '';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: SizedBox(
+          width: 700,
+          height: 600,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(checklistName,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              if (boatName.isNotEmpty) boatName,
+                              if (startedAt != null)
+                                DateFormat.yMMMd().add_jm().format(startedAt),
+                              if (completedBy.isNotEmpty) 'by $completedBy',
+                            ].join(' • '),
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(dialogContext),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Summary row
+                Row(
+                  children: [
+                    _summaryChip(
+                      Icons.checklist,
+                      '$checked / $total items',
+                      total > 0 && checked == total
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    _summaryChip(
+                      Icons.verified,
+                      switch (status) {
+                        'signedOff' => 'Signed Off',
+                        'completedPendingSignoff' => 'Pending Sign-off',
+                        'inProgress' => 'In Progress',
+                        _ => status,
+                      },
+                      switch (status) {
+                        'signedOff' => Colors.green,
+                        'completedPendingSignoff' => Colors.orange,
+                        _ => Colors.blue,
+                      },
+                    ),
+                    if (signOffBy != null) ...[
+                      const SizedBox(width: 8),
+                      _summaryChip(
+                          Icons.person, 'Signed by $signOffBy', Colors.green),
+                    ],
+                    if (completedAt != null && startedAt != null) ...[
+                      const SizedBox(width: 8),
+                      _summaryChip(
+                        Icons.timer,
+                        '${completedAt.difference(startedAt).inMinutes} min',
+                        Colors.blue,
+                      ),
+                    ],
+                  ],
+                ),
+                const Divider(height: 20),
+
+                // Item list — look up template for titles
+                Expanded(
+                  child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    future: checklistId.isNotEmpty
+                        ? FirebaseFirestore.instance
+                            .collection('checklists')
+                            .doc(checklistId)
+                            .get()
+                        : null,
+                    builder: (context, templateSnap) {
+                      final templateItems =
+                          (templateSnap.data?.data()?['items']
+                                  as List<dynamic>?)
+                              ?.cast<Map<String, dynamic>>();
+
+                      return ListView.separated(
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1),
+                        itemBuilder: (context, i) {
+                          final item = items[i];
+                          final isChecked = item['checked'] == true;
+                          final itemId = item['itemId'] as String? ?? '';
+                          final note = item['note'] as String?;
+
+                          // Try to find the template item for a title
+                          String title = itemId;
+                          String? description;
+                          String? category;
+                          if (templateItems != null) {
+                            final tmpl = templateItems
+                                .where((t) => t['id'] == itemId)
+                                .firstOrNull;
+                            if (tmpl != null) {
+                              title = tmpl['title'] as String? ?? itemId;
+                              description =
+                                  tmpl['description'] as String?;
+                              category = tmpl['category'] as String?;
+                            }
+                          }
+
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              isChecked
+                                  ? Icons.check_circle
+                                  : Icons.cancel_outlined,
+                              color:
+                                  isChecked ? Colors.green : Colors.red.shade300,
+                              size: 22,
+                            ),
+                            title: Text(title,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  decoration: isChecked
+                                      ? null
+                                      : TextDecoration.lineThrough,
+                                  color: isChecked ? null : Colors.red.shade400,
+                                )),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (description != null &&
+                                    description.isNotEmpty)
+                                  Text(description,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade500)),
+                                if (note != null && note.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text('Note: $note',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.blue.shade700,
+                                            fontStyle: FontStyle.italic)),
+                                  ),
+                              ],
+                            ),
+                            trailing: category != null
+                                ? Text(category,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade400))
+                                : null,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _summaryChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 }
