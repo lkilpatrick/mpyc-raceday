@@ -62,11 +62,9 @@ class NoaaWeatherService {
       final obs = obsData['properties'] as Map<String, dynamic>?;
       if (obs == null) return null;
 
-      // Parse values — NOAA uses SI units
-      final windSpeedMs =
-          (obs['windSpeed']?['value'] as num?)?.toDouble() ?? 0;
-      final windGustMs =
-          (obs['windGust']?['value'] as num?)?.toDouble();
+      // Parse values — NOAA uses SI units (wind can be m/s or km/h)
+      final windSpeedMs = _toMs(obs['windSpeed']);
+      final windGustMs = _toMs(obs['windGust']);
       final windDirDeg =
           (obs['windDirection']?['value'] as num?)?.toDouble() ?? 0;
       final tempC =
@@ -79,7 +77,7 @@ class NoaaWeatherService {
           (obs['visibility']?['value'] as num?)?.toDouble();
 
       // Convert
-      final windSpeedKts = windSpeedMs * 1.94384;
+      final windSpeedKts = (windSpeedMs ?? 0) * 1.94384;
       final windGustKts =
           windGustMs != null ? windGustMs * 1.94384 : null;
       final tempF = tempC != null ? tempC * 9 / 5 + 32 : null;
@@ -148,6 +146,18 @@ class NoaaWeatherService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Convert NOAA wind value object to m/s, handling km/h unitCode.
+  /// NOAA uses unitCode like "wmoUnit:km_h-1" (km/h) or "wmoUnit:m_s-1" (m/s).
+  static double? _toMs(Map<String, dynamic>? valueObj) {
+    if (valueObj == null) return null;
+    final val = (valueObj['value'] as num?)?.toDouble();
+    if (val == null) return null;
+    final unit = (valueObj['unitCode'] as String? ?? '').toLowerCase();
+    if (unit.contains('km_h') || unit.contains('km/h')) return val / 3.6;
+    if (unit.contains('mi_h') || unit.contains('mph')) return val * 0.44704;
+    return val; // default: m/s
   }
 
   static String _degToCompass(double deg) {

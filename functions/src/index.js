@@ -3937,19 +3937,30 @@ async function fetchNoaaData() {
   return { obs, stationId, stationName };
 }
 
+function toMs(valueObj) {
+  // NOAA returns wind with unitCode like "wmoUnit:km_h-1" (km/h) or "wmoUnit:m_s-1" (m/s)
+  if (!valueObj || valueObj.value === null || valueObj.value === undefined) return null;
+  const val = valueObj.value;
+  const unit = (valueObj.unitCode || "").toLowerCase();
+  if (unit.includes("km_h") || unit.includes("km/h")) return val / 3.6;
+  if (unit.includes("mi_h") || unit.includes("mph")) return val * 0.44704;
+  // Default: assume m/s (wmoUnit:m_s-1)
+  return val;
+}
+
 function normalizeNoaaObservation({ obs, stationName }) {
-  // NOAA returns SI units: wind in m/s (km/h for some), temp in °C, pressure in Pa
-  const windSpeedMs = obs.windSpeed?.value ?? 0;
-  const windGustMs = obs.windGust?.value ?? null;
+  // NOAA returns SI units but wind can be m/s OR km/h depending on station
+  const windSpeedMs = toMs(obs.windSpeed) ?? 0;
+  const windGustMs = toMs(obs.windGust);
   const dirDeg = obs.windDirection?.value ?? 0;
   const tempC = obs.temperature?.value ?? null;
   const humidity = obs.relativeHumidity?.value ?? null;
   const pressurePa = obs.barometricPressure?.value ?? null;
 
   const speedKts = Math.round(windSpeedMs * MS_TO_KTS * 100) / 100;
-  const speedMph = Math.round(speedKts / 0.868976 * 100) / 100;
+  const speedMph = Math.round(speedKts * 1.15078 * 100) / 100;
   const gustKts = windGustMs !== null ? Math.round(windGustMs * MS_TO_KTS * 100) / 100 : null;
-  const gustMph = gustKts !== null ? Math.round(gustKts / 0.868976 * 100) / 100 : null;
+  const gustMph = gustKts !== null ? Math.round(gustKts * 1.15078 * 100) / 100 : null;
   const tempF = tempC !== null ? Math.round((tempC * 9 / 5 + 32) * 10) / 10 : null;
   const pressureInHg = pressurePa !== null ? Math.round(pressurePa / 100 * 0.02953 * 100) / 100 : null;
 
