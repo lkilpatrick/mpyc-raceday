@@ -95,9 +95,8 @@ service cloud.firestore {
     match /maintenance_requests/{requestId} {
       allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair', 'skipper']);
       allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
-      allow update: if isWebAdmin()
-        || (isRCChair() && resource.data.reportedBy == request.auth.uid);
-      allow delete: if isWebAdmin();
+      allow update: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Scheduled Maintenance ──
@@ -111,7 +110,7 @@ service cloud.firestore {
       allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair'])
         || (isAuthenticated() && request.auth.uid in resource.data.involvedMemberIds);
       allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
-      allow update: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Boats (Fleet) ──
