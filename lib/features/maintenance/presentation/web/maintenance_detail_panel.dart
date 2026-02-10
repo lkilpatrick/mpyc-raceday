@@ -296,7 +296,7 @@ class _MaintenanceDetailPanelState
   Future<void> _showCompletionDialog(MaintenanceRequest request) async {
     final notes = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Completion Notes Required'),
         content: TextField(
           controller: _completionNotesController,
@@ -305,11 +305,11 @@ class _MaintenanceDetailPanelState
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(
-                context, _completionNotesController.text.trim()),
+                dialogContext, _completionNotesController.text.trim()),
             child: const Text('Mark Complete'),
           ),
         ],

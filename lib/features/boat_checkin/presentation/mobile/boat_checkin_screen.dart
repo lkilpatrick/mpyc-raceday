@@ -178,16 +178,16 @@ class _BoatCheckinScreenState extends ConsumerState<BoatCheckinScreen>
   Future<void> _closeCheckins() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Close Check-In?'),
         content: const Text(
             'No more boats will be able to check in. This cannot be undone.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Close Check-In')),
         ],

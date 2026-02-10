@@ -52,12 +52,12 @@ class ErrorHandler {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(buttonText),
           ),
         ],

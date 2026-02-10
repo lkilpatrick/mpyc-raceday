@@ -228,18 +228,18 @@ class _CourseConfigurationPageState
   Future<void> _deleteCourse(CourseConfig course) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Course'),
         content:
             Text('Delete "${course.courseName}"? This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],

@@ -296,7 +296,7 @@ class _FinishRecordingScreenState
     final sailController = TextEditingController();
     final sail = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(score.name.toUpperCase()),
         content: TextField(
           controller: sailController,
@@ -306,11 +306,11 @@ class _FinishRecordingScreenState
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () =>
-                Navigator.pop(context, sailController.text.trim()),
+                Navigator.pop(dialogContext, sailController.text.trim()),
             child: const Text('Record'),
           ),
         ],
@@ -334,15 +334,15 @@ class _FinishRecordingScreenState
   Future<void> _undoLast(FinishRecord record) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Undo Last Finish?'),
         content: Text('Remove ${record.sailNumber} at position ${record.position}?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text('Undo')),
         ],
       ),

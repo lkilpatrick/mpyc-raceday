@@ -177,7 +177,7 @@ class _EventCheckinTable extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Late Check-In'),
         content: SizedBox(
           width: 400,
@@ -204,7 +204,7 @@ class _EventCheckinTable extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
@@ -225,7 +225,7 @@ class _EventCheckinTable extends ConsumerWidget {
               await ref
                   .read(boatCheckinRepositoryProvider)
                   .checkInBoat(checkin);
-              if (context.mounted) Navigator.pop(context);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: const Text('Check In'),
           ),

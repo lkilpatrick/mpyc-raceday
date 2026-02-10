@@ -179,7 +179,7 @@ class _ActiveChecklistScreenState
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Sign-Off Required'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -199,7 +199,7 @@ class _ActiveChecklistScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Later'),
           ),
           FilledButton(
@@ -210,8 +210,8 @@ class _ActiveChecklistScreenState
                 completionId: widget.completionId,
                 signOffUserId: signOffId,
               );
-              if (mounted) {
-                Navigator.pop(context);
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Checklist signed off!')),
                 );

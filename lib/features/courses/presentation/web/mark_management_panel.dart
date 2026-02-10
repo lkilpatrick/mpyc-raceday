@@ -216,18 +216,18 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
   Future<void> _deleteMark(Mark mark) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Mark'),
         content: Text(
             'Delete "${mark.name}"? This may affect courses using this mark.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],

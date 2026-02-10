@@ -113,7 +113,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Decline assignment'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -130,7 +130,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
@@ -143,7 +143,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     ConfirmationStatus.declined,
                     reason: _declineReasonController.text.trim(),
                   );
-              if (mounted) Navigator.pop(context);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: const Text('Submit Decline'),
           ),

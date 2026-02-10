@@ -229,7 +229,7 @@ class _MaintenanceDetailScreenState
       final controller = TextEditingController();
       final notes = await showDialog<String>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('Completion Notes'),
           content: TextField(
             controller: controller,
@@ -239,12 +239,12 @@ class _MaintenanceDetailScreenState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () =>
-                  Navigator.pop(context, controller.text.trim()),
+                  Navigator.pop(dialogContext, controller.text.trim()),
               child: const Text('Complete'),
             ),
           ],

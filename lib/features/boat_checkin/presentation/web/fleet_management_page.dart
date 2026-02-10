@@ -171,7 +171,7 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(existing != null ? 'Edit Boat' : 'Add Boat'),
         content: SizedBox(
           width: 400,
@@ -205,7 +205,7 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
@@ -222,7 +222,7 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
               await ref
                   .read(boatCheckinRepositoryProvider)
                   .saveBoat(boat);
-              if (context.mounted) Navigator.pop(context);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: const Text('Save'),
           ),
@@ -234,15 +234,15 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
   Future<void> _deleteBoat(Boat boat) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Remove Boat?'),
         content: Text('Remove ${boat.boatName} (${boat.sailNumber})?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Remove')),
         ],

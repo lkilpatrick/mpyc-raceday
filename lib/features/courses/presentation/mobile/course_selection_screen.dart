@@ -146,18 +146,18 @@ class _CourseSelectionScreenState extends ConsumerState<CourseSelectionScreen> {
   Future<void> _selectCourse(CourseConfig course) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Select Course ${course.courseNumber}?'),
         content: Text(
             'Set "${course.courseName}" as the course for this event?\n\n'
             'This will notify the fleet.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Confirm'),
           ),
         ],

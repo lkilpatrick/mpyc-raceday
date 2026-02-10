@@ -182,26 +182,42 @@ class _SeasonCalendarPageState extends ConsumerState<SeasonCalendarPage> {
   Future<void> _confirmDeleteEvent(RaceEvent event) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Event'),
         content: Text('Delete "${event.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
     if (confirm != true) return;
-    final repo = ref.read(crewAssignmentRepositoryProvider);
-    await repo.deleteEvent(event.id);
-    setState(() => _selectedEvent = null);
+    try {
+      final repo = ref.read(crewAssignmentRepositoryProvider);
+      await repo.deleteEvent(event.id);
+      setState(() => _selectedEvent = null);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _exportCalendar() async {

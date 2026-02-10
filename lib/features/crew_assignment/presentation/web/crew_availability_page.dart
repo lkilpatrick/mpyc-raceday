@@ -113,12 +113,12 @@ class CrewAvailabilityPage extends ConsumerWidget {
     final text = dutyCount.entries.map((e) => '${e.key},${e.value}').join('\n');
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Rotation Report (CSV preview)'),
         content: SelectableText('member,duties\n$text'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Close'),
           ),
         ],

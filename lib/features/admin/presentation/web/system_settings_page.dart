@@ -696,16 +696,16 @@ class _DataManagementTab extends StatelessWidget {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (_) => AlertDialog(
+                    builder: (dialogContext) => AlertDialog(
                       title: const Text('Purge Data?'),
                       content: const Text(
                           'This will permanently delete old records. Are you sure?'),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(dialogContext),
                             child: const Text('Cancel')),
                         FilledButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(dialogContext),
                             style: FilledButton.styleFrom(
                                 backgroundColor: Colors.red),
                             child: const Text('Purge')),

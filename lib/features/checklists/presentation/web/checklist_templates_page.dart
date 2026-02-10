@@ -377,7 +377,7 @@ class _TemplateEditorState extends ConsumerState<_TemplateEditor> {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('New Category'),
         content: TextField(
           controller: controller,
@@ -385,11 +385,11 @@ class _TemplateEditorState extends ConsumerState<_TemplateEditor> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Add'),
           ),
         ],

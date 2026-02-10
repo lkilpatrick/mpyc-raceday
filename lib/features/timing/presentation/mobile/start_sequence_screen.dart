@@ -355,15 +355,15 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   Future<void> _generalRecall() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('General Recall?'),
         content: const Text('This will reset the start sequence.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text('Recall')),
         ],
       ),
@@ -404,14 +404,14 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   Future<void> _postpone() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Postpone Race?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text('Postpone')),
         ],
       ),

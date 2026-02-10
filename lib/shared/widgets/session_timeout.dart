@@ -59,7 +59,7 @@ class _SessionTimeoutState extends State<SessionTimeout> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Session Expiring'),
         content: Text(
           'Your session will expire in ${widget.warningDuration.inMinutes} minutes due to inactivity.',
@@ -67,7 +67,7 @@ class _SessionTimeoutState extends State<SessionTimeout> {
         actions: [
           FilledButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               _resetTimer();
             },
             child: const Text('Stay Signed In'),

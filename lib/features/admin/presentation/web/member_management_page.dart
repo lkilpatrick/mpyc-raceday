@@ -376,16 +376,16 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
   Future<void> _bulkDeactivate() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Deactivate Members'),
         content: Text(
             'Deactivate ${_selectedIds.length} selected member(s)?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text('Deactivate')),
         ],
       ),
