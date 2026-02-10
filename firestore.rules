@@ -47,8 +47,8 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == memberId;
       allow update: if isOwnDocument(memberId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['roles']);
-      // Full write for admins
-      allow write: if isWebAdmin();
+      // Full CRUD for admins (including delete)
+      allow read, create, update, delete: if isWebAdmin();
     }
 
     // ── Race Events ──

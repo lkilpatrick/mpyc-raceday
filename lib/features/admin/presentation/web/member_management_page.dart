@@ -103,6 +103,11 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
                         onSelected: (v) =>
                             setState(() => _activeOnly = v),
                       ),
+                      FilledButton.icon(
+                        onPressed: _showCreateMemberDialog,
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Member'),
+                      ),
                       OutlinedButton.icon(
                         onPressed: () => _exportCsv(filtered),
                         icon: const Icon(Icons.download),
@@ -124,6 +129,11 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
                           const PopupMenuItem(
                             value: 'deactivate',
                             child: Text('Deactivate selected'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Delete selected',
+                                style: TextStyle(color: Colors.red)),
                           ),
                         ],
                         child: FilledButton.icon(
@@ -212,6 +222,8 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
                   member: _detailMember!,
                   onClose: () => setState(() => _detailMember = null),
                   onRolesChanged: () => setState(() {}),
+                  onEdit: () => _showEditMemberDialog(_detailMember!),
+                  onDelete: () => _deleteMember(_detailMember!['id'] as String),
                 ),
               ),
             ],
@@ -332,6 +344,8 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
         _showBulkRoleDialog(add: false);
       case 'deactivate':
         _bulkDeactivate();
+      case 'delete':
+        _bulkDelete();
     }
   }
 
@@ -401,6 +415,271 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
     setState(() => _selectedIds.clear());
   }
 
+  void _showCreateMemberDialog() {
+    final firstNameCtrl = TextEditingController();
+    final lastNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final memberNumCtrl = TextEditingController();
+    final signalNumCtrl = TextEditingController();
+    final boatNameCtrl = TextEditingController();
+    final sailNumCtrl = TextEditingController();
+    final boatClassCtrl = TextEditingController();
+    final phrfCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Member'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Expanded(child: TextField(controller: firstNameCtrl, decoration: const InputDecoration(labelText: 'First Name'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: lastNameCtrl, decoration: const InputDecoration(labelText: 'Last Name'))),
+                ]),
+                const SizedBox(height: 8),
+                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
+                const SizedBox(height: 8),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: memberNumCtrl, decoration: const InputDecoration(labelText: 'Member #'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: signalNumCtrl, decoration: const InputDecoration(labelText: 'Signal #'))),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: boatNameCtrl, decoration: const InputDecoration(labelText: 'Boat Name'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: sailNumCtrl, decoration: const InputDecoration(labelText: 'Sail #'))),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: boatClassCtrl, decoration: const InputDecoration(labelText: 'Boat Class'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: phrfCtrl, decoration: const InputDecoration(labelText: 'PHRF Rating'), keyboardType: TextInputType.number)),
+                ]),
+                const SizedBox(height: 12),
+                Text('New members default to Crew role.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (firstNameCtrl.text.trim().isEmpty && lastNameCtrl.text.trim().isEmpty) return;
+              await FirebaseFirestore.instance.collection('members').add({
+                'firstName': firstNameCtrl.text.trim(),
+                'lastName': lastNameCtrl.text.trim(),
+                'email': emailCtrl.text.trim(),
+                'mobileNumber': phoneCtrl.text.trim(),
+                'memberNumber': memberNumCtrl.text.trim(),
+                'signalNumber': signalNumCtrl.text.trim(),
+                'boatName': boatNameCtrl.text.trim(),
+                'sailNumber': sailNumCtrl.text.trim(),
+                'boatClass': boatClassCtrl.text.trim(),
+                'phrfRating': int.tryParse(phrfCtrl.text.trim()),
+                'roles': ['crew'],
+                'membershipStatus': 'active',
+                'membershipCategory': '',
+                'memberTags': <String>[],
+                'isActive': true,
+                'emergencyContact': {'name': '', 'phone': ''},
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: const Text('Add Member'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditMemberDialog(Map<String, dynamic> member) {
+    final id = member['id'] as String;
+    final firstNameCtrl = TextEditingController(text: member['firstName'] as String? ?? '');
+    final lastNameCtrl = TextEditingController(text: member['lastName'] as String? ?? '');
+    final emailCtrl = TextEditingController(text: member['email'] as String? ?? '');
+    final phoneCtrl = TextEditingController(text: member['mobileNumber'] as String? ?? '');
+    final memberNumCtrl = TextEditingController(text: member['memberNumber'] as String? ?? '');
+    final signalNumCtrl = TextEditingController(text: member['signalNumber'] as String? ?? '');
+    final boatNameCtrl = TextEditingController(text: member['boatName'] as String? ?? '');
+    final sailNumCtrl = TextEditingController(text: member['sailNumber'] as String? ?? '');
+    final boatClassCtrl = TextEditingController(text: member['boatClass'] as String? ?? '');
+    final phrfCtrl = TextEditingController(text: '${member['phrfRating'] ?? ''}');
+    final ecNameCtrl = TextEditingController(
+        text: (member['emergencyContact'] as Map<String, dynamic>?)?['name'] as String? ?? '');
+    final ecPhoneCtrl = TextEditingController(
+        text: (member['emergencyContact'] as Map<String, dynamic>?)?['phone'] as String? ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Member'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Expanded(child: TextField(controller: firstNameCtrl, decoration: const InputDecoration(labelText: 'First Name'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: lastNameCtrl, decoration: const InputDecoration(labelText: 'Last Name'))),
+                ]),
+                const SizedBox(height: 8),
+                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
+                const SizedBox(height: 8),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: memberNumCtrl, decoration: const InputDecoration(labelText: 'Member #'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: signalNumCtrl, decoration: const InputDecoration(labelText: 'Signal #'))),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: boatNameCtrl, decoration: const InputDecoration(labelText: 'Boat Name'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: sailNumCtrl, decoration: const InputDecoration(labelText: 'Sail #'))),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: boatClassCtrl, decoration: const InputDecoration(labelText: 'Boat Class'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: phrfCtrl, decoration: const InputDecoration(labelText: 'PHRF Rating'), keyboardType: TextInputType.number)),
+                ]),
+                const Divider(height: 24),
+                Row(children: [
+                  Expanded(child: TextField(controller: ecNameCtrl, decoration: const InputDecoration(labelText: 'Emergency Contact Name'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: ecPhoneCtrl, decoration: const InputDecoration(labelText: 'Emergency Phone'))),
+                ]),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('members').doc(id).update({
+                'firstName': firstNameCtrl.text.trim(),
+                'lastName': lastNameCtrl.text.trim(),
+                'email': emailCtrl.text.trim(),
+                'mobileNumber': phoneCtrl.text.trim(),
+                'memberNumber': memberNumCtrl.text.trim(),
+                'signalNumber': signalNumCtrl.text.trim(),
+                'boatName': boatNameCtrl.text.trim(),
+                'sailNumber': sailNumCtrl.text.trim(),
+                'boatClass': boatClassCtrl.text.trim(),
+                'phrfRating': int.tryParse(phrfCtrl.text.trim()),
+                'emergencyContact': {
+                  'name': ecNameCtrl.text.trim(),
+                  'phone': ecPhoneCtrl.text.trim(),
+                },
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              setState(() => _detailMember = null);
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteMember(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Member'),
+        content: const Text(
+          'This will permanently delete this member record. This cannot be undone.\n\n'
+          'If this member was synced from Clubspot, they will be re-created on the next sync.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await FirebaseFirestore.instance.collection('members').doc(id).delete();
+      setState(() => _detailMember = null);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delete failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _bulkDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Members'),
+        content: Text(
+          'Permanently delete ${_selectedIds.length} selected member(s)? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final batch = FirebaseFirestore.instance.batch();
+    for (final id in _selectedIds) {
+      batch.delete(FirebaseFirestore.instance.collection('members').doc(id));
+    }
+    await batch.commit();
+    setState(() => _selectedIds.clear());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Members deleted')),
+      );
+    }
+  }
+
   Future<void> _exportCsv(List<Map<String, dynamic>> members) async {
     final rows = <List<String>>[
       const [
@@ -464,11 +743,15 @@ class _MemberDetailPanel extends StatelessWidget {
     required this.member,
     required this.onClose,
     required this.onRolesChanged,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final Map<String, dynamic> member;
   final VoidCallback onClose;
   final VoidCallback onRolesChanged;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   static const _roleEntries = [
     ('web_admin', 'Web Admin', Colors.red, Icons.shield),
@@ -609,30 +892,55 @@ class _MemberDetailPanel extends StatelessWidget {
           _infoRow('Last Login', _formatLastLogin(member['lastLogin'])),
           const SizedBox(height: 16),
 
-          // Danger zone
-          _sectionTitle(context, 'DANGER ZONE'),
+          // Actions
+          _sectionTitle(context, 'ACTIONS'),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () {
-              final doc = FirebaseFirestore.instance
-                  .collection('members')
-                  .doc(id);
-              final isActive = member['isActive'] != false;
-              doc.update({'isActive': !isActive});
-              onRolesChanged();
-            },
-            icon: Icon(
-              member['isActive'] != false
-                  ? Icons.block
-                  : Icons.check_circle,
-              size: 16,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Edit Member'),
             ),
-            label: Text(member['isActive'] != false
-                ? 'Deactivate Member'
-                : 'Reactivate Member'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                final doc = FirebaseFirestore.instance
+                    .collection('members')
+                    .doc(id);
+                final isActive = member['isActive'] != false;
+                doc.update({'isActive': !isActive});
+                onRolesChanged();
+              },
+              icon: Icon(
+                member['isActive'] != false
+                    ? Icons.block
+                    : Icons.check_circle,
+                size: 16,
+              ),
+              label: Text(member['isActive'] != false
+                  ? 'Deactivate Member'
+                  : 'Reactivate Member'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_forever, size: 16),
+              label: const Text('Delete Member'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
             ),
           ),
         ],
