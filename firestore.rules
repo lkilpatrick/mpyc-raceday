@@ -43,9 +43,12 @@ service cloud.firestore {
     // ── Members ──
     match /members/{memberId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      // Allow users to create/update their own UID-keyed doc (for rules lookup)
+      allow create: if isAuthenticated() && request.auth.uid == memberId;
       allow update: if isOwnDocument(memberId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['roles']);
+      // Full write for admins
+      allow write: if isWebAdmin();
     }
 
     // ── Race Events ──

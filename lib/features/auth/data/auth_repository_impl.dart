@@ -82,9 +82,12 @@ class AuthRepositoryImpl implements AuthRepository {
       final doc = emailSnap.docs.first;
       // Link the UID
       await doc.reference.update({'firebaseUid': uid});
+      await _ensureUidDoc(uid, doc.data());
       return _memberFromDoc(doc);
     }
-    return _memberFromDoc(snap.docs.first);
+    final memberDoc = snap.docs.first;
+    await _ensureUidDoc(uid, memberDoc.data());
+    return _memberFromDoc(memberDoc);
   }
 
   @override
@@ -118,7 +121,10 @@ class AuthRepositoryImpl implements AuthRepository {
         .where('firebaseUid', isEqualTo: user.uid)
         .limit(1)
         .get();
-    if (snap.docs.isNotEmpty) return _memberFromDoc(snap.docs.first);
+    if (snap.docs.isNotEmpty) {
+      await _ensureUidDoc(user.uid, snap.docs.first.data());
+      return _memberFromDoc(snap.docs.first);
+    }
 
     // Fallback: match by email
     if (user.email != null) {
@@ -130,6 +136,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (emailSnap.docs.isNotEmpty) {
         final doc = emailSnap.docs.first;
         await doc.reference.update({'firebaseUid': user.uid});
+        await _ensureUidDoc(user.uid, doc.data());
         return _memberFromDoc(doc);
       }
     }
@@ -279,4 +286,28 @@ class AuthRepositoryImpl implements AuthRepository {
   };
 
   static MemberRole? _parseRole(String roleStr) => _roleStringMap[roleStr];
+
+  /// Ensure a member document exists at /members/{uid} so Firestore security
+  /// rules (which look up roles via `get(/members/$(request.auth.uid))`)
+  /// can find the user's roles. The canonical member doc may be keyed by
+  /// Clubspot ID; this writes a mirror keyed by Firebase Auth UID.
+  Future<void> _ensureUidDoc(String uid, Map<String, dynamic> data) async {
+    final uidDocRef = _firestore.collection('members').doc(uid);
+    final uidDoc = await uidDocRef.get();
+    if (uidDoc.exists) {
+      // Keep roles in sync
+      final existingRoles = uidDoc.data()?['roles'];
+      final newRoles = data['roles'];
+      if (existingRoles?.toString() != newRoles?.toString()) {
+        await uidDocRef.update({'roles': newRoles});
+      }
+      return;
+    }
+    // Write a copy with the UID as doc ID
+    await uidDocRef.set({
+      ...data,
+      'firebaseUid': uid,
+      'lastLogin': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 }
