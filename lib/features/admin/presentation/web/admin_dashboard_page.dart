@@ -12,29 +12,109 @@ class AdminDashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Dashboard',
-              style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 900;
 
-          // ── Row 1: Metric cards ──
-          const _MetricCardsRow(),
-          const SizedBox(height: 16),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Dashboard',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
 
-          // ── Row 2: Upcoming Events + Weather ──
-          const _UpcomingAndWeatherRow(),
-          const SizedBox(height: 16),
+              // ── Row 1: Metric cards (responsive wrap) ──
+              _MetricCardsRow(isWide: isWide),
+              const SizedBox(height: 20),
 
-          // ── Row 3: Activity Feed + Open Issues ──
-          const _ActivityAndIssuesRow(),
-        ],
-      ),
+              // ── Row 2: Upcoming Events + Weather ──
+              if (isWide)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: _UpcomingEventsCard()),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 2, child: _WeatherCard()),
+                    ],
+                  ),
+                )
+              else ...[
+                _WeatherCard(),
+                const SizedBox(height: 16),
+                _UpcomingEventsCard(),
+              ],
+              const SizedBox(height: 20),
+
+              // ── Row 3: Activity Feed + Open Issues ──
+              if (isWide)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: _RecentActivityCard()),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 2, child: _OpenIssuesCard()),
+                    ],
+                  ),
+                )
+              else ...[
+                _RecentActivityCard(),
+                const SizedBox(height: 16),
+                _OpenIssuesCard(),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// Safe StreamBuilder wrapper — catches Firestore errors
+// ═══════════════════════════════════════════════════════
+
+Widget _safeStream<T>({
+  required Stream<T> stream,
+  required Widget Function(T data) builder,
+  Widget? loading,
+  Widget? onError,
+}) {
+  return StreamBuilder<T>(
+    stream: stream,
+    builder: (context, snap) {
+      if (snap.hasError) {
+        return onError ??
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'Unable to load data',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+            );
+      }
+      if (!snap.hasData) {
+        return loading ??
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+      }
+      return builder(snap.data as T);
+    },
+  );
 }
 
 // ═══════════════════════════════════════════════════════
@@ -42,20 +122,40 @@ class AdminDashboardPage extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════
 
 class _MetricCardsRow extends StatelessWidget {
-  const _MetricCardsRow();
+  const _MetricCardsRow({required this.isWide});
+
+  final bool isWide;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _NextRaceCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _MaintenanceMetricCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _SeasonProgressCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _MembersSyncedCard()),
-      ],
+    final cards = <Widget>[
+      _NextRaceCard(),
+      _MaintenanceMetricCard(),
+      _SeasonProgressCard(),
+      _MembersSyncedCard(),
+    ];
+
+    if (isWide) {
+      return Row(
+        children: [
+          for (int i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            Expanded(child: cards[i]),
+          ],
+        ],
+      );
+    }
+
+    // Narrow: 2-column grid
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: cards
+          .map((c) => SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 72 - 260) / 2,
+                child: c,
+              ))
+          .toList(),
     );
   }
 }
@@ -63,15 +163,15 @@ class _MetricCardsRow extends StatelessWidget {
 class _NextRaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return _safeStream<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
           .where('date', isGreaterThanOrEqualTo: Timestamp.now())
           .orderBy('date')
           .limit(1)
           .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+      builder: (snap) {
+        final docs = snap.docs;
         String name = 'No upcoming';
         String dateStr = '';
         String countdown = '';
@@ -103,6 +203,14 @@ class _NextRaceCard extends StatelessWidget {
           onTap: () => context.go('/race-events'),
         );
       },
+      onError: _DashCard(
+        icon: Icons.sailing,
+        iconColor: Colors.blue,
+        title: 'Next Race',
+        value: '—',
+        subtitle: 'Unable to load',
+        onTap: () => context.go('/race-events'),
+      ),
     );
   }
 }
@@ -110,20 +218,24 @@ class _NextRaceCard extends StatelessWidget {
 class _MaintenanceMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return _safeStream<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('maintenance_requests')
           .where('status', whereIn: ['open', 'in_progress'])
           .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+      builder: (snap) {
+        final docs = snap.docs;
         int critical = 0, high = 0, normal = 0;
         for (final doc in docs) {
           final d = doc.data() as Map<String, dynamic>;
           final p = d['priority'] as String? ?? '';
-          if (p == 'critical') critical++;
-          else if (p == 'high') high++;
-          else normal++;
+          if (p == 'critical') {
+            critical++;
+          } else if (p == 'high') {
+            high++;
+          } else {
+            normal++;
+          }
         }
 
         return _DashCard(
@@ -135,6 +247,14 @@ class _MaintenanceMetricCard extends StatelessWidget {
           onTap: () => context.go('/maintenance'),
         );
       },
+      onError: _DashCard(
+        icon: Icons.build,
+        iconColor: Colors.orange,
+        title: 'Active Maintenance',
+        value: '—',
+        subtitle: 'Unable to load',
+        onTap: () => context.go('/maintenance'),
+      ),
     );
   }
 }
@@ -142,12 +262,12 @@ class _MaintenanceMetricCard extends StatelessWidget {
 class _SeasonProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return _safeStream<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
           .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+      builder: (snap) {
+        final docs = snap.docs;
         final now = DateTime.now();
         int completed = 0;
         for (final doc in docs) {
@@ -174,6 +294,14 @@ class _SeasonProgressCard extends StatelessWidget {
           ),
         );
       },
+      onError: _DashCard(
+        icon: Icons.emoji_events,
+        iconColor: Colors.amber,
+        title: 'Season Progress',
+        value: '—',
+        subtitle: 'Unable to load',
+        onTap: () => context.go('/season-calendar'),
+      ),
     );
   }
 }
@@ -181,21 +309,21 @@ class _SeasonProgressCard extends StatelessWidget {
 class _MembersSyncedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return _safeStream<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('members').snapshots(),
-      builder: (context, membersSnap) {
-        final memberCount = membersSnap.data?.docs.length ?? 0;
-        return StreamBuilder<QuerySnapshot>(
+      builder: (membersSnap) {
+        final memberCount = membersSnap.docs.length;
+        return _safeStream<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('memberSyncLogs')
               .orderBy('timestamp', descending: true)
               .limit(1)
               .snapshots(),
-          builder: (context, syncSnap) {
+          builder: (syncSnap) {
             String lastSync = 'Never';
-            if (syncSnap.data != null && syncSnap.data!.docs.isNotEmpty) {
-              final ts = syncSnap.data!.docs.first.data()
-                  as Map<String, dynamic>;
+            if (syncSnap.docs.isNotEmpty) {
+              final ts =
+                  syncSnap.docs.first.data() as Map<String, dynamic>;
               final t = ts['timestamp'] as Timestamp?;
               if (t != null) {
                 lastSync = DateFormat.yMMMd().add_Hm().format(t.toDate());
@@ -210,31 +338,31 @@ class _MembersSyncedCard extends StatelessWidget {
               onTap: () => context.go('/sync-dashboard'),
             );
           },
+          onError: _DashCard(
+            icon: Icons.people,
+            iconColor: Colors.green,
+            title: 'Members Synced',
+            value: '$memberCount',
+            subtitle: 'Sync log unavailable',
+            onTap: () => context.go('/sync-dashboard'),
+          ),
         );
       },
+      onError: _DashCard(
+        icon: Icons.people,
+        iconColor: Colors.green,
+        title: 'Members Synced',
+        value: '—',
+        subtitle: 'Unable to load',
+        onTap: () => context.go('/sync-dashboard'),
+      ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════
-// Row 2 — Upcoming Events + Weather
+// Upcoming Events Card
 // ═══════════════════════════════════════════════════════
-
-class _UpcomingAndWeatherRow extends StatelessWidget {
-  const _UpcomingAndWeatherRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 3, child: _UpcomingEventsCard()),
-        const SizedBox(width: 12),
-        Expanded(flex: 2, child: _WeatherCard()),
-      ],
-    );
-  }
-}
 
 class _UpcomingEventsCard extends StatelessWidget {
   @override
@@ -259,7 +387,7 @@ class _UpcomingEventsCard extends StatelessWidget {
               ],
             ),
             const Divider(),
-            StreamBuilder<QuerySnapshot>(
+            _safeStream<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('race_events')
                   .where('date',
@@ -267,8 +395,8 @@ class _UpcomingEventsCard extends StatelessWidget {
                   .orderBy('date')
                   .limit(5)
                   .snapshots(),
-              builder: (context, snap) {
-                final docs = snap.data?.docs ?? [];
+              builder: (snap) {
+                final docs = snap.docs;
                 if (docs.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(12),
@@ -302,12 +430,15 @@ class _UpcomingEventsCard extends StatelessWidget {
                               visualDensity: VisualDensity.compact,
                             )
                           : null,
-                      onTap: () =>
-                          context.go('/schedule/event/${doc.id}'),
+                      onTap: () => context.go('/race-events'),
                     );
                   }).toList(),
                 );
               },
+              onError: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Unable to load events'),
+              ),
             ),
           ],
         ),
@@ -315,6 +446,10 @@ class _UpcomingEventsCard extends StatelessWidget {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// Weather Card
+// ═══════════════════════════════════════════════════════
 
 class _WeatherCard extends ConsumerWidget {
   @override
@@ -327,6 +462,7 @@ class _WeatherCard extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
@@ -335,21 +471,20 @@ class _WeatherCard extends ConsumerWidget {
                 Text('MPYC Live Wind',
                     style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
-                // Unit toggle
                 SegmentedButton<WindSpeedUnit>(
                   segments: const [
-                    ButtonSegment(value: WindSpeedUnit.kts, label: Text('kts')),
-                    ButtonSegment(value: WindSpeedUnit.mph, label: Text('mph')),
+                    ButtonSegment(
+                        value: WindSpeedUnit.kts, label: Text('kts')),
+                    ButtonSegment(
+                        value: WindSpeedUnit.mph, label: Text('mph')),
                   ],
                   selected: {unit},
-                  onSelectionChanged: (v) =>
-                      ref.read(windSpeedUnitProvider.notifier).state = v.first,
-                  style: ButtonStyle(
+                  onSelectionChanged: (v) => ref
+                      .read(windSpeedUnitProvider.notifier)
+                      .state = v.first,
+                  style: const ButtonStyle(
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: WidgetStatePropertyAll(
-                      Theme.of(context).textTheme.bodySmall,
-                    ),
                   ),
                 ),
               ],
@@ -361,14 +496,48 @@ class _WeatherCard extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (e, _) => Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text('Error: $e'),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Icon(Icons.cloud_off,
+                        size: 40, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Weather data unavailable',
+                      style: TextStyle(
+                          fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Check Firestore connection',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade400),
+                    ),
+                  ],
+                ),
               ),
               data: (weather) {
                 if (weather == null) {
-                  return const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text('No weather data available from NOAA. Check network connectivity.'),
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Icon(Icons.cloud_off,
+                            size: 40, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No weather data from NOAA',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Cloud Function may not be deployed yet',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade400),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
@@ -380,6 +549,7 @@ class _WeatherCard extends ConsumerWidget {
                     : weather.gustMph;
 
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Stale warning
                     if (weather.isStale)
@@ -397,10 +567,12 @@ class _WeatherCard extends ConsumerWidget {
                             const Icon(Icons.warning_amber,
                                 size: 16, color: Colors.orange),
                             const SizedBox(width: 6),
-                            Text(
-                              'Data is ${weather.staleness.inSeconds}s old',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.orange),
+                            Flexible(
+                              child: Text(
+                                'Data is ${_formatStaleness(weather.staleness)} old',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.orange),
+                              ),
                             ),
                           ],
                         ),
@@ -427,25 +599,24 @@ class _WeatherCard extends ConsumerWidget {
                       speed: speed,
                       unit: unit,
                       gust: gust,
-                      size: 160,
+                      size: 150,
                     ),
                     const SizedBox(height: 8),
                     // Extra info row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      spacing: 12,
+                      alignment: WrapAlignment.center,
                       children: [
-                        if (weather.tempF != null) ...[
+                        if (weather.tempF != null)
                           Text('${weather.tempF!.toStringAsFixed(0)}°F',
                               style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 12),
-                        ],
-                        if (weather.humidity != null) ...[
-                          Text('${weather.humidity!.toStringAsFixed(0)}% RH',
+                        if (weather.humidity != null)
+                          Text(
+                              '${weather.humidity!.toStringAsFixed(0)}% RH',
                               style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 12),
-                        ],
                         if (weather.pressureInHg != null)
-                          Text('${weather.pressureInHg!.toStringAsFixed(2)}" Hg',
+                          Text(
+                              '${weather.pressureInHg!.toStringAsFixed(2)}" Hg',
                               style: const TextStyle(fontSize: 13)),
                       ],
                     ),
@@ -465,6 +636,12 @@ class _WeatherCard extends ConsumerWidget {
     );
   }
 
+  static String _formatStaleness(Duration d) {
+    if (d.inMinutes < 1) return '${d.inSeconds}s';
+    if (d.inHours < 1) return '${d.inMinutes}m';
+    return '${d.inHours}h ${d.inMinutes % 60}m';
+  }
+
   static String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 10) return 'just now';
@@ -475,24 +652,8 @@ class _WeatherCard extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════
-// Row 3 — Activity Feed + Open Issues
+// Activity Feed + Open Issues
 // ═══════════════════════════════════════════════════════
-
-class _ActivityAndIssuesRow extends StatelessWidget {
-  const _ActivityAndIssuesRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 3, child: _RecentActivityCard()),
-        const SizedBox(width: 12),
-        Expanded(flex: 2, child: _OpenIssuesCard()),
-      ],
-    );
-  }
-}
 
 class _RecentActivityCard extends StatelessWidget {
   @override
@@ -506,7 +667,6 @@ class _RecentActivityCard extends StatelessWidget {
             Text('Recent Activity',
                 style: Theme.of(context).textTheme.titleMedium),
             const Divider(),
-            // Check-ins
             _ActivitySection(
               icon: Icons.how_to_reg,
               color: Colors.blue,
@@ -517,7 +677,6 @@ class _RecentActivityCard extends StatelessWidget {
                   '${d['boatName'] ?? ''} (${d['sailNumber'] ?? ''})',
               timeField: 'checkedInAt',
             ),
-            // Incidents
             _ActivitySection(
               icon: Icons.report,
               color: Colors.red,
@@ -527,7 +686,6 @@ class _RecentActivityCard extends StatelessWidget {
               labelBuilder: (d) => d['description'] as String? ?? '',
               timeField: 'reportedAt',
             ),
-            // Maintenance
             _ActivitySection(
               icon: Icons.build,
               color: Colors.orange,
@@ -565,14 +723,14 @@ class _ActivitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return _safeStream<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection(collection)
           .orderBy(orderField, descending: true)
           .limit(3)
           .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+      builder: (snap) {
+        final docs = snap.docs;
         if (docs.isEmpty) return const SizedBox.shrink();
 
         return Column(
@@ -611,6 +769,7 @@ class _ActivitySection extends StatelessWidget {
           ],
         );
       },
+      onError: const SizedBox.shrink(),
     );
   }
 }
@@ -629,44 +788,48 @@ class _OpenIssuesCard extends StatelessWidget {
             const Divider(),
 
             // Critical maintenance
-            StreamBuilder<QuerySnapshot>(
+            _safeStream<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('maintenance_requests')
                   .where('priority', isEqualTo: 'critical')
                   .where('status', whereIn: ['open', 'in_progress'])
                   .snapshots(),
-              builder: (context, snap) {
-                final count = snap.data?.docs.length ?? 0;
+              builder: (snap) {
+                final count = snap.docs.length;
                 if (count == 0) return const SizedBox.shrink();
                 return _IssueTile(
                   icon: Icons.warning,
                   color: Colors.red,
-                  label: '$count critical maintenance item${count > 1 ? 's' : ''}',
+                  label:
+                      '$count critical maintenance item${count > 1 ? 's' : ''}',
                   onTap: () => context.go('/maintenance'),
                 );
               },
+              onError: const SizedBox.shrink(),
             ),
 
             // Unresolved incidents
-            StreamBuilder<QuerySnapshot>(
+            _safeStream<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('incidents')
                   .where('status', whereIn: ['reported', 'protestFiled'])
                   .snapshots(),
-              builder: (context, snap) {
-                final count = snap.data?.docs.length ?? 0;
+              builder: (snap) {
+                final count = snap.docs.length;
                 if (count == 0) return const SizedBox.shrink();
                 return _IssueTile(
                   icon: Icons.report,
                   color: Colors.orange,
-                  label: '$count unresolved incident${count > 1 ? 's' : ''}',
+                  label:
+                      '$count unresolved incident${count > 1 ? 's' : ''}',
                   onTap: () => context.go('/incidents'),
                 );
               },
+              onError: const SizedBox.shrink(),
             ),
 
             // Upcoming events needing crew
-            StreamBuilder<QuerySnapshot>(
+            _safeStream<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('race_events')
                   .where('date',
@@ -674,8 +837,8 @@ class _OpenIssuesCard extends StatelessWidget {
                   .orderBy('date')
                   .limit(10)
                   .snapshots(),
-              builder: (context, snap) {
-                final docs = snap.data?.docs ?? [];
+              builder: (snap) {
+                final docs = snap.docs;
                 int needsCrew = 0;
                 for (final doc in docs) {
                   final d = doc.data() as Map<String, dynamic>;
@@ -687,10 +850,12 @@ class _OpenIssuesCard extends StatelessWidget {
                 return _IssueTile(
                   icon: Icons.group_off,
                   color: Colors.purple,
-                  label: '$needsCrew event${needsCrew > 1 ? 's' : ''} need crew',
+                  label:
+                      '$needsCrew event${needsCrew > 1 ? 's' : ''} need crew',
                   onTap: () => context.go('/crew-management'),
                 );
               },
+              onError: const SizedBox.shrink(),
             ),
           ],
         ),
@@ -762,9 +927,12 @@ class _DashCard extends StatelessWidget {
                 children: [
                   Icon(icon, color: iconColor, size: 20),
                   const SizedBox(width: 8),
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600)),
+                  Flexible(
+                    child: Text(title,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
