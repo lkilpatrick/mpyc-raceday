@@ -223,18 +223,17 @@ class _WeatherMiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('weather_entries')
-          .orderBy('timestamp', descending: true)
-          .limit(1)
+          .collection('weather')
+          .doc('mpyc_station')
           .snapshots(),
       builder: (context, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (!snap.hasData || !snap.data!.exists) {
           return const _MiniStat(icon: Icons.cloud, label: '—');
         }
-        final d = snap.data!.docs.first.data() as Map<String, dynamic>;
-        final wind = (d['windSpeedKts'] as num?)?.toDouble() ?? 0;
+        final d = snap.data!.data() as Map<String, dynamic>? ?? {};
+        final wind = (d['speedKts'] as num?)?.toDouble() ?? 0;
         return _MiniStat(
             icon: Icons.air, label: '${wind.toStringAsFixed(0)} kts');
       },
@@ -634,25 +633,29 @@ class _WeatherCompactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('weather_entries')
-          .orderBy('timestamp', descending: true)
-          .limit(1)
+          .collection('weather')
+          .doc('mpyc_station')
           .snapshots(),
       builder: (context, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (!snap.hasData || !snap.data!.exists) {
           return const SizedBox.shrink();
         }
-        final d = snap.data!.docs.first.data() as Map<String, dynamic>;
-        final wind = (d['windSpeedKts'] as num?)?.toDouble() ?? 0;
-        final dir = (d['windDirectionDeg'] as num?)?.toDouble() ?? 0;
-        final temp = (d['temperatureF'] as num?)?.toDouble() ?? 0;
-        final desc = d['description'] as String? ?? '';
+        final d = snap.data!.data() as Map<String, dynamic>? ?? {};
+        final wind = (d['speedKts'] as num?)?.toDouble() ?? 0;
+        final dir = (d['dirDeg'] as num?)?.toDouble() ?? 0;
+        final temp = (d['tempF'] as num?)?.toDouble();
+        final source = d['source'] as String? ?? '';
+
+        final tempStr = temp != null ? '${temp.toStringAsFixed(0)}°F' : '';
+        final subtitle = [tempStr, if (source.isNotEmpty) source.toUpperCase()]
+            .where((s) => s.isNotEmpty)
+            .join(' • ');
 
         return Card(
           child: InkWell(
-            onTap: () => context.push('/weather'),
+            onTap: () => context.push('/live-wind'),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -668,9 +671,10 @@ class _WeatherCompactCard extends StatelessWidget {
                       Text('${wind.toStringAsFixed(0)} kts from ${dir.toStringAsFixed(0)}°',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text('${temp.toStringAsFixed(0)}°F • $desc',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
+                      if (subtitle.isNotEmpty)
+                        Text(subtitle,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey)),
                     ],
                   ),
                   const Spacer(),

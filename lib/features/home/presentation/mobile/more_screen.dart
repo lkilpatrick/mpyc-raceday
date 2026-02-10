@@ -37,7 +37,7 @@ class MoreScreen extends StatelessWidget {
         _MoreItem(
           icon: Icons.air,
           label: 'Live Wind',
-          subtitle: 'Real-time wind from MPYC station',
+          subtitle: 'Real-time wind from NOAA',
           onTap: () => context.push('/live-wind'),
         ),
         const Divider(),
