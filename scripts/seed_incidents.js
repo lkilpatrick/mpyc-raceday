@@ -34,9 +34,18 @@ const credential = admin.credential.refreshToken({
   refresh_token: refreshToken,
 });
 
+// ISO 8601 date string pattern
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
 function toFsValue(val) {
   if (val === null || val === undefined) return { nullValue: null };
-  if (typeof val === "string") return { stringValue: val };
+  if (typeof val === "string") {
+    // Detect ISO date strings and write as Firestore timestamps
+    if (ISO_DATE_RE.test(val)) {
+      return { timestampValue: val };
+    }
+    return { stringValue: val };
+  }
   if (typeof val === "boolean") return { booleanValue: val };
   if (typeof val === "number") {
     return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
