@@ -31,10 +31,9 @@ void main() {
                   'first_name': 'John',
                   'last_name': 'Doe',
                   'email': 'john@example.com',
-                  'mobile': '+15551234567',
-                  'membership_status': 'active',
-                  'membership_category': 'Regular',
-                  'tags': ['RC Crew'],
+                  'mobile_number': '+15551234567',
+                  'membership': {'id': 'ms1', 'status': 'active', 'category': 'Regular'},
+                  'member_tags': ['RC Crew'],
                 },
               ],
               'has_more': false,
@@ -52,8 +51,8 @@ void main() {
         expect(members.first.lastName, 'Doe');
         expect(members.first.fullName, 'John Doe');
         expect(members.first.email, 'john@example.com');
-        expect(members.first.mobile, '+15551234567');
-        expect(members.first.tags, ['RC Crew']);
+        expect(members.first.mobileNumber, '+15551234567');
+        expect(members.first.memberTags, ['RC Crew']);
       });
 
       test('handles pagination with has_more', () async {
@@ -137,7 +136,7 @@ void main() {
 
         expect(members, hasLength(1));
         expect(members.first.id, 'alt1');
-        expect(members.first.mobile, '+15559999999');
+        expect(members.first.mobileNumber, '+15559999999');
         expect(members.first.membershipNumber, '200');
       });
     });
@@ -227,10 +226,9 @@ void main() {
         'first_name': 'Jane',
         'last_name': 'Smith',
         'email': 'jane@test.com',
-        'mobile': '+15550001111',
-        'membership_status': 'active',
-        'membership_category': 'Full',
-        'tags': ['Skipper', 'RC'],
+        'mobile_number': '+15550001111',
+        'membership': {'id': 'ms1', 'status': 'active', 'category': 'Full'},
+        'member_tags': ['Skipper', 'RC'],
       });
 
       expect(member.id, 'abc');
@@ -240,10 +238,10 @@ void main() {
       expect(member.lastName, 'Smith');
       expect(member.fullName, 'Jane Smith');
       expect(member.email, 'jane@test.com');
-      expect(member.mobile, '+15550001111');
+      expect(member.mobileNumber, '+15550001111');
       expect(member.membershipStatus, 'active');
       expect(member.membershipCategory, 'Full');
-      expect(member.tags, ['Skipper', 'RC']);
+      expect(member.memberTags, ['Skipper', 'RC']);
     });
 
     test('handles missing fields gracefully', () {
@@ -252,7 +250,7 @@ void main() {
       expect(member.firstName, '');
       expect(member.lastName, '');
       expect(member.email, '');
-      expect(member.tags, isEmpty);
+      expect(member.memberTags, isEmpty);
     });
   });
 }

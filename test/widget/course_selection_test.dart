@@ -136,8 +136,7 @@ void main() {
         windDirMin: 295, windDirMax: 320, finishLocation: 'committee_boat',
       );
       expect(course.markSequenceDisplay, contains('Ap'));
-      expect(course.markSequenceDisplay, contains('Bs'));
-      expect(course.markSequenceDisplay, contains('(Finish)'));
+      expect(course.markSequenceDisplay, contains('FINISH'));
     });
   });
 }

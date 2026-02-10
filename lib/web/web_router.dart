@@ -57,6 +57,7 @@ final GoRouter webRouter = GoRouter(
         GoRoute(path: '/weather-analytics', builder: (_, __) => const SizedBox()),
         GoRoute(path: '/reports', builder: (_, __) => const SizedBox()),
         GoRoute(path: '/system-settings', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/situation-advisor', builder: (_, __) => const SizedBox()),
         GoRoute(path: '/settings', builder: (_, __) => const SizedBox()),
       ],
     ),

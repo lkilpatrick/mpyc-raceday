@@ -73,6 +73,12 @@ const List<WebNavItem> webNavItems = [
     requiredRoles: [MemberRole.webAdmin, MemberRole.rcChair],
   ),
   WebNavItem(
+    label: 'Situation Advisor',
+    route: '/situation-advisor',
+    icon: Icons.psychology,
+    requiredRoles: [MemberRole.webAdmin, MemberRole.rcChair],
+  ),
+  WebNavItem(
     label: 'Current Weather',
     route: '/weather-logs',
     icon: Icons.cloud,

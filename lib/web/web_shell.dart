@@ -14,6 +14,7 @@ import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_m
 import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_reports_panel.dart';
 import 'package:mpyc_raceday/features/maintenance/presentation/web/maintenance_schedule_page.dart';
 import 'package:mpyc_raceday/features/racing_rules/presentation/web/rules_reference_page.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/web/situation_advisor_page.dart';
 import 'package:mpyc_raceday/features/weather/presentation/web/weather_analytics_panel.dart';
 import 'package:mpyc_raceday/features/weather/presentation/web/weather_log_page.dart';
 import 'package:mpyc_raceday/features/boat_checkin/presentation/web/fleet_management_page.dart';
@@ -68,6 +69,7 @@ class _WebShellState extends ConsumerState<WebShell> {
     '/checklists-compliance': [MemberRole.webAdmin, MemberRole.rcChair],
     '/incidents': [MemberRole.webAdmin, MemberRole.rcChair],
     '/rules-reference': [MemberRole.webAdmin, MemberRole.rcChair],
+    '/situation-advisor': [MemberRole.webAdmin, MemberRole.rcChair],
     '/weather-logs': [MemberRole.webAdmin, MemberRole.rcChair],
     '/weather-analytics': [MemberRole.webAdmin, MemberRole.rcChair],
     '/fleet-broadcasts': [MemberRole.webAdmin, MemberRole.rcChair],
@@ -137,6 +139,8 @@ class _WebShellState extends ConsumerState<WebShell> {
         return const MaintenanceReportsPanel();
       case '/rules-reference':
         return const RulesReferencePage();
+      case '/situation-advisor':
+        return const SituationAdvisorPage();
       case '/courses':
       case '/course-config':
         return const CourseConfigurationPage();

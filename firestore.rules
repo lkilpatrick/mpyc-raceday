@@ -64,23 +64,23 @@ service cloud.firestore {
     // ── Courses ──
     match /courses/{courseId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
 
     // ── Marks and Mark Distances ──
     match /marks/{markId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
     match /mark_distances/{distId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
 
     // ── Checklists (templates) ──
     match /checklists/{checklistId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
 
     // ── Checklist Completions ──
@@ -102,13 +102,12 @@ service cloud.firestore {
     // ── Scheduled Maintenance ──
     match /scheduled_maintenance/{docId} {
       allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair']);
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
 
     // ── Race Incidents ──
     match /incidents/{incidentId} {
-      allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair'])
-        || (isAuthenticated() && request.auth.uid in resource.data.involvedMemberIds);
+      allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair', 'skipper']);
       allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
       allow update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
@@ -116,7 +115,7 @@ service cloud.firestore {
     // ── Boats (Fleet) ──
     match /boats/{boatId} {
       allow read: if isAuthenticated();
-      allow write: if isWebAdmin();
+      allow write: if isRCChair();
     }
 
     // ── Boat Check-ins ──
@@ -159,7 +158,11 @@ service cloud.firestore {
     // ── Audit Log ──
     match /audit_logs/{logId} {
       allow read: if isBoard();
-      allow create: if false;
+      allow create: if isAuthenticated();
+    }
+    match /audit_log/{logId} {
+      allow read: if isBoard();
+      allow create: if isAuthenticated();
     }
 
     // ── Reports ──
@@ -194,6 +197,42 @@ service cloud.firestore {
     match /smsLogs/{docId} {
       allow read: if isWebAdmin();
       allow write: if false;
+    }
+
+    // ── App Settings (System Settings page) ──
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isWebAdmin();
+    }
+
+    // ── Wind Groups ──
+    match /wind_groups/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isRCChair();
+    }
+
+    // ── Fleets ──
+    match /fleets/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isRCChair();
+    }
+
+    // ── Race Starts (Timing) ──
+    match /race_starts/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Finish Records ──
+    match /finish_records/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Handicap Ratings ──
+    match /handicap_ratings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isWebAdmin();
     }
 
     // ── Default deny ──

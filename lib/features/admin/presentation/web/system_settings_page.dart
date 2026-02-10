@@ -132,11 +132,45 @@ class _ClubspotTabState extends State<_ClubspotTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+
+    final needsSetup = _apiKeyCtrl.text.trim().isEmpty;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (needsSetup) ...[
+            Card(
+              color: Colors.amber.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.amber.shade800),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Clubspot API Key Required',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber.shade900)),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Enter your Clubspot API key below to enable member sync. '
+                            'You can find this in your Clubspot admin panel under Settings > API.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           const Text('Clubspot API Integration',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
@@ -145,10 +179,11 @@ class _ClubspotTabState extends State<_ClubspotTab> {
             child: TextField(
               controller: _apiKeyCtrl,
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'API Key',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 helperText: 'Stored securely in Firestore',
+                errorText: needsSetup ? 'API key is required for member sync' : null,
               ),
             ),
           ),
@@ -817,12 +852,12 @@ class _AuditLogTabState extends State<_AuditLogTab> {
 
   Query<Map<String, dynamic>> _buildQuery() {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
-        .collection('audit_log')
+        .collection('audit_logs')
         .orderBy('timestamp', descending: true)
         .limit(100);
     if (_actionFilter != 'all') {
       query = FirebaseFirestore.instance
-          .collection('audit_log')
+          .collection('audit_logs')
           .where('category', isEqualTo: _actionFilter)
           .orderBy('timestamp', descending: true)
           .limit(100);

@@ -676,9 +676,13 @@ class _MemberDetailPanel extends StatelessWidget {
   }
 
   String _formatLastLogin(Object? value) {
+    DateTime? dt;
     if (value is Timestamp) {
-      return DateFormat.yMMMd().add_jm().format(value.toDate().toLocal());
+      dt = value.toDate();
+    } else if (value is String && value.isNotEmpty) {
+      dt = DateTime.tryParse(value);
     }
-    return 'Never';
+    if (dt == null) return 'Never';
+    return DateFormat.yMMMd().add_jm().format(dt.toLocal());
   }
 }
