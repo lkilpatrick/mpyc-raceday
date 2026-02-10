@@ -64,7 +64,7 @@ class _CoursePainter extends CustomPainter {
     final padding = 40.0;
     final usable = Size(size.width - padding * 2, size.height - padding * 2);
 
-    // Calculate positions using headings and distances from MY1 (start/finish)
+    // Calculate positions using headings and distances from mark 1 (start/finish)
     // Start at bottom-center
     final positions = <String, Offset>{};
     final startPos = Offset(usable.width / 2, usable.height - 20);
@@ -77,8 +77,8 @@ class _CoursePainter extends CustomPainter {
 
     for (int i = 0; i < marks.length; i++) {
       if (i == 0) {
-        // First mark: use heading from MY1 to this mark
-        final dist = _findDist('MY1', marks[i].markId);
+        // First mark: use heading from start (mark 1) to this mark
+        final dist = _findDist('1', marks[i].markId);
         if (dist != null) {
           final rad = (dist.headingMagnetic - 90) * math.pi / 180;
           final scale = usable.width * 0.12;
@@ -203,7 +203,7 @@ class _CoursePainter extends CustomPainter {
       _drawArrowHead(canvas, prevPos, curPos, legPaint, 8);
 
       // Leg distance label
-      final prevMarkId = i == 0 ? 'MY1' : marks[i - 1].markId;
+      final prevMarkId = i == 0 ? '1' : marks[i - 1].markId;
       final curMarkId = marks[i].markId;
       final dist = _findDist(prevMarkId, curMarkId);
       if (dist != null) {
@@ -227,17 +227,72 @@ class _CoursePainter extends CustomPainter {
       prevPos = curPos;
     }
 
+    // Draw North arrow
+    final northPaint = Paint()
+      ..color = Colors.grey.shade400
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final northTop = Offset(size.width - 24, 16);
+    final northBot = Offset(size.width - 24, 40);
+    canvas.drawLine(northBot, northTop, northPaint);
+    // Arrow head
+    canvas.drawLine(northTop, northTop + const Offset(-4, 6), northPaint);
+    canvas.drawLine(northTop, northTop + const Offset(4, 6), northPaint);
+    final northTp = TextPainter(
+      text: TextSpan(
+        text: 'N',
+        style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    northTp.paint(canvas, northTop - Offset(northTp.width / 2, 12));
+
     // Draw marks
     for (int i = 0; i < marks.length; i++) {
       final pos = normalizedMarks[i + 1] ?? normalizedStart;
       final mark = marks[i];
-      final isInflatable = ['W', 'R', 'L', 'LV'].contains(mark.markId);
 
-      // Mark circle
-      final markPaint = Paint()
-        ..color = isInflatable ? Colors.orange : Colors.blue
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(pos, 10, markPaint);
+      // START and FINISH are drawn as special markers, not buoy circles
+      if (mark.isStart || mark.isFinish) {
+        final markerPaint = Paint()
+          ..color = mark.isStart ? Colors.blue : Colors.green
+          ..style = PaintingStyle.fill;
+        canvas.drawRect(
+          Rect.fromCenter(center: pos, width: 18, height: 12),
+          markerPaint,
+        );
+        final label = mark.isStart ? 'START' : 'FINISH';
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(
+              color: mark.isStart ? Colors.blue : Colors.green,
+              fontSize: 7,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, pos + Offset(-tp.width / 2, 8));
+        continue;
+      }
+
+      // Determine mark color by type
+      final markColor = _markColor(mark.markId);
+      final isTemporary = ['W', 'R', 'L', 'LV'].contains(mark.markId);
+
+      if (isTemporary) {
+        // Draw triangle for temporary/inflatable marks
+        final path = Path()
+          ..moveTo(pos.dx, pos.dy - 10)
+          ..lineTo(pos.dx - 9, pos.dy + 7)
+          ..lineTo(pos.dx + 9, pos.dy + 7)
+          ..close();
+        canvas.drawPath(path, Paint()..color = markColor..style = PaintingStyle.fill);
+      } else {
+        // Draw circle for permanent/government/harbor marks
+        canvas.drawCircle(pos, 10, Paint()..color = markColor..style = PaintingStyle.fill);
+      }
 
       // Rounding indicator
       final roundColor =
@@ -264,53 +319,19 @@ class _CoursePainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-
-      // Finish indicator
-      if (mark.isFinish) {
-        final finishPaint = Paint()
-          ..color = Colors.green
-          ..strokeWidth = 3;
-        canvas.drawLine(
-          pos + const Offset(-12, 14),
-          pos + const Offset(12, 14),
-          finishPaint,
-        );
-        final finishTp = TextPainter(
-          text: const TextSpan(
-            text: 'FINISH',
-            style: TextStyle(
-              color: Colors.green,
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        finishTp.paint(canvas, pos + Offset(-finishTp.width / 2, 16));
-      }
     }
+  }
 
-    // Draw start marker
-    final startPaint = Paint()
-      ..color = Colors.green
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromCenter(center: normalizedStart, width: 16, height: 12),
-      startPaint,
-    );
-    final startTp = TextPainter(
-      text: const TextSpan(
-        text: 'RC',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 7,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    startTp.paint(
-        canvas, normalizedStart - Offset(startTp.width / 2, startTp.height / 2));
+  /// Returns mark icon color based on mark type conventions from spec
+  Color _markColor(String markId) {
+    // Government red buoys: M (Mile R4), P (Point Pinos R2)
+    if (markId == 'M' || markId == 'P') return Colors.red.shade700;
+    // Temporary/inflatable marks: LV, W, R, L
+    if (['LV', 'W', 'R', 'L'].contains(markId)) return Colors.orange;
+    // Harbor buoys: A, X
+    if (markId == 'A' || markId == 'X') return Colors.grey.shade600;
+    // Permanent yellow buoys: B, C, 1, 3, 4
+    return Colors.amber.shade700;
   }
 
   void _drawArrowHead(

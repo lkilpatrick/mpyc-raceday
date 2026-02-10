@@ -34,14 +34,7 @@ const credential = admin.credential.refreshToken({
   refresh_token: refreshToken,
 });
 
-// Mark abbreviation mapping (same as courses_repository_impl.dart)
-const MARK_ABBREV_MAP = {
-  X: "X", C: "C", P: "P", M: "MY2", LV: "LV",
-  A: "A", B: "B",
-  "1": "MY1", "3": "MY3", "4": "MY4",
-  W: "W", R: "R", L: "L",
-};
-
+// Mark name mapping (code → display name)
 const MARK_NAME_MAP = {
   X: "X", C: "C", P: "P", M: "M", LV: "LV",
   A: "A", B: "B",
@@ -49,31 +42,44 @@ const MARK_NAME_MAP = {
   W: "W", R: "R", L: "L",
 };
 
-function parseMarks(seq) {
-  const parts = seq.split("-");
+// Wind group definitions (used to look up wind ranges)
+const WIND_GROUPS = {
+  S_SW: { windRange: [200, 260] },
+  W: { windRange: [260, 295] },
+  NW: { windRange: [295, 320] },
+  N: { windRange: [320, 20] },
+  INFLATABLE: { windRange: [0, 360] },
+  LONG: { windRange: [295, 320] },
+};
+
+function parseSequence(sequence) {
   const marks = [];
   let order = 1;
-  for (const part of parts) {
-    const p = part.trim();
-    if (p === "Finish") {
-      if (marks.length > 0) {
-        marks[marks.length - 1].isFinish = true;
-      }
+  for (const entry of sequence) {
+    if (entry === "START") {
+      marks.push({ markId: "1", markName: "1", order: order++, rounding: "port", isStart: true, isFinish: false });
       continue;
     }
-    const rChar = p[p.length - 1];
-    const rounding = rChar === "s" ? "starboard" : "port";
-    const abbrev = p.substring(0, p.length - 1);
+    if (entry === "FINISH") {
+      marks.push({ markId: "1", markName: "1", order: order++, rounding: "port", isStart: false, isFinish: true });
+      continue;
+    }
+    if (entry === "FINISH_X") {
+      marks.push({ markId: "X", markName: "X", order: order++, rounding: "starboard", isStart: false, isFinish: true });
+      continue;
+    }
+    const match = entry.match(/^(.+?)(p|s)$/);
+    if (!match) continue;
+    const code = match[1];
+    const rounding = match[2] === "s" ? "starboard" : "port";
     marks.push({
-      markId: MARK_ABBREV_MAP[abbrev] || abbrev,
-      markName: MARK_NAME_MAP[abbrev] || abbrev,
+      markId: code,
+      markName: MARK_NAME_MAP[code] || code,
       order: order++,
       rounding,
+      isStart: false,
       isFinish: false,
     });
-  }
-  if (marks.length > 0 && !marks.some((m) => m.isFinish)) {
-    marks[marks.length - 1].isFinish = true;
   }
   return marks;
 }
@@ -149,24 +155,15 @@ async function seed() {
   const seedPath = path.join(__dirname, "..", "assets", "courses_seed.json");
   const data = JSON.parse(fs.readFileSync(seedPath, "utf8"));
 
-  // Delete old marks
-  const oldMarks = await listDocs(accessToken, "marks");
-  if (oldMarks.length > 0) {
-    console.log(`Deleting ${oldMarks.length} old marks...`);
-    for (const id of oldMarks) {
-      await deleteDoc(accessToken, "marks", id);
+  // Delete old collections
+  for (const col of ["marks", "mark_distances", "courses", "wind_groups", "fleets"]) {
+    const oldDocs = await listDocs(accessToken, col);
+    if (oldDocs.length > 0) {
+      console.log(`Deleting ${oldDocs.length} old ${col}...`);
+      for (const id of oldDocs) {
+        await deleteDoc(accessToken, col, id);
+      }
     }
-    console.log("  Old marks deleted.");
-  }
-
-  // Delete old mark distances
-  const oldDists = await listDocs(accessToken, "mark_distances");
-  if (oldDists.length > 0) {
-    console.log(`Deleting ${oldDists.length} old mark distances...`);
-    for (const id of oldDists) {
-      await deleteDoc(accessToken, "mark_distances", id);
-    }
-    console.log("  Old mark distances deleted.");
   }
 
   // Seed marks
@@ -174,6 +171,7 @@ async function seed() {
   for (const m of data.marks) {
     await writeDoc(accessToken, "marks", m.id, {
       name: m.name,
+      code: m.code || m.id,
       type: m.type,
       latitude: m.latitude || null,
       longitude: m.longitude || null,
@@ -182,45 +180,85 @@ async function seed() {
   }
   console.log("  Marks done.");
 
-  // Seed mark distances
-  console.log(`Seeding ${data.mark_distances.length} mark distances...`);
-  for (const d of data.mark_distances) {
-    await writeDoc(accessToken, "mark_distances", `${d.from}_${d.to}`, {
-      fromMarkId: d.from,
-      toMarkId: d.to,
-      distanceNm: d.distance,
-      headingMagnetic: d.heading,
-    });
+  // Seed mark distances from distanceMatrix
+  let distCount = 0;
+  if (data.distanceMatrix) {
+    console.log("Seeding mark distances from matrix...");
+    for (const [from, targets] of Object.entries(data.distanceMatrix)) {
+      for (const [to, vals] of Object.entries(targets)) {
+        await writeDoc(accessToken, "mark_distances", `${from}_${to}`, {
+          fromMarkId: from,
+          toMarkId: to,
+          distanceNm: vals.dist,
+          headingMagnetic: vals.bearing,
+        });
+        distCount++;
+      }
+    }
+    console.log(`  ${distCount} mark distances done.`);
   }
-  console.log("  Mark distances done.");
+
+  // Seed wind groups
+  if (data.windGroups) {
+    console.log(`Seeding ${data.windGroups.length} wind groups...`);
+    for (const wg of data.windGroups) {
+      await writeDoc(accessToken, "wind_groups", wg.id, {
+        label: wg.label,
+        windRange: wg.windRange,
+        color: wg.color,
+        bgColor: wg.bgColor,
+      });
+    }
+    console.log("  Wind groups done.");
+  }
+
+  // Seed fleets
+  if (data.fleets) {
+    console.log(`Seeding ${data.fleets.length} fleets...`);
+    for (const f of data.fleets) {
+      await writeDoc(accessToken, "fleets", f.id, {
+        name: f.name,
+        type: f.type,
+        description: f.description || "",
+      });
+    }
+    console.log("  Fleets done.");
+  }
 
   // Seed courses
   console.log(`Seeding ${data.courses.length} courses...`);
   for (const c of data.courses) {
-    const marks = parseMarks(c.marks);
-    const courseName = `Course ${c.num} — ${c.marks}`;
-    await writeDoc(accessToken, "courses", `course_${c.num}`, {
-      courseNumber: c.num,
+    const courseNum = String(c.number);
+    const marks = parseSequence(c.sequence);
+    const courseName = `Course ${courseNum}`;
+    const wg = WIND_GROUPS[c.windGroup] || { windRange: [0, 360] };
+    const requiresInflatable = c.sequence.some((s) =>
+      s.startsWith("LV") || s.startsWith("W") || s.startsWith("R") || s.startsWith("L")
+    );
+
+    await writeDoc(accessToken, "courses", `course_${courseNum}`, {
+      courseNumber: courseNum,
       courseName,
       marks,
-      distanceNm: c.dist,
-      windDirectionBand: c.band,
-      windDirMin: c.dirMin,
-      windDirMax: c.dirMax,
-      finishLocation: c.finish,
-      canMultiply: c.x2 || false,
-      requiresInflatable: c.inflatable || false,
-      inflatableType: c.infType || null,
+      distanceNm: c.distanceNm,
+      windDirectionBand: c.windGroup,
+      windDirMin: wg.windRange[0],
+      windDirMax: wg.windRange[1],
+      finishLocation: c.finishAt || "committee_boat",
+      canMultiply: c.canMultiply || false,
+      requiresInflatable,
       isActive: true,
-      notes: "",
+      notes: c.notes || "",
     });
   }
   console.log("  Courses done.");
 
   console.log("\n=== Course Data Seeded ===");
   console.log(`  ${data.marks.length} marks`);
-  console.log(`  ${data.mark_distances.length} mark distances`);
+  console.log(`  ${distCount} mark distances`);
   console.log(`  ${data.courses.length} courses`);
+  console.log(`  ${(data.windGroups || []).length} wind groups`);
+  console.log(`  ${(data.fleets || []).length} fleets`);
   console.log("==========================\n");
   process.exit(0);
 }

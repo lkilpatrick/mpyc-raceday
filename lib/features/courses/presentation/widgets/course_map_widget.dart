@@ -82,8 +82,8 @@ class _CourseMapWidgetState extends State<CourseMapWidget> {
     final courseMarks = course.marks;
     if (courseMarks.isEmpty) return const PolylineLayer(polylines: []);
 
-    // Start from MY1 (the implicit start/finish)
-    final startMark = _findMark('MY1');
+    // Start from mark 1 (the implicit start/finish)
+    final startMark = _findMark('1');
     if (startMark == null || startMark.latitude == null) {
       return const PolylineLayer(polylines: []);
     }
@@ -98,7 +98,7 @@ class _CourseMapWidgetState extends State<CourseMapWidget> {
       points.add(LatLng(m.latitude!, m.longitude!));
     }
 
-    // If course finishes at committee boat (Finish), return to MY1
+    // If course finishes at committee boat (Finish), return to mark 1
     if (course.finishLocation == 'committee_boat') {
       points.add(LatLng(startMark.latitude!, startMark.longitude!));
     }
@@ -124,8 +124,8 @@ class _CourseMapWidgetState extends State<CourseMapWidget> {
       final isInflatable = m.type == 'inflatable' || m.type == 'temporary';
       final isCourseActive = widget.course != null &&
           widget.course!.marks.any((cm) => cm.markId == m.id);
-      // MY1 is always on the course (implicit start/finish)
-      final isStart = m.id == 'MY1';
+      // Mark 1 is always on the course (implicit start/finish)
+      final isStart = m.id == '1';
 
       final color = isSelected
           ? AppColors.accent

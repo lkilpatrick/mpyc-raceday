@@ -262,7 +262,7 @@ class _ActiveCourseDetail extends ConsumerWidget {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: _parseHexColor(course.windGroup?.color),
                         radius: 20,
                         child: Text(
                           course.courseNumber,
@@ -366,16 +366,12 @@ class _CourseListItem extends StatelessWidget {
       child: ListTile(
         dense: true,
         leading: CircleAvatar(
-          backgroundColor: recommendation == 'RECOMMENDED'
-              ? AppColors.primary
-              : Colors.grey.shade300,
+          backgroundColor: _parseHexColor(course.windGroup?.color),
           radius: 18,
           child: Text(
             course.courseNumber,
-            style: TextStyle(
-              color: recommendation == 'RECOMMENDED'
-                  ? Colors.white
-                  : Colors.black87,
+            style: const TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 11,
             ),
@@ -384,7 +380,7 @@ class _CourseListItem extends StatelessWidget {
         title: Text(course.courseName,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         subtitle: Text(
-          '${course.windDirectionBand} · ${course.distanceNm} nm',
+          '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"}',
           style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
         trailing: Container(
@@ -406,4 +402,12 @@ class _CourseListItem extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Parse a hex color string like "#DC2626" to a Flutter Color.
+Color _parseHexColor(String? hex) {
+  if (hex != null && hex.startsWith('#') && hex.length == 7) {
+    return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+  }
+  return AppColors.primary;
 }

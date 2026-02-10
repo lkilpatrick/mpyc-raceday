@@ -23,69 +23,63 @@ class CoursesRepositoryImpl implements CoursesRepository {
   CollectionReference<Map<String, dynamic>> get _broadcastsCol =>
       _fs.collection('fleet_broadcasts');
 
-  // ── Mark abbreviation mapping ──
-  static const _markAbbrevMap = {
-    'X': 'X', 'C': 'C', 'P': 'P', 'M': 'MY2', 'LV': 'LV',
-    '1': 'MY1', '3': 'MY3', '4': 'MY4',
+  // ── Mark name mapping (code → display name) ──
+  static const _markNameMap = {
+    'X': 'X', 'C': 'C', 'P': 'P', 'M': 'M', 'LV': 'LV',
+    '1': '1', '3': '3', '4': '4',
     'W': 'W', 'R': 'R', 'L': 'L',
+    'A': 'A', 'B': 'B',
   };
 
-  static String _resolveMarkId(String abbrev) =>
-      _markAbbrevMap[abbrev] ?? abbrev;
+  static String _resolveMarkName(String code) =>
+      _markNameMap[code] ?? code;
 
-  static String _resolveMarkName(String abbrev) {
-    const nameMap = {
-      'X': 'X', 'C': 'C', 'P': 'P', 'M': 'M', 'LV': 'LV',
-      '1': 'MY 1', '3': 'MY 3', '4': 'MY 4',
-      'W': 'W', 'R': 'R', 'L': 'L',
-    };
-    return nameMap[abbrev] ?? abbrev;
-  }
-
-  /// Parse "Xp-1p-4s-Finish" into List<CourseMark>
-  static List<CourseMark> _parseMarks(String seq) {
-    final parts = seq.split('-');
+  /// Parse sequence array ["START","Xp","4s","FINISH"] into List<CourseMark>
+  static List<CourseMark> _parseSequence(List<String> sequence) {
     final marks = <CourseMark>[];
     int order = 1;
-    for (final part in parts) {
-      final p = part.trim();
-      if (p == 'Finish') {
-        // Tag previous mark as finish if exists, or add a finish marker
-        if (marks.isNotEmpty) {
-          final last = marks.removeLast();
-          marks.add(CourseMark(
-            markId: last.markId,
-            markName: last.markName,
-            order: last.order,
-            rounding: last.rounding,
-            isFinish: true,
-          ));
-        }
+    for (final entry in sequence) {
+      if (entry == 'START') {
+        marks.add(CourseMark(
+          markId: '1',
+          markName: '1',
+          order: order++,
+          rounding: MarkRounding.port,
+          isStart: true,
+        ));
         continue;
       }
-      // Last char is p or s for rounding
-      final rChar = p[p.length - 1];
+      if (entry == 'FINISH') {
+        marks.add(CourseMark(
+          markId: '1',
+          markName: '1',
+          order: order++,
+          rounding: MarkRounding.port,
+          isFinish: true,
+        ));
+        continue;
+      }
+      if (entry == 'FINISH_X') {
+        marks.add(CourseMark(
+          markId: 'X',
+          markName: 'X',
+          order: order++,
+          rounding: MarkRounding.starboard,
+          isFinish: true,
+        ));
+        continue;
+      }
+      // Parse "Xp", "4s", "LVp", "Mp", etc.
+      final match = RegExp(r'^(.+?)(p|s)$').firstMatch(entry);
+      if (match == null) continue;
+      final code = match.group(1)!;
       final rounding =
-          rChar == 's' ? MarkRounding.starboard : MarkRounding.port;
-      final abbrev = p.substring(0, p.length - 1);
+          match.group(2) == 's' ? MarkRounding.starboard : MarkRounding.port;
       marks.add(CourseMark(
-        markId: _resolveMarkId(abbrev),
-        markName: _resolveMarkName(abbrev),
+        markId: code,
+        markName: _resolveMarkName(code),
         order: order++,
         rounding: rounding,
-        isFinish: false,
-      ));
-    }
-    // If last mark in sequence and no Finish token, mark last as finish
-    // (for sequences like "Cp-Xp" that end at X)
-    if (marks.isNotEmpty && !marks.any((m) => m.isFinish)) {
-      final last = marks.removeLast();
-      marks.add(CourseMark(
-        markId: last.markId,
-        markName: last.markName,
-        order: last.order,
-        rounding: last.rounding,
-        isFinish: true,
       ));
     }
     return marks;
@@ -104,6 +98,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
         rounding: md['rounding'] == 'starboard'
             ? MarkRounding.starboard
             : MarkRounding.port,
+        isStart: md['isStart'] as bool? ?? false,
         isFinish: md['isFinish'] as bool? ?? false,
       );
     }).toList() ?? [];
@@ -136,6 +131,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
                   'order': m.order,
                   'rounding':
                       m.rounding == MarkRounding.starboard ? 'starboard' : 'port',
+                  'isStart': m.isStart,
                   'isFinish': m.isFinish,
                 })
             .toList(),
@@ -201,6 +197,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
         id: doc.id,
         name: d['name'] as String? ?? '',
         type: d['type'] as String? ?? 'permanent',
+        code: d['code'] as String?,
         latitude: (d['latitude'] as num?)?.toDouble(),
         longitude: (d['longitude'] as num?)?.toDouble(),
         description: d['description'] as String?,
@@ -216,6 +213,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
         id: doc.id,
         name: d['name'] as String? ?? '',
         type: d['type'] as String? ?? 'permanent',
+        code: d['code'] as String?,
         latitude: (d['latitude'] as num?)?.toDouble(),
         longitude: (d['longitude'] as num?)?.toDouble(),
         description: d['description'] as String?,
@@ -228,6 +226,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
     final data = {
       'name': mark.name,
       'type': mark.type,
+      'code': mark.code,
       'latitude': mark.latitude,
       'longitude': mark.longitude,
       'description': mark.description,
@@ -328,6 +327,7 @@ class CoursesRepositoryImpl implements CoursesRepository {
       final md = m as Map<String, dynamic>;
       await _marksCol.doc(md['id'] as String).set({
         'name': md['name'],
+        'code': md['code'] ?? md['id'],
         'type': md['type'],
         'latitude': md['latitude'],
         'longitude': md['longitude'],
@@ -335,53 +335,97 @@ class CoursesRepositoryImpl implements CoursesRepository {
       });
     }
 
-    // Seed mark distances
-    final distances = data['mark_distances'] as List<dynamic>;
-    for (final d in distances) {
-      final dd = d as Map<String, dynamic>;
-      final from = dd['from'] as String;
-      final to = dd['to'] as String;
-      await _distCol.doc('${from}_$to').set({
-        'fromMarkId': from,
-        'toMarkId': to,
-        'distanceNm': dd['distance'],
-        'headingMagnetic': dd['heading'],
-      });
+    // Seed mark distances from distanceMatrix
+    final matrix = data['distanceMatrix'] as Map<String, dynamic>?;
+    if (matrix != null) {
+      for (final fromEntry in matrix.entries) {
+        final from = fromEntry.key;
+        final targets = fromEntry.value as Map<String, dynamic>;
+        for (final toEntry in targets.entries) {
+          final to = toEntry.key;
+          final vals = toEntry.value as Map<String, dynamic>;
+          await _distCol.doc('${from}_$to').set({
+            'fromMarkId': from,
+            'toMarkId': to,
+            'distanceNm': (vals['dist'] as num).toDouble(),
+            'headingMagnetic': (vals['bearing'] as num).toDouble(),
+          });
+        }
+      }
+    }
+
+    // Seed wind groups
+    final windGroups = data['windGroups'] as List<dynamic>?;
+    if (windGroups != null) {
+      for (final wg in windGroups) {
+        final wd = wg as Map<String, dynamic>;
+        await _fs.collection('wind_groups').doc(wd['id'] as String).set({
+          'label': wd['label'],
+          'windRange': wd['windRange'],
+          'color': wd['color'],
+          'bgColor': wd['bgColor'],
+        });
+      }
+    }
+
+    // Seed fleets
+    final fleets = data['fleets'] as List<dynamic>?;
+    if (fleets != null) {
+      for (final f in fleets) {
+        final fd = f as Map<String, dynamic>;
+        await _fs.collection('fleets').doc(fd['id'] as String).set({
+          'name': fd['name'],
+          'type': fd['type'],
+          'description': fd['description'] ?? '',
+        });
+      }
     }
 
     // Seed courses
     final courses = data['courses'] as List<dynamic>;
     for (final c in courses) {
       final cd = c as Map<String, dynamic>;
-      final num = cd['num'] as String;
-      final markSeq = cd['marks'] as String;
-      final parsedMarks = _parseMarks(markSeq);
-      final courseName = 'Course $num — $markSeq';
+      final courseNum = cd['number'].toString();
+      final sequence = (cd['sequence'] as List<dynamic>).cast<String>();
+      final parsedMarks = _parseSequence(sequence);
+      final windGroupId = cd['windGroup'] as String;
+      final wg = WindGroup.byId(windGroupId);
+      final finishAt = cd['finishAt'] as String? ?? 'committee_boat';
 
-      await _coursesCol.doc('course_$num').set({
-        'courseNumber': num,
+      final courseName = 'Course $courseNum';
+
+      // Determine wind range from wind group
+      final windMin = wg?.windRange[0] ?? 0;
+      final windMax = wg?.windRange[1] ?? 360;
+
+      // Check if requires inflatable
+      final requiresInflatable = sequence.any((s) =>
+          s.startsWith('LV') || s.startsWith('W') ||
+          s.startsWith('R') || s.startsWith('L'));
+
+      await _coursesCol.doc('course_$courseNum').set({
+        'courseNumber': courseNum,
         'courseName': courseName,
         'marks': parsedMarks
             .map((m) => {
                   'markId': m.markId,
                   'markName': m.markName,
                   'order': m.order,
-                  'rounding': m.rounding == MarkRounding.starboard
-                      ? 'starboard'
-                      : 'port',
+                  'rounding':
+                      m.rounding == MarkRounding.starboard ? 'starboard' : 'port',
+                  'isStart': m.isStart,
                   'isFinish': m.isFinish,
                 })
             .toList(),
-        'distanceNm': cd['dist'],
-        'windDirectionBand': cd['band'],
-        'windDirMin': cd['dirMin'],
-        'windDirMax': cd['dirMax'],
-        'finishLocation': cd['finish'],
-        'canMultiply': cd['x2'] ?? false,
-        'requiresInflatable': cd['inflatable'] ?? false,
-        'inflatableType': cd['infType'],
+        'distanceNm': cd['distanceNm'],
+        'windDirectionBand': windGroupId,
+        'windDirMin': windMin,
+        'windDirMax': windMax,
+        'finishLocation': finishAt,
+        'canMultiply': cd['canMultiply'] ?? false,
+        'requiresInflatable': requiresInflatable,
         'isActive': true,
-        'notes': '',
+        'notes': cd['notes'] ?? '',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });

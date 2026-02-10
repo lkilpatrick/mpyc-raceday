@@ -53,6 +53,20 @@ final longRaceCoursesProvider = Provider<List<CourseConfig>>((ref) {
   return courses.where((c) => c.windDirectionBand == 'LONG').toList();
 });
 
+/// Courses grouped by WindGroup, preserving wind group order.
+final coursesGroupedByWindProvider =
+    Provider<List<({WindGroup group, List<CourseConfig> courses})>>((ref) {
+  final courses = ref.watch(allCoursesProvider).value ?? [];
+  final result = <({WindGroup group, List<CourseConfig> courses})>[];
+  for (final wg in WindGroup.all) {
+    final matching = courses.where((c) => c.windDirectionBand == wg.id).toList();
+    if (matching.isNotEmpty) {
+      result.add((group: wg, courses: matching));
+    }
+  }
+  return result;
+});
+
 /// Returns courses recommended for the given wind direction (degrees magnetic).
 /// Handles 360° wraparound for northerly bands.
 final recommendedCoursesProvider =

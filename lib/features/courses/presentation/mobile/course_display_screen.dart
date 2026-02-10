@@ -46,7 +46,7 @@ class CourseDisplayScreen extends ConsumerWidget {
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: _windGroupColor(course),
                       radius: 24,
                       child: Text(
                         course.courseNumber,
@@ -71,7 +71,7 @@ class CourseDisplayScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${course.windDirectionBand} · ${course.distanceNm} nm',
+                            '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"}',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade600,
@@ -138,36 +138,38 @@ class CourseDisplayScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          Icon(
-                            Icons.circle,
-                            size: 12,
-                            color: m.rounding == MarkRounding.port
-                                ? Colors.red
-                                : Colors.green,
-                          ),
+                          if (m.isStart || m.isFinish)
+                            Icon(
+                              m.isStart ? Icons.flag : Icons.sports_score,
+                              size: 14,
+                              color: m.isStart ? Colors.blue : Colors.green,
+                            )
+                          else
+                            Icon(
+                              Icons.circle,
+                              size: 12,
+                              color: m.rounding == MarkRounding.port
+                                  ? Colors.red
+                                  : Colors.green,
+                            ),
                           const SizedBox(width: 8),
                           Text(
-                            '${m.markName} (${m.rounding.name})',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          if (m.isFinish)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withAlpha(25),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'FINISH',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
+                            m.isStart
+                                ? 'START (at Mark 1)'
+                                : m.isFinish
+                                    ? 'FINISH (at ${m.markName})'
+                                    : '${m.markName} (${m.rounding.name})',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: (m.isStart || m.isFinish)
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
+                          ),
+                          if (m.isStart)
+                            _badge('START', Colors.blue),
+                          if (m.isFinish)
+                            _badge('FINISH', Colors.green),
                         ],
                       ),
                     )),
@@ -235,5 +237,32 @@ class CourseDisplayScreen extends ConsumerWidget {
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
+  }
+
+  Widget _badge(String label, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Color _windGroupColor(CourseConfig course) {
+    final hex = course.windGroup?.color;
+    if (hex != null && hex.startsWith('#') && hex.length == 7) {
+      return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+    }
+    return AppColors.primary;
   }
 }

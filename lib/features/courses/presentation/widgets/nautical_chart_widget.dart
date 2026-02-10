@@ -249,8 +249,8 @@ class _CourseLegPainter extends CustomPainter {
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
-    // Draw from MY1 (start/finish) to first mark, then mark to mark
-    final startMark = _findMark('MY1');
+    // Draw from mark 1 (start/finish) to first mark, then mark to mark
+    final startMark = _findMark('1');
     if (startMark == null || startMark.latitude == null) return;
 
     Offset prevPos = geoToPixel(startMark.latitude!, startMark.longitude!);
