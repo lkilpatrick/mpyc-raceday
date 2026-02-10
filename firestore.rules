@@ -32,9 +32,6 @@ service cloud.firestore {
       return hasAnyRole(['web_admin', 'rc_chair']);
     }
 
-    function isSkipperOrAbove() {
-      return hasAnyRole(['web_admin', 'rc_chair', 'club_board', 'skipper']);
-    }
 
     function isOwnDocument(userId) {
       return isAuthenticated() && request.auth.uid == userId;
