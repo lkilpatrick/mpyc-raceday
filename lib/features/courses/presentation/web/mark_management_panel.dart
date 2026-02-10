@@ -5,7 +5,7 @@ import 'package:mpyc_raceday/core/theme.dart';
 import '../../data/models/mark.dart';
 import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
-import '../widgets/nautical_chart_widget.dart';
+import '../widgets/course_map_widget.dart';
 
 class MarkManagementPanel extends ConsumerStatefulWidget {
   const MarkManagementPanel({super.key});
@@ -155,7 +155,7 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
                                         ),
                                         const SizedBox(height: 8),
                                         Expanded(
-                                          child: NauticalChartWidget(
+                                          child: CourseMapWidget(
                                             marks: marks,
                                             height: double.infinity,
                                             onMarkTap: (m) => setState(
@@ -430,7 +430,7 @@ class _MarkDetailPanel extends StatelessWidget {
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            NauticalChartWidget(
+            CourseMapWidget(
               marks: allMarks,
               selectedMarkId: mark.id,
               height: 400,
