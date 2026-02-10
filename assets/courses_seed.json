@@ -11,19 +11,19 @@
     "description": "Start/Finish line between RC boat (Duncans Watch) and MY1 buoy"
   },
   "marks": [
-    {"id":"A","code":"A","name":"Harbor Entrance","type":"harbor","latitude":36.608850,"longitude":-121.892587,"description":"Monterey Harbor yellow cylinder buoy that marks the harbor entrance"},
-    {"id":"B","code":"B","name":"MY6","type":"permanent","latitude":36.611983,"longitude":-121.889950,"description":"MBMS yellow cylinder buoy MY6"},
-    {"id":"C","code":"C","name":"Charthouse","type":"permanent","latitude":36.614917,"longitude":-121.895750,"description":"MPYC Charthouse yellow cylinder buoy off Cannery Row"},
-    {"id":"1","code":"1","name":"MY1","type":"permanent","latitude":36.611483,"longitude":-121.876817,"description":"MBMS yellow cylinder buoy MY1 — Start/Finish reference"},
-    {"id":"M","code":"M","name":"Mile Buoy","type":"government","latitude":36.624467,"longitude":-121.895850,"description":"Mile red government buoy R4"},
-    {"id":"3","code":"3","name":"MY3","type":"permanent","latitude":36.651517,"longitude":-121.874250,"description":"MBMS yellow cylinder buoy MY3"},
-    {"id":"4","code":"4","name":"MY4","type":"permanent","latitude":36.638417,"longitude":-121.854833,"description":"MBMS yellow cylinder buoy MY4"},
-    {"id":"P","code":"P","name":"Point Pinos","type":"government","latitude":36.647633,"longitude":-121.944033,"description":"Point Pinos red government buoy R2"},
-    {"id":"LV","code":"LV","name":"LV Inflatable","type":"temporary","latitude":36.629983,"longitude":-121.915500,"description":"RC temporary float mark — set before race"},
-    {"id":"X","code":"X","name":"Mooring Field","type":"harbor","latitude":36.605517,"longitude":-121.887083,"description":"Monterey Harbor yellow cylinder buoy - mooring field edge"},
-    {"id":"W","code":"W","name":"Windward","type":"temporary","description":"Windward inflatable mark — set by RC upwind of start, position varies"},
-    {"id":"R","code":"R","name":"Reach","type":"temporary","description":"Reach inflatable mark — set by RC on beam reach from windward, position varies"},
-    {"id":"L","code":"L","name":"Leeward","type":"temporary","description":"Leeward inflatable mark — set by RC downwind near start line, position varies"}
+    {"id":"A","code":"A","name":"A","type":"harbor","latitude":36.608850,"longitude":-121.892533,"description":"Monterey Harbor yellow cylinder buoy that marks the harbor entrance"},
+    {"id":"B","code":"B","name":"B","type":"permanent","latitude":36.611983,"longitude":-121.889950,"description":"MBMS yellow cylinder buoy \"MY6\""},
+    {"id":"C","code":"C","name":"C","type":"permanent","latitude":36.614917,"longitude":-121.895750,"description":"MPYC \"Charthouse\" yellow cylinder buoy off Cannery Row"},
+    {"id":"1","code":"1","name":"1","type":"permanent","latitude":36.611483,"longitude":-121.876817,"description":"MBMS yellow cylinder buoy \"MY1\""},
+    {"id":"M","code":"M","name":"M","type":"government","latitude":36.624467,"longitude":-121.895850,"description":"\"Mile\" red government buoy \"R4\""},
+    {"id":"3","code":"3","name":"3","type":"permanent","latitude":36.651517,"longitude":-121.874250,"description":"MBMS yellow cylinder buoy \"MY3\""},
+    {"id":"4","code":"4","name":"4","type":"permanent","latitude":36.638417,"longitude":-121.854833,"description":"MBMS yellow cylinder buoy \"MY4\""},
+    {"id":"P","code":"P","name":"P","type":"government","latitude":36.647633,"longitude":-121.944033,"description":"Point Pinos red government buoy \"R2\""},
+    {"id":"LV","code":"LV","name":"LV","type":"temporary","latitude":36.629983,"longitude":-121.915500,"description":"Race committee must install a temporary float mark (either red float or yellow triangle) at this location"},
+    {"id":"X","code":"X","name":"X","type":"harbor","latitude":36.605517,"longitude":-121.887083,"description":"Monterey Harbor yellow cylinder buoy that marks edge of the mooring field"},
+    {"id":"W","code":"W","name":"W","type":"temporary","description":"Windward inflatable mark — set by RC upwind of start, position varies"},
+    {"id":"R","code":"R","name":"R","type":"temporary","description":"Reach inflatable mark — set by RC on beam reach from windward, position varies"},
+    {"id":"L","code":"L","name":"L","type":"temporary","description":"Leeward inflatable mark — set by RC downwind near start line, position varies"}
   ],
   "windGroups": [
     {"id":"S_SW","label":"Southerly & South Westerly","windRange":[200,260],"color":"#DC2626","bgColor":"#FEF2F2"},

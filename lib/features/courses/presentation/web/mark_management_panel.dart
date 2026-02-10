@@ -55,8 +55,12 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
             data: (marks) {
               final permanent =
                   marks.where((m) => m.type == 'permanent').toList();
-              final inflatable =
-                  marks.where((m) => m.type == 'inflatable').toList();
+              final government =
+                  marks.where((m) => m.type == 'government').toList();
+              final harbor =
+                  marks.where((m) => m.type == 'harbor').toList();
+              final temporary =
+                  marks.where((m) => m.type == 'temporary').toList();
 
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,8 +79,7 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
                           : ListView(
                               padding: const EdgeInsets.all(8),
                               children: [
-                                if (permanent.isNotEmpty) ...[
-                                  _sectionHeader('Permanent Marks'),
+                                if (permanent.isNotEmpty) ...[                                  _sectionHeader('Permanent Marks (Yellow Buoys)'),
                                   ...permanent.map((m) => _MarkListTile(
                                         mark: m,
                                         isSelected:
@@ -85,10 +88,29 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
                                             () => _selectedMark = m),
                                       )),
                                 ],
-                                if (inflatable.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  _sectionHeader('Inflatable Marks'),
-                                  ...inflatable.map((m) => _MarkListTile(
+                                if (government.isNotEmpty) ...[                                  const SizedBox(height: 8),
+                                  _sectionHeader('Government Marks (Red Buoys)'),
+                                  ...government.map((m) => _MarkListTile(
+                                        mark: m,
+                                        isSelected:
+                                            _selectedMark?.id == m.id,
+                                        onTap: () => setState(
+                                            () => _selectedMark = m),
+                                      )),
+                                ],
+                                if (harbor.isNotEmpty) ...[                                  const SizedBox(height: 8),
+                                  _sectionHeader('Harbor Marks'),
+                                  ...harbor.map((m) => _MarkListTile(
+                                        mark: m,
+                                        isSelected:
+                                            _selectedMark?.id == m.id,
+                                        onTap: () => setState(
+                                            () => _selectedMark = m),
+                                      )),
+                                ],
+                                if (temporary.isNotEmpty) ...[                                  const SizedBox(height: 8),
+                                  _sectionHeader('Temporary / Inflatable Marks'),
+                                  ...temporary.map((m) => _MarkListTile(
                                         mark: m,
                                         isSelected:
                                             _selectedMark?.id == m.id,
@@ -235,7 +257,21 @@ class _MarkListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasGps = mark.latitude != null && mark.longitude != null;
-    final isPermanent = mark.type == 'permanent';
+
+    Color avatarColor;
+    switch (mark.type) {
+      case 'government':
+        avatarColor = Colors.red.shade700;
+        break;
+      case 'harbor':
+        avatarColor = Colors.grey.shade600;
+        break;
+      case 'temporary':
+        avatarColor = Colors.orange;
+        break;
+      default:
+        avatarColor = Colors.amber.shade700;
+    }
 
     return ListTile(
       selected: isSelected,
@@ -243,10 +279,10 @@ class _MarkListTile extends StatelessWidget {
       onTap: onTap,
       dense: true,
       leading: CircleAvatar(
-        backgroundColor: isPermanent ? AppColors.primary : Colors.orange,
+        backgroundColor: avatarColor,
         radius: 16,
         child: Text(
-          mark.id.length > 3 ? mark.id.substring(0, 3) : mark.id,
+          mark.name,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 10,
@@ -359,10 +395,8 @@ class _MarkDetailPanel extends StatelessWidget {
                   _infoChip(Icons.gps_fixed,
                       'Lon: ${mark.longitude!.toStringAsFixed(6)}'),
                 _infoChip(
-                  mark.type == 'permanent'
-                      ? Icons.anchor
-                      : Icons.circle_outlined,
-                  mark.type == 'permanent' ? 'Permanent' : 'Inflatable',
+                  _typeIcon(mark.type),
+                  _typeLabel(mark.type),
                 ),
               ],
             ),
@@ -414,6 +448,25 @@ class _MarkDetailPanel extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
+  }
+
+  static IconData _typeIcon(String type) {
+    switch (type) {
+      case 'government': return Icons.flag;
+      case 'harbor': return Icons.anchor;
+      case 'temporary': return Icons.circle_outlined;
+      default: return Icons.location_on;
+    }
+  }
+
+  static String _typeLabel(String type) {
+    switch (type) {
+      case 'permanent': return 'Permanent (Yellow Buoy)';
+      case 'government': return 'Government (Red Buoy)';
+      case 'harbor': return 'Harbor Mark';
+      case 'temporary': return 'Temporary / Inflatable';
+      default: return type;
+    }
   }
 }
 
@@ -526,9 +579,13 @@ class _MarkFormDialogState extends State<_MarkFormDialog> {
                     ),
                     items: const [
                       DropdownMenuItem(
-                          value: 'permanent', child: Text('Permanent')),
+                          value: 'permanent', child: Text('Permanent (Yellow Buoy)')),
                       DropdownMenuItem(
-                          value: 'inflatable', child: Text('Inflatable')),
+                          value: 'government', child: Text('Government (Red Buoy)')),
+                      DropdownMenuItem(
+                          value: 'harbor', child: Text('Harbor Mark')),
+                      DropdownMenuItem(
+                          value: 'temporary', child: Text('Temporary / Inflatable')),
                     ],
                     onChanged: (v) =>
                         setState(() => _type = v ?? _type),

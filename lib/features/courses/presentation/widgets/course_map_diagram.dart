@@ -64,49 +64,33 @@ class _CoursePainter extends CustomPainter {
     final padding = 40.0;
     final usable = Size(size.width - padding * 2, size.height - padding * 2);
 
-    // Calculate positions using headings and distances from mark 1 (start/finish)
-    // Start at bottom-center
-    final positions = <String, Offset>{};
-    final startPos = Offset(usable.width / 2, usable.height - 20);
-    positions['START'] = startPos;
+    // Build absolute positions for each unique mark relative to Mark 1 (origin).
+    // North-up: bearing 0° = up on canvas.
+    // START and FINISH both map to Mark 1's position (the origin).
+    final markPositions = <String, Offset>{};
+    markPositions['1'] = Offset.zero; // Mark 1 is the origin
 
-    // Place marks relative using heading/distance
-    // First pass: compute raw positions
-    final rawPositions = <int, Offset>{};
-    rawPositions[0] = startPos;
-
-    for (int i = 0; i < marks.length; i++) {
-      if (i == 0) {
-        // First mark: use heading from start (mark 1) to this mark
-        final dist = _findDist('1', marks[i].markId);
-        if (dist != null) {
-          final rad = (dist.headingMagnetic - 90) * math.pi / 180;
-          final scale = usable.width * 0.12;
-          rawPositions[i + 1] = Offset(
-            startPos.dx + math.cos(rad) * dist.distanceNm * scale,
-            startPos.dy - math.sin(rad) * dist.distanceNm * scale,
-          );
-        } else {
-          // Fallback: place above start
-          rawPositions[i + 1] = Offset(startPos.dx, startPos.dy - 60);
-        }
-      } else {
-        final prevMarkId = marks[i - 1].markId;
-        final curMarkId = marks[i].markId;
-        final dist = _findDist(prevMarkId, curMarkId);
-        final prevPos = rawPositions[i] ?? startPos;
-        if (dist != null) {
-          final rad = (dist.headingMagnetic - 90) * math.pi / 180;
-          final scale = usable.width * 0.12;
-          rawPositions[i + 1] = Offset(
-            prevPos.dx + math.cos(rad) * dist.distanceNm * scale,
-            prevPos.dy - math.sin(rad) * dist.distanceNm * scale,
-          );
-        } else {
-          rawPositions[i + 1] =
-              Offset(prevPos.dx + 30, prevPos.dy - 40);
-        }
+    // Place all unique marks using distance/bearing from Mark 1
+    for (final m in marks) {
+      final id = m.markId;
+      if (markPositions.containsKey(id)) continue;
+      final dist = _findDist('1', id);
+      if (dist != null) {
+        // North-up: bearing in degrees clockwise from north
+        // x = dist * sin(bearing), y = -dist * cos(bearing) (negative because y-axis is inverted)
+        final rad = dist.headingMagnetic * math.pi / 180;
+        markPositions[id] = Offset(
+          dist.distanceNm * math.sin(rad),
+          -dist.distanceNm * math.cos(rad),
+        );
       }
+    }
+
+    // Build sequence positions: each entry in marks list gets a position
+    final rawPositions = <int, Offset>{};
+    for (int i = 0; i < marks.length; i++) {
+      final id = marks[i].markId;
+      rawPositions[i] = markPositions[id] ?? Offset.zero;
     }
 
     // Normalize to fit canvas
@@ -118,11 +102,6 @@ class _CoursePainter extends CustomPainter {
       minY = math.min(minY, p.dy);
       maxY = math.max(maxY, p.dy);
     }
-    // Add start position
-    minX = math.min(minX, startPos.dx);
-    maxX = math.max(maxX, startPos.dx);
-    minY = math.min(minY, startPos.dy);
-    maxY = math.max(maxY, startPos.dy);
 
     final rangeX = maxX - minX;
     final rangeY = maxY - minY;
@@ -138,11 +117,11 @@ class _CoursePainter extends CustomPainter {
           padding + (p.dy - centerY) * scale + usable.height / 2,
         );
 
-    final normalizedStart = normalize(startPos);
     final normalizedMarks = <int, Offset>{};
     for (final entry in rawPositions.entries) {
       normalizedMarks[entry.key] = normalize(entry.value);
     }
+    final normalizedStart = normalize(Offset.zero);
 
     // Draw wind direction arrow (background)
     if (windDirDeg != null) {
@@ -195,21 +174,23 @@ class _CoursePainter extends CustomPainter {
       startLinePaint,
     );
 
-    // Draw legs from start to first mark, then mark to mark
-    Offset prevPos = normalizedStart;
-    for (int i = 0; i < marks.length; i++) {
-      final curPos = normalizedMarks[i + 1] ?? prevPos;
-      canvas.drawLine(prevPos, curPos, legPaint);
-      _drawArrowHead(canvas, prevPos, curPos, legPaint, 8);
+    // Draw legs connecting consecutive marks in sequence
+    for (int i = 0; i < marks.length - 1; i++) {
+      final fromPos = normalizedMarks[i] ?? normalizedStart;
+      final toPos = normalizedMarks[i + 1] ?? normalizedStart;
+      // Skip zero-length legs (e.g. START→first mark at same position)
+      if ((fromPos - toPos).distance < 2) continue;
+      canvas.drawLine(fromPos, toPos, legPaint);
+      _drawArrowHead(canvas, fromPos, toPos, legPaint, 8);
 
       // Leg distance label
-      final prevMarkId = i == 0 ? '1' : marks[i - 1].markId;
-      final curMarkId = marks[i].markId;
-      final dist = _findDist(prevMarkId, curMarkId);
+      final fromId = marks[i].markId;
+      final toId = marks[i + 1].markId;
+      final dist = _findDist(fromId, toId);
       if (dist != null) {
         final mid = Offset(
-          (prevPos.dx + curPos.dx) / 2,
-          (prevPos.dy + curPos.dy) / 2,
+          (fromPos.dx + toPos.dx) / 2,
+          (fromPos.dy + toPos.dy) / 2,
         );
         final tp = TextPainter(
           text: TextSpan(
@@ -223,8 +204,6 @@ class _CoursePainter extends CustomPainter {
         )..layout();
         tp.paint(canvas, mid + const Offset(4, -12));
       }
-
-      prevPos = curPos;
     }
 
     // Draw North arrow
@@ -247,35 +226,43 @@ class _CoursePainter extends CustomPainter {
     )..layout();
     northTp.paint(canvas, northTop - Offset(northTp.width / 2, 12));
 
-    // Draw marks
-    for (int i = 0; i < marks.length; i++) {
-      final pos = normalizedMarks[i + 1] ?? normalizedStart;
-      final mark = marks[i];
-
-      // START and FINISH are drawn as special markers, not buoy circles
-      if (mark.isStart || mark.isFinish) {
-        final markerPaint = Paint()
-          ..color = mark.isStart ? Colors.blue : Colors.green
-          ..style = PaintingStyle.fill;
-        canvas.drawRect(
-          Rect.fromCenter(center: pos, width: 18, height: 12),
-          markerPaint,
-        );
-        final label = mark.isStart ? 'START' : 'FINISH';
+    // Draw START/FINISH label at Mark 1 position
+    {
+      final hasStart = marks.any((m) => m.isStart);
+      final hasFinish = marks.any((m) => m.isFinish);
+      if (hasStart || hasFinish) {
+        final label = hasStart && hasFinish
+            ? 'START / FINISH'
+            : hasStart
+                ? 'START'
+                : 'FINISH';
         final tp = TextPainter(
           text: TextSpan(
             text: label,
-            style: TextStyle(
-              color: mark.isStart ? Colors.blue : Colors.green,
-              fontSize: 7,
+            style: const TextStyle(
+              color: Colors.green,
+              fontSize: 8,
               fontWeight: FontWeight.bold,
             ),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        tp.paint(canvas, pos + Offset(-tp.width / 2, 8));
-        continue;
+        tp.paint(canvas, normalizedStart + Offset(-tp.width / 2, 14));
       }
+    }
+
+    // Draw marks (skip START/FINISH entries — they share Mark 1 position)
+    final drawnMarkIds = <String>{};
+    for (int i = 0; i < marks.length; i++) {
+      final pos = normalizedMarks[i] ?? normalizedStart;
+      final mark = marks[i];
+
+      // Skip START/FINISH — already drawn above
+      if (mark.isStart || mark.isFinish) continue;
+
+      // Skip if we already drew this mark (revisited marks)
+      if (drawnMarkIds.contains(mark.markId)) continue;
+      drawnMarkIds.add(mark.markId);
 
       // Determine mark color by type
       final markColor = _markColor(mark.markId);

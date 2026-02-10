@@ -350,8 +350,10 @@ class _CourseListTile extends StatelessWidget {
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"} · ${course.marks.length} marks',
+        '${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"} · ${course.markSequenceDisplay}',
         style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
