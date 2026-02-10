@@ -73,7 +73,7 @@ class _MarkManagementPanelState extends ConsumerState<MarkManagementPanel> {
                           ? const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(32),
-                                child: Text('No marks found. Seed data first.'),
+                                child: Text('No marks found.'),
                               ),
                             )
                           : ListView(

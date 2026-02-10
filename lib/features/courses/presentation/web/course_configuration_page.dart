@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
@@ -110,12 +109,6 @@ class _CourseConfigurationPageState
                 }),
               ),
               const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: _seedFromAsset,
-                icon: const Icon(Icons.cloud_upload, size: 18),
-                label: const Text('Seed Data'),
-              ),
-              const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: _addCourse,
                 icon: const Icon(Icons.add, size: 18),
@@ -212,60 +205,6 @@ class _CourseConfigurationPageState
     );
   }
 
-  Future<void> _seedFromAsset() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Seed Course Data'),
-        content: const Text(
-          'This will load all marks, distances, and courses from the '
-          'built-in course sheet into Firestore.\n\n'
-          'Existing data with matching IDs will be overwritten.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Seed Data'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || !mounted) return;
-
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final jsonString =
-          await rootBundle.loadString('assets/courses_seed.json');
-      await ref.read(coursesRepositoryProvider).seedFromJson(jsonString);
-      if (!mounted) return;
-      Navigator.pop(context); // dismiss loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Course data seeded successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context); // dismiss loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Seed failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   Future<void> _addCourse() async {
     final result = await showDialog<CourseConfig>(

@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../domain/checklists_repository.dart';
@@ -10,14 +9,11 @@ import 'models/checklist.dart';
 class ChecklistsRepositoryImpl implements ChecklistsRepository {
   ChecklistsRepositoryImpl({
     FirebaseFirestore? firestore,
-    FirebaseFunctions? functions,
     FirebaseStorage? storage,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _functions = functions ?? FirebaseFunctions.instance,
         _storage = storage ?? FirebaseStorage.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
 
   CollectionReference<Map<String, dynamic>> get _templatesCol =>
@@ -217,8 +213,8 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
   }
 
   @override
-  Future<void> archiveTemplate(String checklistId) async {
-    await _templatesCol.doc(checklistId).update({'isActive': false});
+  Future<void> deleteTemplate(String checklistId) async {
+    await _templatesCol.doc(checklistId).delete();
   }
 
   // ── Completions ──
@@ -377,11 +373,4 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
     return await ref.getDownloadURL();
   }
 
-  // ── Seed ──
-
-  @override
-  Future<void> seedTemplates() async {
-    final callable = _functions.httpsCallable('seedChecklistTemplates');
-    await callable.call<void>();
-  }
 }

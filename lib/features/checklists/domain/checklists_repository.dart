@@ -9,7 +9,7 @@ abstract class ChecklistsRepository {
   Stream<List<Checklist>> watchTemplates();
   Future<Checklist?> getTemplate(String checklistId);
   Future<void> saveTemplate(Checklist checklist);
-  Future<void> archiveTemplate(String checklistId);
+  Future<void> deleteTemplate(String checklistId);
 
   // Completions
   Stream<List<ChecklistCompletion>> watchActiveCompletions();
@@ -45,6 +45,4 @@ abstract class ChecklistsRepository {
     required Uint8List imageBytes,
   });
 
-  // Seed
-  Future<void> seedTemplates();
 }

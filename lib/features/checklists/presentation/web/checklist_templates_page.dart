@@ -33,11 +33,6 @@ class _ChecklistTemplatesPageState
               icon: const Icon(Icons.add),
               label: const Text('New Template'),
             ),
-            OutlinedButton.icon(
-              onPressed: () => ref.read(checklistsRepositoryProvider).seedTemplates(),
-              icon: const Icon(Icons.download),
-              label: const Text('Seed Defaults'),
-            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -59,7 +54,7 @@ class _ChecklistTemplatesPageState
                           selected: isSelected,
                           title: Text(t.name),
                           subtitle: Text(
-                            'v${t.version} • ${t.items.length} items • ${t.isActive ? "Active" : "Archived"}',
+                            'v${t.version} • ${t.items.length} items',
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -70,14 +65,9 @@ class _ChecklistTemplatesPageState
                                 onPressed: () => _duplicate(t),
                               ),
                               IconButton(
-                                icon: Icon(
-                                  t.isActive
-                                      ? Icons.archive
-                                      : Icons.unarchive,
-                                ),
-                                tooltip:
-                                    t.isActive ? 'Archive' : 'Restore',
-                                onPressed: () => _toggleArchive(t),
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                tooltip: 'Delete',
+                                onPressed: () => _deleteTemplate(t),
                               ),
                             ],
                           ),
@@ -143,13 +133,29 @@ class _ChecklistTemplatesPageState
     ref.read(checklistsRepositoryProvider).saveTemplate(dup);
   }
 
-  void _toggleArchive(Checklist t) {
-    if (t.isActive) {
-      ref.read(checklistsRepositoryProvider).archiveTemplate(t.id);
-    } else {
-      ref.read(checklistsRepositoryProvider).saveTemplate(
-            t.copyWith(isActive: true),
-          );
+  Future<void> _deleteTemplate(Checklist t) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Template'),
+        content: Text('Are you sure you want to delete "${t.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(checklistsRepositoryProvider).deleteTemplate(t.id);
+    if (_editing?.id == t.id) {
+      setState(() => _editing = null);
     }
   }
 }

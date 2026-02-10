@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -96,36 +95,6 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
     }
   }
 
-  Future<void> _seedTestAdmin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final callable =
-          FirebaseFunctions.instance.httpsCallable('seedTestAdmin');
-      final result = await callable.call<Map<String, dynamic>>({});
-      final data = result.data;
-
-      if (!mounted) return;
-
-      // Pre-fill the login form with the returned credentials
-      _emailController.text = data['email'] as String? ?? '';
-      _passwordController.text = data['password'] as String? ?? '';
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Test admin created! Click Sign In to continue.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      setState(() => _errorMessage = 'Seed failed: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
   String _parseError(Object e) {
     final msg = e.toString();
@@ -319,18 +288,6 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
                           _showForgotPassword
                               ? 'Back to Sign In'
                               : 'Forgot Password?',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: _isLoading ? null : _seedTestAdmin,
-                        icon: const Icon(Icons.developer_mode, size: 16),
-                        label: const Text('Seed Test Admin (Dev)'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
                         ),
                       ),
                     ],

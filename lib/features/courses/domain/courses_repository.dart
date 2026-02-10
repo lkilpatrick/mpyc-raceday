@@ -27,6 +27,4 @@ abstract class CoursesRepository {
   Future<void> sendBroadcast(FleetBroadcast broadcast);
   Stream<List<FleetBroadcast>> watchBroadcasts({String? eventId});
 
-  // Seed
-  Future<void> seedFromJson(String jsonString);
 }
