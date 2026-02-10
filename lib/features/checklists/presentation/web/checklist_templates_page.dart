@@ -136,26 +136,42 @@ class _ChecklistTemplatesPageState
   Future<void> _deleteTemplate(Checklist t) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Template'),
         content: Text('Are you sure you want to delete "${t.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
     if (confirm != true) return;
-    await ref.read(checklistsRepositoryProvider).deleteTemplate(t.id);
-    if (_editing?.id == t.id) {
-      setState(() => _editing = null);
+    try {
+      await ref.read(checklistsRepositoryProvider).deleteTemplate(t.id);
+      if (_editing?.id == t.id) {
+        setState(() => _editing = null);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Template deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
