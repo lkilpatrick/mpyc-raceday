@@ -5,7 +5,7 @@ import 'package:mpyc_raceday/core/theme.dart';
 import '../../data/models/course_config.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
-import '../widgets/nautical_chart_widget.dart';
+import '../widgets/course_map_widget.dart';
 
 class CourseDisplayScreen extends ConsumerWidget {
   const CourseDisplayScreen({super.key, required this.courseId});
@@ -175,14 +175,14 @@ class CourseDisplayScreen extends ConsumerWidget {
                     )),
                 const SizedBox(height: 24),
 
-                // Nautical chart
-                Text('Nautical Chart',
+                // Live map
+                Text('Course Map',
                     style: Theme.of(context)
                         .textTheme
                         .titleSmall
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                NauticalChartWidget(
+                CourseMapWidget(
                   marks: ref.watch(marksProvider).value?.cast() ?? const [],
                   course: course,
                   height: 300,
