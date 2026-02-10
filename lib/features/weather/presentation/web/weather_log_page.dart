@@ -178,24 +178,12 @@ class WeatherLogPage extends ConsumerWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            WindCompassWidget(
-              dirDeg: weather.dirDeg,
-              speed: speed,
-              unit: unit,
-              gust: gust,
-              size: 220,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Wind from ${weather.windDirectionLabel} (${weather.dirDeg}°)',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ],
+        child: WindCompassWidget(
+          dirDeg: weather.dirDeg,
+          speed: speed,
+          unit: unit,
+          gust: gust,
+          size: 240,
         ),
       ),
     );
