@@ -292,22 +292,33 @@ class AuthRepositoryImpl implements AuthRepository {
   /// can find the user's roles. The canonical member doc may be keyed by
   /// Clubspot ID; this writes a mirror keyed by Firebase Auth UID.
   Future<void> _ensureUidDoc(String uid, Map<String, dynamic> data) async {
-    final uidDocRef = _firestore.collection('members').doc(uid);
-    final uidDoc = await uidDocRef.get();
-    if (uidDoc.exists) {
-      // Keep roles in sync
-      final existingRoles = uidDoc.data()?['roles'];
-      final newRoles = data['roles'];
-      if (existingRoles?.toString() != newRoles?.toString()) {
-        await uidDocRef.update({'roles': newRoles});
+    try {
+      final uidDocRef = _firestore.collection('members').doc(uid);
+      final uidDoc = await uidDocRef.get();
+      if (uidDoc.exists) {
+        // Keep roles in sync
+        final existingRoles = uidDoc.data()?['roles'];
+        final newRoles = data['roles'];
+        if (existingRoles?.toString() != newRoles?.toString()) {
+          await uidDocRef.update({
+            'roles': newRoles,
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+        } else {
+          await uidDocRef.update({
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+        }
+        return;
       }
-      return;
+      // Write a copy with the UID as doc ID
+      await uidDocRef.set({
+        ...data,
+        'firebaseUid': uid,
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Non-fatal: the UID doc may already exist from seed script
     }
-    // Write a copy with the UID as doc ID
-    await uidDocRef.set({
-      ...data,
-      'firebaseUid': uid,
-      'lastLogin': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
   }
 }

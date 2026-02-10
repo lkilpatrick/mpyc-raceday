@@ -65,9 +65,10 @@ async function seed() {
   await admin.auth().setCustomUserClaims(uid, { role: "admin", memberId: "test-admin" });
   console.log("Custom claims set (role: admin).");
 
-  // Step 3: Write Firestore member doc via REST API using access token
+  // Step 3: Write Firestore member docs via REST API using access token.
+  // Write to BOTH /members/test-admin (canonical) AND /members/{uid}
+  // so Firestore rules getMember() (which looks up by auth UID) works.
   const accessToken = (await credential.getAccessToken()).access_token;
-  const docUrl = `https://firestore.googleapis.com/v1/projects/mpyc-raceday/databases/(default)/documents/members/test-admin`;
 
   const firestoreDoc = {
     fields: {
@@ -80,13 +81,20 @@ async function seed() {
       membershipCategory: { stringValue: "Staff" },
       memberTags: { arrayValue: { values: [{ stringValue: "admin" }, { stringValue: "rc" }] } },
       clubspotId: { stringValue: "" },
-      role: { stringValue: "admin" },
+      roles: { arrayValue: { values: [{ stringValue: "web_admin" }] } },
       firebaseUid: { stringValue: uid },
+      isActive: { booleanValue: true },
       emergencyContact: { mapValue: { fields: { name: { stringValue: "" }, phone: { stringValue: "" } } } },
     },
   };
 
-  const resp = await fetch(docUrl + "?updateMask.fieldPaths=firstName&updateMask.fieldPaths=lastName&updateMask.fieldPaths=email&updateMask.fieldPaths=mobileNumber&updateMask.fieldPaths=memberNumber&updateMask.fieldPaths=membershipStatus&updateMask.fieldPaths=membershipCategory&updateMask.fieldPaths=memberTags&updateMask.fieldPaths=clubspotId&updateMask.fieldPaths=role&updateMask.fieldPaths=firebaseUid&updateMask.fieldPaths=emergencyContact", {
+  const fieldPaths = Object.keys(firestoreDoc.fields)
+    .map((f) => `updateMask.fieldPaths=${f}`)
+    .join("&");
+
+  // Write canonical doc at /members/test-admin
+  const canonicalUrl = `https://firestore.googleapis.com/v1/projects/mpyc-raceday/databases/(default)/documents/members/test-admin`;
+  const resp1 = await fetch(`${canonicalUrl}?${fieldPaths}`, {
     method: "PATCH",
     headers: {
       "Authorization": `Bearer ${accessToken}`,
@@ -94,12 +102,27 @@ async function seed() {
     },
     body: JSON.stringify(firestoreDoc),
   });
-
-  if (!resp.ok) {
-    const errBody = await resp.text();
-    throw new Error(`Firestore write failed (${resp.status}): ${errBody}`);
+  if (!resp1.ok) {
+    const errBody = await resp1.text();
+    throw new Error(`Firestore write (canonical) failed (${resp1.status}): ${errBody}`);
   }
-  console.log("Firestore member document written.");
+  console.log("Firestore member doc written at /members/test-admin");
+
+  // Write UID-keyed doc at /members/{uid} for Firestore rules lookup
+  const uidUrl = `https://firestore.googleapis.com/v1/projects/mpyc-raceday/databases/(default)/documents/members/${uid}`;
+  const resp2 = await fetch(`${uidUrl}?${fieldPaths}`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(firestoreDoc),
+  });
+  if (!resp2.ok) {
+    const errBody = await resp2.text();
+    throw new Error(`Firestore write (UID) failed (${resp2.status}): ${errBody}`);
+  }
+  console.log(`Firestore member doc written at /members/${uid}`);
 
   console.log("\n=== Test Admin Seeded ===");
   console.log("Email:    " + testEmail);
