@@ -20,6 +20,8 @@ class AdminDashboardPage extends StatelessWidget {
             'Pre-race and safety checklists'),
         _NavItem(Icons.report_problem, 'Incidents & Protests',
             '/incidents', 'File and review incidents'),
+        _NavItem(Icons.gavel, 'Racing Rules', '/rules-reference',
+            'Browse and search the Racing Rules of Sailing'),
       ],
     ),
     _NavSection(
