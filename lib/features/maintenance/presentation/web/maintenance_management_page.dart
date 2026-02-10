@@ -1,4 +1,5 @@
 import 'package:data_table_2/data_table_2.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -87,6 +88,11 @@ class _MaintenanceManagementPageState
                 ),
                 onChanged: (v) => setState(() => _search = v.trim()),
               ),
+            ),
+            FilledButton.icon(
+              onPressed: _showCreateDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('New Request'),
             ),
             if (_selectedIds.isNotEmpty) ...[
               FilledButton(
@@ -212,5 +218,108 @@ class _MaintenanceManagementPageState
         .read(maintenanceRepositoryProvider)
         .bulkUpdateStatus(_selectedIds.toList(), status);
     setState(_selectedIds.clear);
+  }
+
+  void _showCreateDialog() {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    String boat = "Duncan's Watch";
+    MaintenancePriority priority = MaintenancePriority.medium;
+    MaintenanceCategory category = MaintenanceCategory.general;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('New Maintenance Request'),
+          content: SizedBox(
+            width: 450,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Title'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: boat,
+                  decoration: const InputDecoration(labelText: 'Boat'),
+                  items: ["Duncan's Watch", 'Signal Boat', 'Mark Boat', 'Safety Boat']
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => boat = v ?? boat),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<MaintenancePriority>(
+                  value: priority,
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  items: MaintenancePriority.values
+                      .map((p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(p.name[0].toUpperCase() + p.name.substring(1)),
+                          ))
+                      .toList(),
+                  onChanged: (v) =>
+                      setDialogState(() => priority = v ?? priority),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<MaintenanceCategory>(
+                  value: category,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: MaintenanceCategory.values
+                      .map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(c.name[0].toUpperCase() + c.name.substring(1)),
+                          ))
+                      .toList(),
+                  onChanged: (v) =>
+                      setDialogState(() => category = v ?? category),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (titleCtrl.text.trim().isEmpty) return;
+                final request = MaintenanceRequest(
+                  id: '',
+                  title: titleCtrl.text.trim(),
+                  description: descCtrl.text.trim(),
+                  priority: priority,
+                  reportedBy:
+                      FirebaseAuth.instance.currentUser?.displayName ?? 'Admin',
+                  reportedAt: DateTime.now(),
+                  status: MaintenanceStatus.reported,
+                  photos: const [],
+                  boatName: boat,
+                  category: category,
+                  comments: const [],
+                );
+                await ref
+                    .read(maintenanceRepositoryProvider)
+                    .createRequest(request);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

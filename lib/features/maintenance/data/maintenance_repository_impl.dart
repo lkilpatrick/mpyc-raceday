@@ -482,6 +482,16 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
 
 
 
+  @override
+
+  Future<void> deleteRequest(String requestId) async {
+
+    await _requestsCol.doc(requestId).delete();
+
+  }
+
+
+
   // ── Comments ──
 
 

@@ -174,6 +174,11 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
     });
   }
 
+  @override
+  Future<void> deleteIncident(String id) async {
+    await _incidentsCol.doc(id).delete();
+  }
+
   // ── Comments ──
 
   @override

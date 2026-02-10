@@ -32,6 +32,8 @@ abstract class MaintenanceRepository {
 
       List<String> requestIds, MaintenanceStatus status);
 
+  Future<void> deleteRequest(String requestId);
+
 
 
   // Comments

@@ -9,6 +9,7 @@ abstract class IncidentsRepository {
   Future<String> createIncident(RaceIncident incident);
   Future<void> updateIncident(RaceIncident incident);
   Future<void> updateStatus(String id, RaceIncidentStatus status);
+  Future<void> deleteIncident(String id);
 
   // Comments
   Future<void> addComment(String incidentId, IncidentComment comment);

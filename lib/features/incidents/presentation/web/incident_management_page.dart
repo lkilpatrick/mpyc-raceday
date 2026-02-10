@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +40,12 @@ class _IncidentManagementPageState
                     Text('Incident Management',
                         style: Theme.of(context).textTheme.headlineSmall),
                     const Spacer(),
+                    FilledButton.icon(
+                      onPressed: _showCreateDialog,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Report Incident'),
+                    ),
+                    const SizedBox(width: 8),
                   ],
                 ),
               ),
@@ -212,13 +219,158 @@ class _IncidentManagementPageState
         if (_selectedIncidentId != null)
           SizedBox(
             width: 480,
-            child: IncidentDetailPanel(
-              incidentId: _selectedIncidentId!,
-              onClose: () =>
-                  setState(() => _selectedIncidentId = null),
+            child: Column(
+              children: [
+                Expanded(
+                  child: IncidentDetailPanel(
+                    incidentId: _selectedIncidentId!,
+                    onClose: () =>
+                        setState(() => _selectedIncidentId = null),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deleteIncident(_selectedIncidentId!),
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+                    label: const Text('Delete Incident',
+                        style: TextStyle(color: Colors.red)),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
+    );
+  }
+
+  Future<void> _deleteIncident(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Incident'),
+        content: const Text(
+            'Are you sure you want to delete this incident? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(incidentsRepositoryProvider).deleteIncident(id);
+    setState(() => _selectedIncidentId = null);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incident deleted')),
+      );
+    }
+  }
+
+  void _showCreateDialog() {
+    final descCtrl = TextEditingController();
+    final eventIdCtrl = TextEditingController();
+    int raceNumber = 1;
+    CourseLocationOnIncident location = CourseLocationOnIncident.openWater;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Report Incident'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: eventIdCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Event ID'),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    value: raceNumber,
+                    decoration:
+                        const InputDecoration(labelText: 'Race Number'),
+                    items: List.generate(
+                            10, (i) => i + 1)
+                        .map((n) => DropdownMenuItem(
+                            value: n, child: Text('Race $n')))
+                        .toList(),
+                    onChanged: (v) =>
+                        setDialogState(() => raceNumber = v ?? 1),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<CourseLocationOnIncident>(
+                    value: location,
+                    decoration: const InputDecoration(
+                        labelText: 'Location on Course'),
+                    items: CourseLocationOnIncident.values
+                        .map((l) => DropdownMenuItem(
+                              value: l,
+                              child: Text(l.name),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setDialogState(
+                        () => location = v ?? location),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (descCtrl.text.trim().isEmpty) return;
+                final now = DateTime.now();
+                final incident = RaceIncident(
+                  id: '',
+                  eventId: eventIdCtrl.text.trim(),
+                  raceNumber: raceNumber,
+                  reportedAt: now,
+                  reportedBy: FirebaseAuth
+                          .instance.currentUser?.displayName ??
+                      'Admin',
+                  incidentTime: now,
+                  description: descCtrl.text.trim(),
+                  locationOnCourse: location,
+                  involvedBoats: const [],
+                  status: RaceIncidentStatus.reported,
+                );
+                await ref
+                    .read(incidentsRepositoryProvider)
+                    .createIncident(incident);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: const Text('Report'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
