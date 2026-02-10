@@ -37,13 +37,15 @@ const credential = admin.credential.refreshToken({
 // Mark abbreviation mapping (same as courses_repository_impl.dart)
 const MARK_ABBREV_MAP = {
   X: "X", C: "C", P: "P", M: "MY2", LV: "LV",
+  A: "A", B: "B",
   "1": "MY1", "3": "MY3", "4": "MY4",
   W: "W", R: "R", L: "L",
 };
 
 const MARK_NAME_MAP = {
   X: "X", C: "C", P: "P", M: "M", LV: "LV",
-  "1": "MY 1", "3": "MY 3", "4": "MY 4",
+  A: "A", B: "B",
+  "1": "1", "3": "3", "4": "4",
   W: "W", R: "R", L: "L",
 };
 
@@ -117,10 +119,55 @@ async function writeDoc(accessToken, collection, docId, data) {
   }
 }
 
+async function listDocs(accessToken, collection) {
+  const url = `${BASE_URL}/${collection}?pageSize=500`;
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) return [];
+  const body = await resp.json();
+  return (body.documents || []).map((doc) => {
+    const parts = doc.name.split("/");
+    return parts[parts.length - 1];
+  });
+}
+
+async function deleteDoc(accessToken, collection, docId) {
+  const url = `${BASE_URL}/${collection}/${docId}`;
+  const resp = await fetch(url, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    console.warn(`  ⚠ Failed to delete ${collection}/${docId}: ${errBody}`);
+  }
+}
+
 async function seed() {
   const accessToken = (await credential.getAccessToken()).access_token;
   const seedPath = path.join(__dirname, "..", "assets", "courses_seed.json");
   const data = JSON.parse(fs.readFileSync(seedPath, "utf8"));
+
+  // Delete old marks
+  const oldMarks = await listDocs(accessToken, "marks");
+  if (oldMarks.length > 0) {
+    console.log(`Deleting ${oldMarks.length} old marks...`);
+    for (const id of oldMarks) {
+      await deleteDoc(accessToken, "marks", id);
+    }
+    console.log("  Old marks deleted.");
+  }
+
+  // Delete old mark distances
+  const oldDists = await listDocs(accessToken, "mark_distances");
+  if (oldDists.length > 0) {
+    console.log(`Deleting ${oldDists.length} old mark distances...`);
+    for (const id of oldDists) {
+      await deleteDoc(accessToken, "mark_distances", id);
+    }
+    console.log("  Old mark distances deleted.");
+  }
 
   // Seed marks
   console.log(`Seeding ${data.marks.length} marks...`);
