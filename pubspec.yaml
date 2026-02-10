@@ -61,6 +61,8 @@ dependencies:
   shimmer: any
   connectivity_plus: any
   geolocator: any
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

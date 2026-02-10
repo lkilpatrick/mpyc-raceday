@@ -249,11 +249,11 @@ class _CourseLegPainter extends CustomPainter {
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
-    // Draw from C (committee boat) to first mark, then mark to mark
-    final cMark = _findMark('C');
-    if (cMark == null || cMark.latitude == null) return;
+    // Draw from MY1 (start/finish) to first mark, then mark to mark
+    final startMark = _findMark('MY1');
+    if (startMark == null || startMark.latitude == null) return;
 
-    Offset prevPos = geoToPixel(cMark.latitude!, cMark.longitude!);
+    Offset prevPos = geoToPixel(startMark.latitude!, startMark.longitude!);
 
     for (final cm in courseMarks) {
       final m = _findMark(cm.markId);

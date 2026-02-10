@@ -8,7 +8,7 @@ import '../../data/models/mark.dart';
 import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
-import '../widgets/nautical_chart_widget.dart';
+import '../widgets/course_map_widget.dart';
 import 'mark_management_panel.dart';
 
 class CourseConfigurationPage extends ConsumerStatefulWidget {
@@ -530,12 +530,12 @@ class _CourseDetailPanel extends StatelessWidget {
                 )),
             const SizedBox(height: 20),
 
-            // Nautical chart with marks
-            Text('Nautical Chart',
+            // Interactive map with marks
+            Text('Race Area Map',
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            NauticalChartWidget(
+            CourseMapWidget(
               marks: marks.cast(),
               course: course,
               height: 400,

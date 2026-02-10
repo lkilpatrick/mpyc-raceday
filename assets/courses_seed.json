@@ -677,7 +677,7 @@
     },
     {
       "num": "4",
-      "marks": "Xp-4p-1p-Xp-Finish",
+      "marks": "Xp-4p-Cp-Xp-Finish",
       "dist": 6.9,
       "band": "S_SW",
       "dirMin": 200,
@@ -710,7 +710,7 @@
     },
     {
       "num": "7",
-      "marks": "1p-Finish",
+      "marks": "Cp-Finish",
       "dist": 1.9,
       "band": "W",
       "dirMin": 260,
@@ -721,7 +721,7 @@
     },
     {
       "num": "8",
-      "marks": "1p-1p-1p-Finish",
+      "marks": "Cp-1p-Cp-Finish",
       "dist": 3.7,
       "band": "W",
       "dirMin": 260,
@@ -957,7 +957,7 @@
     },
     {
       "num": "29",
-      "marks": "1p-Xp",
+      "marks": "Cp-Xp",
       "dist": 1.6,
       "band": "W",
       "dirMin": 260,
@@ -968,7 +968,7 @@
     },
     {
       "num": "30",
-      "marks": "1p-1s-Xs",
+      "marks": "Cp-1s-Xs",
       "dist": 2.6,
       "band": "W",
       "dirMin": 260,
@@ -979,7 +979,7 @@
     },
     {
       "num": "31",
-      "marks": "1p-1p-1p-Xp",
+      "marks": "Cp-1p-Cp-Xp",
       "dist": 3.5,
       "band": "W",
       "dirMin": 260,
@@ -990,7 +990,7 @@
     },
     {
       "num": "32",
-      "marks": "1p-1p-1p-1s-Xs",
+      "marks": "Cp-1p-Cp-1s-Xs",
       "dist": 4.4,
       "band": "W",
       "dirMin": 260,
@@ -1205,7 +1205,7 @@
     },
     {
       "num": "51",
-      "marks": "Pp-1p-Pp-Xp",
+      "marks": "Pp-Cp-Pp-Xp",
       "dist": 13.7,
       "band": "LONG",
       "dirMin": 295,

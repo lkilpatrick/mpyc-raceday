@@ -64,7 +64,7 @@ class _CoursePainter extends CustomPainter {
     final padding = 40.0;
     final usable = Size(size.width - padding * 2, size.height - padding * 2);
 
-    // Calculate positions using headings and distances from committee boat (C)
+    // Calculate positions using headings and distances from MY1 (start/finish)
     // Start at bottom-center
     final positions = <String, Offset>{};
     final startPos = Offset(usable.width / 2, usable.height - 20);
@@ -77,8 +77,8 @@ class _CoursePainter extends CustomPainter {
 
     for (int i = 0; i < marks.length; i++) {
       if (i == 0) {
-        // First mark: use heading from C to this mark
-        final dist = _findDist('C', marks[i].markId);
+        // First mark: use heading from MY1 to this mark
+        final dist = _findDist('MY1', marks[i].markId);
         if (dist != null) {
           final rad = (dist.headingMagnetic - 90) * math.pi / 180;
           final scale = usable.width * 0.12;
@@ -203,7 +203,7 @@ class _CoursePainter extends CustomPainter {
       _drawArrowHead(canvas, prevPos, curPos, legPaint, 8);
 
       // Leg distance label
-      final prevMarkId = i == 0 ? 'C' : marks[i - 1].markId;
+      final prevMarkId = i == 0 ? 'MY1' : marks[i - 1].markId;
       final curMarkId = marks[i].markId;
       final dist = _findDist(prevMarkId, curMarkId);
       if (dist != null) {
