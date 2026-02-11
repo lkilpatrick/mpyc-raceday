@@ -458,12 +458,12 @@ class _CompactCourseRow extends ConsumerWidget {
             ? Colors.orange
             : Colors.transparent;
 
-    // Highlight row background for recommended courses
+    // Highlight row background strongly for recommended/possible courses
     Color rowBg;
     if (isRec) {
-      rowBg = Colors.green.withAlpha(12);
+      rowBg = Colors.green.withAlpha(45);
     } else if (isPoss) {
-      rowBg = Colors.orange.withAlpha(8);
+      rowBg = Colors.orange.withAlpha(35);
     } else {
       rowBg = isEven ? Colors.white : Colors.grey.shade50;
     }
