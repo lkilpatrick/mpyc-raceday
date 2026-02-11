@@ -16,7 +16,12 @@ class ChecklistListScreen extends ConsumerWidget {
     final activeAsync = ref.watch(activeCompletionsProvider);
     final historyAsync = ref.watch(completionHistoryProvider);
 
-    return templatesAsync.when(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Checklists'),
+        leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+      ),
+      body: templatesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (templates) {
@@ -59,6 +64,7 @@ class ChecklistListScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
     );
   }
 }

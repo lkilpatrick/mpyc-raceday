@@ -1,7 +1,5 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
+import '../../../../shared/utils/web_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -498,9 +496,7 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
   }
 
   void _openHtmlInNewTab(String htmlContent, String title) {
-    final blob = html.Blob([htmlContent], 'text/html');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.window.open(url, title);
+    openHtmlInNewTab(htmlContent, title);
   }
 
   void _showProtestFormDialog(RaceIncident incident, {ProtestFormData? prefill}) {

@@ -1,7 +1,5 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../shared/utils/web_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1196,9 +1194,7 @@ class _AdvisorProtestBridgeState extends ConsumerState<_AdvisorProtestBridge> {
     const gen = ProtestFormGenerator();
     final htmlContent =
         gen.generateProtestFormHtml(incident, formData: formData);
-    final blob = html.Blob([htmlContent], 'text/html');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.window.open(url, 'Protest Form');
+    openHtmlInNewTab(htmlContent, 'Protest Form');
 
     setState(() => _submitting = false);
 

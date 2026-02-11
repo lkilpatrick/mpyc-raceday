@@ -1,8 +1,8 @@
-import 'dart:html' as html; // ignore: avoid_web_libraries_in_flutter
 import 'dart:math' as math;
-import 'dart:ui_web' as ui_web;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../../../shared/utils/web_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
@@ -19,18 +19,11 @@ import '../../../weather/presentation/live_weather_providers.dart';
 /// Register the Windy.app forecast widget iframe as a platform view.
 bool _windyViewRegistered = false;
 void _ensureWindyViewRegistered() {
-  if (_windyViewRegistered) return;
+  if (_windyViewRegistered || !kIsWeb) return;
   _windyViewRegistered = true;
-  ui_web.platformViewRegistry.registerViewFactory(
+  registerPlatformViewFactory(
     'windy-forecast-widget',
-    (int viewId) {
-      final iframe = html.IFrameElement()
-        ..src = 'windy_widget.html'
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%';
-      return iframe;
-    },
+    (int viewId) => createIFrameElement(src: 'windy_widget.html'),
   );
 }
 

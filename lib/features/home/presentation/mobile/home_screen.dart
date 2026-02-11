@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../auth/data/auth_providers.dart';
@@ -19,8 +24,6 @@ class HomeScreen extends ConsumerWidget {
     final memberAsync = ref.watch(currentUserProvider);
     final member = memberAsync.value;
     final isRCChair = member?.isRCChair ?? false;
-    final isProOrAdmin = isRCChair;
-    final isRcCrew = isRCChair;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -30,34 +33,36 @@ class HomeScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          // ── For ALL: Today's Race hero card ──
+          // ── Weather ──
+          const _WeatherCard(),
+          const SizedBox(height: 8),
+
+          // ── Your Boat ──
+          if (member != null) ...[
+            _YourBoatCard(member: member),
+            const SizedBox(height: 8),
+          ],
+
+          // ── Today's Race ──
           const _TodaysRaceCard(),
           const SizedBox(height: 8),
 
-          // ── For RC CREW: Your Role Today / Next Duty ──
-          if (isRcCrew) ...[
-            _YourRoleCard(ref: ref),
-            const SizedBox(height: 8),
-          ],
-
-          // ── For PRO/ADMIN: Race Control ──
-          if (isProOrAdmin) ...[
+          // ── Race Control (RC Chair only) ──
+          if (isRCChair) ...[
             const _RaceControlCard(),
             const SizedBox(height: 8),
-            const _AttentionNeededCard(),
-            const SizedBox(height: 8),
           ],
 
-          // ── For ALL: Weather compact ──
-          const _WeatherCompactCard(),
+          // ── Upcoming Races ──
+          const _UpcomingRacesCard(),
           const SizedBox(height: 8),
 
-          // ── For ALL: Maintenance alerts ──
-          const _MaintenanceAlertCard(),
-          const SizedBox(height: 8),
-
-          // ── For ALL: Recent results ──
+          // ── Recent Results ──
           const _RecentResultsCard(),
+          const SizedBox(height: 8),
+
+          // ── Maintenance alerts ──
+          const _MaintenanceAlertCard(),
           const SizedBox(height: 16),
         ],
       ),
@@ -99,8 +104,6 @@ class _TodaysRaceCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text('No race today',
                       style: TextStyle(fontSize: 16, color: Colors.grey)),
-                  const SizedBox(height: 4),
-                  const _NextRaceMini(),
                 ],
               ),
             ),
@@ -165,9 +168,6 @@ class _TodaysRaceCard extends StatelessWidget {
                       const SizedBox(width: 16),
                       // Fleet size
                       _FleetSizeStat(eventId: eventId),
-                      const SizedBox(width: 16),
-                      // Weather mini
-                      const _WeatherMiniStat(),
                     ],
                   ),
                 ],
@@ -175,33 +175,6 @@ class _TodaysRaceCard extends StatelessWidget {
             ),
           ),
         );
-      },
-    );
-  }
-}
-
-class _NextRaceMini extends StatelessWidget {
-  const _NextRaceMini();
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('race_events')
-          .where('date', isGreaterThanOrEqualTo: Timestamp.now())
-          .orderBy('date')
-          .limit(1)
-          .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
-        if (docs.isEmpty) return const SizedBox.shrink();
-        final d = docs.first.data() as Map<String, dynamic>;
-        final name = d['name'] as String? ?? '';
-        final ts = d['date'] as Timestamp?;
-        final dateStr =
-            ts != null ? DateFormat.yMMMd().format(ts.toDate()) : '';
-        return Text('Next: $name — $dateStr',
-            style: const TextStyle(fontSize: 12, color: Colors.grey));
       },
     );
   }
@@ -215,29 +188,6 @@ class _FleetSizeStat extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final count = ref.watch(checkinCountProvider(eventId));
     return _MiniStat(icon: Icons.directions_boat, label: '$count boats');
-  }
-}
-
-class _WeatherMiniStat extends StatelessWidget {
-  const _WeatherMiniStat();
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('weather')
-          .doc('mpyc_station')
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData || !snap.data!.exists) {
-          return const _MiniStat(icon: Icons.cloud, label: '—');
-        }
-        final d = snap.data!.data() as Map<String, dynamic>? ?? {};
-        final wind = (d['speedKts'] as num?)?.toDouble() ?? 0;
-        return _MiniStat(
-            icon: Icons.air, label: '${wind.toStringAsFixed(0)} kts');
-      },
-    );
   }
 }
 
@@ -260,112 +210,301 @@ class _MiniStat extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════
-// Your Role Today / Next Duty
+// Weather Card (prominent, always visible)
 // ═══════════════════════════════════════════════════════
 
-class _YourRoleCard extends StatelessWidget {
-  const _YourRoleCard({required this.ref});
-  final WidgetRef ref;
+class _WeatherCard extends StatelessWidget {
+  const _WeatherCard();
+
+  static const _dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
+                         'S','SSW','SW','WSW','W','WNW','NW','NNW'];
 
   @override
   Widget build(BuildContext context) {
-    final nextDutyAsync = ref.watch(nextDutyProvider);
-
-    return nextDutyAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (assignment) {
-        if (assignment == null) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('weather')
+          .doc('mpyc_station')
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData || !snap.data!.exists) {
           return Card(
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(Icons.event_available, color: Colors.green),
+                  Icon(Icons.cloud_off, color: Colors.grey.shade400, size: 32),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('No upcoming RC duty assigned'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/schedule'),
-                    child: const Text('Schedule'),
-                  ),
+                  const Text('Weather data loading...',
+                      style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
           );
         }
-
-        final isToday = _isToday(assignment.event.date);
+        final d = snap.data!.data() as Map<String, dynamic>? ?? {};
+        final wind = (d['speedKts'] as num?)?.toDouble() ?? 0;
+        final gust = (d['gustKts'] as num?)?.toDouble();
+        final dir = (d['dirDeg'] as num?)?.toInt() ?? 0;
+        final temp = (d['tempF'] as num?)?.toDouble();
+        final humidity = (d['humidity'] as num?)?.toInt();
+        final pressure = (d['pressureInHg'] as num?)?.toDouble();
+        final dirLabel = _dirs[((dir + 11) % 360 ~/ 22.5) % 16];
 
         return Card(
-          color: isToday ? Colors.blue.shade50 : null,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(isToday ? Icons.person_pin : Icons.event_note,
-                        color: isToday ? Colors.blue : Colors.grey),
-                    const SizedBox(width: 8),
-                    Text(
-                      isToday ? 'Your Role Today' : 'Your Next RC Duty',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(assignment.event.name),
-                Text(
-                    '${DateFormat.yMMMd().format(assignment.event.date)} • ${roleLabel(assignment.role)}'),
-                if (!isToday) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '${assignment.event.date.difference(DateTime.now()).inDays} days away',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+          color: Colors.blue.shade50,
+          child: InkWell(
+            onTap: () => context.push('/live-wind'),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.air, color: Colors.blue, size: 20),
+                      const SizedBox(width: 6),
+                      const Text('Current Weather',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      // Wind direction arrow
+                      Transform.rotate(
+                        angle: dir * 3.14159 / 180,
+                        child: const Icon(Icons.navigation, size: 36, color: Colors.blue),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${wind.toStringAsFixed(0)} kts $dirLabel',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          if (gust != null && gust > 0)
+                            Text('Gusts ${gust.toStringAsFixed(0)} kts',
+                                style: TextStyle(fontSize: 13, color: Colors.red.shade700)),
+                        ],
+                      ),
+                      const Spacer(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (temp != null)
+                            Text('${temp.toStringAsFixed(0)}°F',
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                          if (humidity != null)
+                            Text('$humidity% RH',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          if (pressure != null)
+                            Text('${pressure.toStringAsFixed(2)} inHg',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (isToday)
-                      FilledButton.icon(
-                        onPressed: () => context.push('/checklists'),
-                        icon: const Icon(Icons.checklist, size: 18),
-                        label: const Text('Pre-Race Checklist'),
-                      ),
-                    if (isToday)
-                      OutlinedButton.icon(
-                        onPressed: () => context.push(
-                            '/checkin/${assignment.event.id}'),
-                        icon: const Icon(Icons.how_to_reg, size: 18),
-                        label: const Text('Open Check-In'),
-                      ),
-                    if (!isToday)
-                      FilledButton(
-                        onPressed: () => context.push(
-                            '/schedule/event/${assignment.event.id}'),
-                        child: const Text('View Assignment'),
-                      ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         );
       },
     );
   }
+}
 
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+// ═══════════════════════════════════════════════════════
+// Your Boat Card (photo, boat info, skipper/crew)
+// ═══════════════════════════════════════════════════════
+
+class _YourBoatCard extends StatefulWidget {
+  const _YourBoatCard({required this.member});
+  final Member member;
+
+  @override
+  State<_YourBoatCard> createState() => _YourBoatCardState();
+}
+
+class _YourBoatCardState extends State<_YourBoatCard> {
+  String? _boatPhotoUrl;
+  bool _uploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBoatPhoto();
+  }
+
+  Future<void> _loadBoatPhoto() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('members')
+        .doc(widget.member.id)
+        .get();
+    if (mounted) {
+      setState(() {
+        _boatPhotoUrl = doc.data()?['boatPhotoUrl'] as String?;
+      });
+    }
+  }
+
+  Future<void> _uploadBoatPhoto() async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (xFile == null) return;
+
+    setState(() => _uploading = true);
+    try {
+      final bytes = await xFile.readAsBytes();
+      final ref = FirebaseStorage.instance
+          .ref('boat_photos/${widget.member.id}.jpg');
+      await ref.putData(Uint8List.fromList(bytes),
+          SettableMetadata(contentType: 'image/jpeg'));
+      final url = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('members')
+          .doc(widget.member.id)
+          .update({'boatPhotoUrl': url});
+
+      if (mounted) setState(() => _boatPhotoUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.member;
+    final hasBoat = m.boatName != null && m.boatName!.isNotEmpty;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Boat photo or placeholder
+          InkWell(
+            onTap: _uploadBoatPhoto,
+            child: SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: _uploading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _boatPhotoUrl != null
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(_boatPhotoUrl!, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _photoPlaceholder()),
+                            Positioned(
+                              right: 8, bottom: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(Icons.camera_alt,
+                                    color: Colors.white, size: 18),
+                              ),
+                            ),
+                          ],
+                        )
+                      : _photoPlaceholder(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasBoat) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.sailing, size: 20, color: Colors.indigo),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(m.boatName!,
+                            style: const TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.bold)),
+                      ),
+                      if (m.sailNumber != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(m.sailNumber!,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.indigo.shade700)),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (m.boatClass != null)
+                    Text('${m.boatClass}${m.phrfRating != null ? ' • PHRF ${m.phrfRating}' : ''}',
+                        style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                ] else ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 20, color: Colors.indigo),
+                      const SizedBox(width: 8),
+                      Text(m.displayName,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(m.displayName,
+                    style: const TextStyle(fontSize: 13)),
+                if (m.roles.isNotEmpty)
+                  Text(
+                    m.roles.map((r) => r.name).join(', '),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoPlaceholder() {
+    return Container(
+      color: Colors.grey.shade200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_a_photo, size: 36, color: Colors.grey.shade400),
+          const SizedBox(height: 4),
+          Text('Tap to add boat photo',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
   }
 }
 
@@ -502,185 +641,108 @@ class _QuickAction extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════
-// Attention Needed (PRO/Admin)
+// Upcoming Races
 // ═══════════════════════════════════════════════════════
 
-class _AttentionNeededCard extends StatelessWidget {
-  const _AttentionNeededCard();
+class _UpcomingRacesCard extends StatelessWidget {
+  const _UpcomingRacesCard();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.amber.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.notification_important, color: Colors.amber),
-                SizedBox(width: 8),
-                Text('Attention Needed',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Unresolved incidents
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('incidents')
-                  .where('status', whereIn: ['reported', 'protestFiled'])
-                  .snapshots(),
-              builder: (context, snap) {
-                final count = snap.data?.docs.length ?? 0;
-                if (count == 0) return const SizedBox.shrink();
-                return _AttentionItem(
-                  icon: Icons.report,
-                  color: Colors.red,
-                  text: '$count unresolved incident${count > 1 ? 's' : ''}',
-                );
-              },
-            ),
-
-            // Critical maintenance
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('maintenance_requests')
-                  .where('priority', isEqualTo: 'critical')
-                  .where('status', whereIn: ['open', 'in_progress'])
-                  .snapshots(),
-              builder: (context, snap) {
-                final count = snap.data?.docs.length ?? 0;
-                if (count == 0) return const SizedBox.shrink();
-                return _AttentionItem(
-                  icon: Icons.build,
-                  color: Colors.orange,
-                  text:
-                      '$count critical maintenance item${count > 1 ? 's' : ''}',
-                );
-              },
-            ),
-
-            // Upcoming events needing crew
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('race_events')
-                  .where('date',
-                      isGreaterThanOrEqualTo: Timestamp.now())
-                  .orderBy('date')
-                  .limit(5)
-                  .snapshots(),
-              builder: (context, snap) {
-                final docs = snap.data?.docs ?? [];
-                int needsCrew = 0;
-                for (final doc in docs) {
-                  final d = doc.data() as Map<String, dynamic>;
-                  final confirmed = d['crewConfirmedCount'] as int? ?? 0;
-                  final needed = d['crewNeededCount'] as int? ?? 0;
-                  if (needed > 0 && confirmed < needed) needsCrew++;
-                }
-                if (needsCrew == 0) return const SizedBox.shrink();
-                return _AttentionItem(
-                  icon: Icons.group_off,
-                  color: Colors.purple,
-                  text:
-                      '$needsCrew event${needsCrew > 1 ? 's' : ''} need crew confirmation',
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttentionItem extends StatelessWidget {
-  const _AttentionItem({
-    required this.icon,
-    required this.color,
-    required this.text,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Text(text, style: const TextStyle(fontSize: 13)),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-// Weather compact card
-// ═══════════════════════════════════════════════════════
-
-class _WeatherCompactCard extends StatelessWidget {
-  const _WeatherCompactCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
+    return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('weather')
-          .doc('mpyc_station')
+          .collection('race_events')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.now())
+          .orderBy('date')
+          .limit(3)
           .snapshots(),
       builder: (context, snap) {
-        if (!snap.hasData || !snap.data!.exists) {
-          return const SizedBox.shrink();
-        }
-        final d = snap.data!.data() as Map<String, dynamic>? ?? {};
-        final wind = (d['speedKts'] as num?)?.toDouble() ?? 0;
-        final dir = (d['dirDeg'] as num?)?.toDouble() ?? 0;
-        final temp = (d['tempF'] as num?)?.toDouble();
-        final source = d['source'] as String? ?? '';
-
-        final tempStr = temp != null ? '${temp.toStringAsFixed(0)}°F' : '';
-        final subtitle = [tempStr, if (source.isNotEmpty) source.toUpperCase()]
-            .where((s) => s.isNotEmpty)
-            .join(' • ');
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox.shrink();
 
         return Card(
-          child: InkWell(
-            onTap: () => context.push('/live-wind'),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Icon(Icons.air,
-                      color: wind > 20 ? Colors.red : Colors.blue,
-                      size: 28),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${wind.toStringAsFixed(0)} kts from ${dir.toStringAsFixed(0)}°',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14)),
-                      if (subtitle.isNotEmpty)
-                        Text(subtitle,
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.event, color: Colors.teal, size: 20),
+                    SizedBox(width: 6),
+                    Text('Upcoming Races',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...docs.map((doc) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  final name = d['name'] as String? ?? '';
+                  final ts = d['date'] as Timestamp?;
+                  final series = d['series'] as String? ?? '';
+                  final dateStr = ts != null
+                      ? DateFormat('EEE, MMM d').format(ts.toDate())
+                      : '';
+                  final daysAway = ts != null
+                      ? ts.toDate().difference(DateTime.now()).inDays
+                      : 0;
+
+                  return InkWell(
+                    onTap: () => context.push('/schedule/event/${doc.id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  ts != null ? DateFormat('d').format(ts.toDate()) : '',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal.shade700),
+                                ),
+                                Text(
+                                  ts != null ? DateFormat('MMM').format(ts.toDate()) : '',
+                                  style: TextStyle(fontSize: 10, color: Colors.teal.shade700),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                                if (series.isNotEmpty)
+                                  Text(series,
+                                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            daysAway == 0 ? 'Today' : daysAway == 1 ? 'Tomorrow' : '${daysAway}d',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: daysAway <= 1 ? Colors.green : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
         );
@@ -744,45 +806,66 @@ class _RecentResultsCard extends StatelessWidget {
           .collection('race_events')
           .where('date', isLessThan: Timestamp.now())
           .orderBy('date', descending: true)
-          .limit(1)
+          .limit(2)
           .snapshots(),
       builder: (context, snap) {
         final docs = snap.data?.docs ?? [];
         if (docs.isEmpty) return const SizedBox.shrink();
 
-        final d = docs.first.data() as Map<String, dynamic>;
-        final name = d['name'] as String? ?? '';
-        final ts = d['date'] as Timestamp?;
-        final dateStr =
-            ts != null ? DateFormat.yMMMd().format(ts.toDate()) : '';
-
         return Card(
-          child: InkWell(
-            onTap: () =>
-                context.push('/schedule/event/${docs.first.id}'),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  const Icon(Icons.emoji_events, color: Colors.amber),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Recent Results',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('$name — $dateStr',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey)),
-                      ],
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.emoji_events, color: Colors.amber, size: 20),
+                    SizedBox(width: 6),
+                    Text('Recent Results',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...docs.map((doc) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  final name = d['name'] as String? ?? '';
+                  final ts = d['date'] as Timestamp?;
+                  final status = d['status'] as String? ?? '';
+                  final dateStr = ts != null
+                      ? DateFormat('EEE, MMM d').format(ts.toDate())
+                      : '';
+
+                  return InkWell(
+                    onTap: () => context.push('/schedule/event/${doc.id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            status == 'complete' ? Icons.check_circle : Icons.schedule,
+                            size: 18,
+                            color: status == 'complete' ? Colors.green : Colors.orange,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text(dateStr,
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
+                  );
+                }),
+              ],
             ),
           ),
         );
