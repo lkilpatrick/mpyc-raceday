@@ -324,7 +324,12 @@ class _WindGroupBlock extends StatelessWidget {
     final gc = _parseHex(group.color);
     final bg = _parseHex(group.bgColor);
     final sorted = [...courses]
-      ..sort((a, b) => a.courseNumber.compareTo(b.courseNumber));
+      ..sort((a, b) {
+        final na = int.tryParse(a.courseNumber) ?? 0;
+        final nb = int.tryParse(b.courseNumber) ?? 0;
+        if (na != nb) return na.compareTo(nb);
+        return a.courseNumber.compareTo(b.courseNumber);
+      });
 
     return Container(
       decoration: BoxDecoration(
