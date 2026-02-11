@@ -275,6 +275,7 @@ class _IncidentManagementPageState
   }
 
   void _showCreateDialog() {
+    final formKey = GlobalKey<FormState>();
     final descCtrl = TextEditingController();
     final eventIdCtrl = TextEditingController();
     int raceNumber = 1;
@@ -287,52 +288,59 @@ class _IncidentManagementPageState
           title: const Text('Report Incident'),
           content: SizedBox(
             width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: eventIdCtrl,
-                    decoration:
-                        const InputDecoration(labelText: 'Event ID'),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    value: raceNumber,
-                    decoration:
-                        const InputDecoration(labelText: 'Race Number'),
-                    items: List.generate(
-                            10, (i) => i + 1)
-                        .map((n) => DropdownMenuItem(
-                            value: n, child: Text('Race $n')))
-                        .toList(),
-                    onChanged: (v) =>
-                        setDialogState(() => raceNumber = v ?? 1),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<CourseLocationOnIncident>(
-                    value: location,
-                    decoration: const InputDecoration(
-                        labelText: 'Location on Course'),
-                    items: CourseLocationOnIncident.values
-                        .map((l) => DropdownMenuItem(
-                              value: l,
-                              child: Text(l.name),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setDialogState(
-                        () => location = v ?? location),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: descCtrl,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: eventIdCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Event ID'),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Event ID is required' : null,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: raceNumber,
+                      decoration:
+                          const InputDecoration(labelText: 'Race Number'),
+                      items: List.generate(
+                              10, (i) => i + 1)
+                          .map((n) => DropdownMenuItem(
+                              value: n, child: Text('Race $n')))
+                          .toList(),
+                      onChanged: (v) =>
+                          setDialogState(() => raceNumber = v ?? 1),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<CourseLocationOnIncident>(
+                      value: location,
+                      decoration: const InputDecoration(
+                          labelText: 'Location on Course'),
+                      items: CourseLocationOnIncident.values
+                          .map((l) => DropdownMenuItem(
+                                value: l,
+                                child: Text(l.name),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setDialogState(
+                          () => location = v ?? location),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: descCtrl,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Description *',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Description is required' : null,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -343,7 +351,7 @@ class _IncidentManagementPageState
             ),
             FilledButton(
               onPressed: () async {
-                if (descCtrl.text.trim().isEmpty) return;
+                if (!formKey.currentState!.validate()) return;
                 final now = DateTime.now();
                 final incident = RaceIncident(
                   id: '',

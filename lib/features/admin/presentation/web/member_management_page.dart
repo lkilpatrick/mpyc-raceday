@@ -427,47 +427,68 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
     final boatClassCtrl = TextEditingController();
     final phrfCtrl = TextEditingController();
 
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Add Member'),
         content: SizedBox(
           width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  Expanded(child: TextField(controller: firstNameCtrl, decoration: const InputDecoration(labelText: 'First Name'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: lastNameCtrl, decoration: const InputDecoration(labelText: 'Last Name'))),
-                ]),
-                const SizedBox(height: 8),
-                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-                const SizedBox(height: 8),
-                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(child: TextField(controller: memberNumCtrl, decoration: const InputDecoration(labelText: 'Member #'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: signalNumCtrl, decoration: const InputDecoration(labelText: 'Signal #'))),
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(child: TextField(controller: boatNameCtrl, decoration: const InputDecoration(labelText: 'Boat Name'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: sailNumCtrl, decoration: const InputDecoration(labelText: 'Sail #'))),
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(child: TextField(controller: boatClassCtrl, decoration: const InputDecoration(labelText: 'Boat Class'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: phrfCtrl, decoration: const InputDecoration(labelText: 'PHRF Rating'), keyboardType: TextInputType.number)),
-                ]),
-                const SizedBox(height: 12),
-                Text('New members default to Crew role.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              ],
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Expanded(child: TextFormField(
+                      controller: firstNameCtrl,
+                      decoration: const InputDecoration(labelText: 'First Name *'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'First name is required' : null,
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextFormField(
+                      controller: lastNameCtrl,
+                      decoration: const InputDecoration(labelText: 'Last Name *'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Last name is required' : null,
+                    )),
+                  ]),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(labelText: 'Email *'),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Email is required';
+                      if (!v.contains('@') || !v.contains('.')) return 'Enter a valid email';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: TextFormField(controller: memberNumCtrl, decoration: const InputDecoration(labelText: 'Member #'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextFormField(controller: signalNumCtrl, decoration: const InputDecoration(labelText: 'Signal #'))),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: TextFormField(controller: boatNameCtrl, decoration: const InputDecoration(labelText: 'Boat Name'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextFormField(controller: sailNumCtrl, decoration: const InputDecoration(labelText: 'Sail #'))),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: TextFormField(controller: boatClassCtrl, decoration: const InputDecoration(labelText: 'Boat Class'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextFormField(controller: phrfCtrl, decoration: const InputDecoration(labelText: 'PHRF Rating'), keyboardType: TextInputType.number)),
+                  ]),
+                  const SizedBox(height: 12),
+                  Text('New members default to Crew role.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                ],
+              ),
             ),
           ),
         ),
@@ -478,7 +499,7 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
           ),
           FilledButton(
             onPressed: () async {
-              if (firstNameCtrl.text.trim().isEmpty && lastNameCtrl.text.trim().isEmpty) return;
+              if (!formKey.currentState!.validate()) return;
               await FirebaseFirestore.instance.collection('members').add({
                 'firstName': firstNameCtrl.text.trim(),
                 'lastName': lastNameCtrl.text.trim(),

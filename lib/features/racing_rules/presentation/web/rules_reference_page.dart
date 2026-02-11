@@ -218,11 +218,12 @@ class _RulesReferencePageState extends ConsumerState<RulesReferencePage> {
                       Wrap(
                         spacing: 4,
                         children: d.relatedRules
-                            .map((r) => Chip(
+                            .map((r) => ActionChip(
                                   label: Text('Rule $r',
                                       style:
                                           const TextStyle(fontSize: 11)),
                                   visualDensity: VisualDensity.compact,
+                                  onPressed: () => _navigateToRule(db, r),
                                 ))
                             .toList(),
                       ),
@@ -232,6 +233,28 @@ class _RulesReferencePageState extends ConsumerState<RulesReferencePage> {
               ),
             )),
       ],
+    );
+  }
+
+  void _navigateToRule(RacingRulesDatabase db, String ruleNumber) {
+    for (final part in db.parts) {
+      for (final section in part.sections) {
+        for (final rule in section.rules) {
+          if (rule.number == ruleNumber) {
+            setState(() {
+              _selectedPartId = part.id;
+              _selectedSectionId = section.id;
+              _query = '';
+              _searchController.clear();
+            });
+            return;
+          }
+        }
+      }
+    }
+    // Rule not found — show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Rule $ruleNumber not found')),
     );
   }
 
@@ -283,11 +306,12 @@ class _RulesReferencePageState extends ConsumerState<RulesReferencePage> {
                         Wrap(
                           spacing: 4,
                           children: rule.crossReferences
-                              .map((r) => Chip(
+                              .map((r) => ActionChip(
                                     label: Text('Rule $r',
                                         style: const TextStyle(
                                             fontSize: 11)),
                                     visualDensity: VisualDensity.compact,
+                                    onPressed: () => _navigateToRule(db, r),
                                   ))
                               .toList(),
                         ),

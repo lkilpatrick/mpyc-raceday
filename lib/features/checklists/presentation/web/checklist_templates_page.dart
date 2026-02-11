@@ -109,12 +109,11 @@ class _ChecklistTemplatesPageState
       name: 'New Checklist',
       type: ChecklistType.custom,
       items: const [],
-      version: 1,
+      version: 0,
       lastModifiedBy: FirebaseAuth.instance.currentUser?.uid ?? '',
       lastModifiedAt: now,
       isActive: true,
     );
-    ref.read(checklistsRepositoryProvider).saveTemplate(newTemplate);
     setState(() => _editing = newTemplate);
   }
 
@@ -417,8 +416,27 @@ class _TemplateEditorState extends ConsumerState<_TemplateEditor> {
   }
 
   Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty || name == 'New Checklist') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a checklist name'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least one item before saving'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     final updated = widget.checklist.copyWith(
-      name: _nameController.text.trim(),
+      name: name,
       type: _type,
       items: _items,
       version: widget.checklist.version + 1,
