@@ -58,7 +58,7 @@ class LiveWeather {
   }
 
   bool get isStale {
-    return DateTime.now().difference(fetchedAt).inSeconds > 60;
+    return DateTime.now().difference(fetchedAt).inSeconds > 120;
   }
 
   Duration get staleness => DateTime.now().difference(fetchedAt);

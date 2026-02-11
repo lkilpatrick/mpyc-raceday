@@ -4,12 +4,36 @@ void main() {
   // Test the CSV parsing logic used in importFleetFromCsv
   // (extracted logic, not the Firestore calls)
 
+  List<String> parseCsvLine(String line) {
+    final result = <String>[];
+    final buf = StringBuffer();
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+          buf.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch == ',' && !inQuotes) {
+        result.add(buf.toString().trim());
+        buf.clear();
+      } else {
+        buf.write(ch);
+      }
+    }
+    result.add(buf.toString().trim());
+    return result;
+  }
+
   List<Map<String, String?>> parseCsv(String csvContent) {
     final lines = csvContent.split('\n');
     if (lines.length < 2) return [];
 
     final headers =
-        lines.first.split(',').map((h) => h.trim().toLowerCase()).toList();
+        parseCsvLine(lines.first).map((h) => h.toLowerCase()).toList();
     final sailIdx = headers.indexOf('sail');
     final nameIdx = headers.indexOf('boat name');
     final ownerIdx = headers.indexOf('owner');
@@ -21,7 +45,7 @@ void main() {
     for (int i = 1; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty) continue;
-      final cols = line.split(',').map((c) => c.trim()).toList();
+      final cols = parseCsvLine(line);
 
       final sail =
           sailIdx >= 0 && sailIdx < cols.length ? cols[sailIdx] : '';
@@ -112,6 +136,19 @@ void main() {
       expect(boats, hasLength(1));
       expect(boats[0]['sail'], '42');
       expect(boats[0]['name'], 'Wind Dancer');
+    });
+
+    test('handles quoted fields with commas in values', () {
+      const csv = 'Sail,Boat Name,Owner,Class,PHRF\n'
+          '42,"Wind, Dancer","Smith, Jr.",J/105,84\n';
+
+      final boats = parseCsv(csv);
+      expect(boats, hasLength(1));
+      expect(boats[0]['sail'], '42');
+      expect(boats[0]['name'], 'Wind, Dancer');
+      expect(boats[0]['owner'], 'Smith, Jr.');
+      expect(boats[0]['class'], 'J/105');
+      expect(boats[0]['phrf'], '84');
     });
 
     test('handles columns in different order', () {

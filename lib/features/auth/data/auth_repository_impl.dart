@@ -317,8 +317,13 @@ class AuthRepositoryImpl implements AuthRepository {
         'firebaseUid': uid,
         'lastLogin': FieldValue.serverTimestamp(),
       });
-    } catch (_) {
-      // Non-fatal: the UID doc may already exist from seed script
+    } catch (e) {
+      // Non-fatal: log but don't break sign-in flow
+      assert(() {
+        // ignore: avoid_print
+        print('[AuthRepo] _ensureUidDoc failed for $uid: $e');
+        return true;
+      }());
     }
   }
 }

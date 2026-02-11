@@ -167,6 +167,30 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
     await _fleetCol.doc(boatId).update({'isActive': false});
   }
 
+  static List<String> _parseCsvLine(String line) {
+    final result = <String>[];
+    final buf = StringBuffer();
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+          buf.write('"');
+          i++; // skip escaped quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch == ',' && !inQuotes) {
+        result.add(buf.toString().trim());
+        buf.clear();
+      } else {
+        buf.write(ch);
+      }
+    }
+    result.add(buf.toString().trim());
+    return result;
+  }
+
   @override
   Future<void> importFleetFromCsv(String csvContent) async {
     final lines = csvContent.split('\n');
@@ -174,7 +198,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
 
     // Parse header
     final headers =
-        lines.first.split(',').map((h) => h.trim().toLowerCase()).toList();
+        _parseCsvLine(lines.first).map((h) => h.toLowerCase()).toList();
     final sailIdx = headers.indexOf('sail');
     final nameIdx = headers.indexOf('boat name');
     final ownerIdx = headers.indexOf('owner');
@@ -184,7 +208,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
     for (int i = 1; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty) continue;
-      final cols = line.split(',').map((c) => c.trim()).toList();
+      final cols = _parseCsvLine(line);
 
       final sail = sailIdx >= 0 && sailIdx < cols.length ? cols[sailIdx] : '';
       final name = nameIdx >= 0 && nameIdx < cols.length ? cols[nameIdx] : '';

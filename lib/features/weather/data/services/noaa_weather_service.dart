@@ -165,7 +165,7 @@ class NoaaWeatherService {
       'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
     ];
-    final index = ((deg / 22.5) + 0.5).toInt() % 16;
+    final index = ((deg + 11.25) % 360 / 22.5).floor() % 16;
     return dirs[index];
   }
 }

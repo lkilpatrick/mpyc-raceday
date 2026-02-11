@@ -1,3 +1,5 @@
+const _sentinel = Object();
+
 enum WeatherSource { noaa, openWeather, manual, merged }
 
 enum SeaState { calm, smooth, slight, moderate, rough, veryRough, high }
@@ -50,17 +52,17 @@ class WeatherEntry {
     WeatherSource? source,
     WeatherEntryTag? tag,
     double? windSpeedKts,
-    double? windGustKts,
+    Object? windGustKts = _sentinel,
     double? windDirectionDeg,
     String? windDirectionLabel,
-    double? temperatureF,
-    double? humidity,
-    double? pressureMb,
-    String? visibility,
-    SeaState? seaState,
-    String? forecastSummary,
+    Object? temperatureF = _sentinel,
+    Object? humidity = _sentinel,
+    Object? pressureMb = _sentinel,
+    Object? visibility = _sentinel,
+    Object? seaState = _sentinel,
+    Object? forecastSummary = _sentinel,
     String? notes,
-    String? loggedBy,
+    Object? loggedBy = _sentinel,
   }) {
     return WeatherEntry(
       id: id ?? this.id,
@@ -69,17 +71,17 @@ class WeatherEntry {
       source: source ?? this.source,
       tag: tag ?? this.tag,
       windSpeedKts: windSpeedKts ?? this.windSpeedKts,
-      windGustKts: windGustKts ?? this.windGustKts,
+      windGustKts: windGustKts == _sentinel ? this.windGustKts : windGustKts as double?,
       windDirectionDeg: windDirectionDeg ?? this.windDirectionDeg,
       windDirectionLabel: windDirectionLabel ?? this.windDirectionLabel,
-      temperatureF: temperatureF ?? this.temperatureF,
-      humidity: humidity ?? this.humidity,
-      pressureMb: pressureMb ?? this.pressureMb,
-      visibility: visibility ?? this.visibility,
-      seaState: seaState ?? this.seaState,
-      forecastSummary: forecastSummary ?? this.forecastSummary,
+      temperatureF: temperatureF == _sentinel ? this.temperatureF : temperatureF as double?,
+      humidity: humidity == _sentinel ? this.humidity : humidity as double?,
+      pressureMb: pressureMb == _sentinel ? this.pressureMb : pressureMb as double?,
+      visibility: visibility == _sentinel ? this.visibility : visibility as String?,
+      seaState: seaState == _sentinel ? this.seaState : seaState as SeaState?,
+      forecastSummary: forecastSummary == _sentinel ? this.forecastSummary : forecastSummary as String?,
       notes: notes ?? this.notes,
-      loggedBy: loggedBy ?? this.loggedBy,
+      loggedBy: loggedBy == _sentinel ? this.loggedBy : loggedBy as String?,
     );
   }
 }
