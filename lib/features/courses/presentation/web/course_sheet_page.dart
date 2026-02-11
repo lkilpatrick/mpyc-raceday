@@ -13,8 +13,8 @@ import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
 import '../widgets/course_map_widget.dart';
 
-/// Course sheet page — read-only view of all courses organized by wind
-/// direction band, with live wind recommendation and detail modals.
+/// Course sheet page — compact 2-column layout matching the MPYC printed
+/// course sheet, with live wind recommendation and detail modals.
 class CourseSheetPage extends ConsumerStatefulWidget {
   const CourseSheetPage({super.key});
 
@@ -33,33 +33,47 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
 
     final liveWindDir = weatherAsync.value?.dirDeg.toDouble() ?? 0;
     final liveWindSpeed = weatherAsync.value?.speedKts ?? 0;
-    final liveWindLabel = weatherAsync.value?.windDirectionLabel ?? '';
     final windDir = _windOverride ?? liveWindDir;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Header ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        // ── Title bar ──
+        Container(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('MPYC Course Sheet',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('MPYC COURSE SHEET',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          )),
+                  Text('Monterey Peninsula Yacht Club',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500)),
+                ],
+              ),
               const Spacer(),
+              // Legend
+              _legendDot(Colors.green, 'Recommended'),
+              const SizedBox(width: 10),
+              _legendDot(Colors.orange, 'Possible'),
+              const SizedBox(width: 10),
               allCourses.when(
                 data: (c) => Text('${c.length} courses',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500)),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
 
         // ── Wind direction bar ──
         Padding(
@@ -68,7 +82,6 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
             windDir: windDir,
             liveWindDir: liveWindDir,
             liveWindSpeed: liveWindSpeed,
-            liveWindLabel: liveWindLabel,
             isOverride: _windOverride != null,
             weatherAsync: weatherAsync,
             recommendedCount:
@@ -77,9 +90,9 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
             onReset: () => setState(() => _windOverride = null),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
-        // ── Course table ──
+        // ── 2-column course sheet ──
         Expanded(
           child: allCourses.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -88,18 +101,57 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
               if (coursesGrouped.isEmpty) {
                 return const Center(child: Text('No courses configured.'));
               }
-              return ListView(
+              // Split groups into 2 columns:
+              // Left: S_SW, W, NW   Right: N, INFLATABLE, LONG
+              final leftGroups = <({WindGroup group, List<CourseConfig> courses})>[];
+              final rightGroups = <({WindGroup group, List<CourseConfig> courses})>[];
+              const rightIds = {'N', 'INFLATABLE', 'LONG'};
+              for (final g in coursesGrouped) {
+                if (rightIds.contains(g.group.id)) {
+                  rightGroups.add(g);
+                } else {
+                  leftGroups.add(g);
+                }
+              }
+
+              return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                children: [
-                  for (final group in coursesGrouped) ...[
-                    _WindGroupTable(
-                      group: group.group,
-                      courses: group.courses,
-                      windDir: windDir,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left column
+                    Expanded(
+                      child: Column(
+                        children: [
+                          for (final g in leftGroups) ...[
+                            _WindGroupBlock(
+                              group: g.group,
+                              courses: g.courses,
+                              windDir: windDir,
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(width: 12),
+                    // Right column
+                    Expanded(
+                      child: Column(
+                        children: [
+                          for (final g in rightGroups) ...[
+                            _WindGroupBlock(
+                              group: g.group,
+                              courses: g.courses,
+                              windDir: windDir,
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
-                ],
+                ),
               );
             },
           ),
@@ -107,10 +159,25 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
       ],
     );
   }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8, height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 3),
+        Text(label,
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+      ],
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Wind Direction Bar
+// Wind Direction Bar — compact
 // ═══════════════════════════════════════════════════════════════════
 
 class _WindDirectionBar extends StatelessWidget {
@@ -118,7 +185,6 @@ class _WindDirectionBar extends StatelessWidget {
     required this.windDir,
     required this.liveWindDir,
     required this.liveWindSpeed,
-    required this.liveWindLabel,
     required this.isOverride,
     required this.weatherAsync,
     required this.recommendedCount,
@@ -129,7 +195,6 @@ class _WindDirectionBar extends StatelessWidget {
   final double windDir;
   final double liveWindDir;
   final double liveWindSpeed;
-  final String liveWindLabel;
   final bool isOverride;
   final AsyncValue<LiveWeather?> weatherAsync;
   final int recommendedCount;
@@ -141,149 +206,110 @@ class _WindDirectionBar extends StatelessWidget {
       'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
     ];
-    final index = ((deg / 22.5) + 0.5).toInt() % 16;
-    return dirs[index];
+    return dirs[((deg / 22.5) + 0.5).toInt() % 16];
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withAlpha(12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withAlpha(30)),
+        color: AppColors.primary.withAlpha(10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withAlpha(25)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Wind compass icon
-              Transform.rotate(
-                angle: (windDir * math.pi / 180) + math.pi,
-                child: const Icon(Icons.navigation,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: 10),
-              // Wind info
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '${_degToCompass(windDir)} ${windDir.toInt()}°',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isOverride) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withAlpha(25),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('MANUAL',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange)),
-                        ),
-                        const SizedBox(width: 4),
-                        InkWell(
-                          onTap: onReset,
-                          child: const Icon(Icons.refresh,
-                              size: 16, color: AppColors.primary),
-                        ),
-                      ] else
-                        weatherAsync.when(
-                          data: (_) => Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withAlpha(25),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'LIVE · ${liveWindSpeed.toStringAsFixed(1)} kts',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green),
-                            ),
-                          ),
-                          loading: () => const SizedBox(
-                              width: 12,
-                              height: 12,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 1.5)),
-                          error: (_, __) => const Text('(offline)',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.orange)),
-                        ),
-                    ],
-                  ),
-                  Text(
-                    '$recommendedCount courses recommended for this wind',
-                    style:
-                        TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Legend
-              _legendDot(Colors.green, 'Recommended'),
-              const SizedBox(width: 12),
-              _legendDot(Colors.orange, 'Possible'),
-            ],
+          Transform.rotate(
+            angle: (windDir * math.pi / 180) + math.pi,
+            child: const Icon(Icons.navigation,
+                color: AppColors.primary, size: 20),
           ),
-          const SizedBox(height: 4),
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.primary.withAlpha(30),
-              thumbColor: AppColors.primary,
-              overlayColor: AppColors.primary.withAlpha(20),
+          const SizedBox(width: 8),
+          Text(
+            '${_degToCompass(windDir)} ${windDir.toInt()}°',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(width: 8),
+          if (isOverride) ...[
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha(25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: const Text('MANUAL',
+                  style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange)),
             ),
-            child: Slider(
-              value: windDir,
-              min: 0,
-              max: 359,
-              divisions: 359,
-              onChanged: onChanged,
+            const SizedBox(width: 4),
+            InkWell(
+              onTap: onReset,
+              child: const Icon(Icons.refresh,
+                  size: 14, color: AppColors.primary),
+            ),
+          ] else
+            weatherAsync.when(
+              data: (_) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.withAlpha(25),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  'LIVE · ${liveWindSpeed.toStringAsFixed(1)} kts',
+                  style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
+                ),
+              ),
+              loading: () => const SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(strokeWidth: 1.5)),
+              error: (_, __) => const Text('offline',
+                  style: TextStyle(fontSize: 9, color: Colors.orange)),
+            ),
+          const SizedBox(width: 8),
+          Text('$recommendedCount rec.',
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+          Expanded(
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 2,
+                thumbShape:
+                    const RoundSliderThumbShape(enabledThumbRadius: 6),
+                activeTrackColor: AppColors.primary,
+                inactiveTrackColor: AppColors.primary.withAlpha(25),
+                thumbColor: AppColors.primary,
+                overlayColor: AppColors.primary.withAlpha(15),
+              ),
+              child: Slider(
+                value: windDir,
+                min: 0,
+                max: 359,
+                divisions: 359,
+                onChanged: onChanged,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _legendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-      ],
-    );
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Wind Group Table — one section per wind direction band
+// Wind Group Block — compact table for one wind band
 // ═══════════════════════════════════════════════════════════════════
 
-class _WindGroupTable extends StatelessWidget {
-  const _WindGroupTable({
+class _WindGroupBlock extends StatelessWidget {
+  const _WindGroupBlock({
     required this.group,
     required this.courses,
     required this.windDir,
@@ -295,87 +321,86 @@ class _WindGroupTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groupColor = _parseHex(group.color);
-    final bgColor = _parseHex(group.bgColor);
+    final gc = _parseHex(group.color);
+    final bg = _parseHex(group.bgColor);
     final sorted = [...courses]
       ..sort((a, b) => a.courseNumber.compareTo(b.courseNumber));
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: groupColor.withAlpha(60)),
+        border: Border.all(color: gc.withAlpha(80), width: 1.5),
+        borderRadius: BorderRadius.circular(6),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Group header
+          // Group header — compact colored bar
           Container(
-            color: bgColor,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: gc,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             child: Row(
               children: [
-                Container(
-                  width: 6,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: groupColor,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        group.label,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: groupColor,
-                        ),
-                      ),
-                      if (group.id != 'INFLATABLE')
-                        Text(
-                          'Wind ${group.windRange[0]}° – ${group.windRange[1]}°',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                    ],
-                  ),
-                ),
                 Text(
-                  '${sorted.length} course${sorted.length == 1 ? '' : 's'}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  group.label.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                  ),
                 ),
+                const Spacer(),
+                if (group.id != 'INFLATABLE')
+                  Text(
+                    '${group.windRange[0]}° – ${group.windRange[1]}°',
+                    style: TextStyle(
+                        color: Colors.white.withAlpha(200),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500),
+                  ),
               ],
             ),
           ),
 
-          // Table header
+          // Column headers
           Container(
-            color: Colors.grey.shade100,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: const Row(
+            color: bg,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            child: Row(
               children: [
-                SizedBox(width: 48, child: Text('#', style: _headerStyle)),
-                Expanded(flex: 3, child: Text('Course', style: _headerStyle)),
-                SizedBox(
-                    width: 60,
-                    child: Text('Dist', style: _headerStyle)),
-                Expanded(
-                    flex: 4,
-                    child: Text('Mark Sequence', style: _headerStyle)),
-                SizedBox(
-                    width: 70,
-                    child: Text('Finish', style: _headerStyle)),
-                SizedBox(
-                    width: 80,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Text('Status', style: _headerStyle),
-                    )),
+                const SizedBox(
+                    width: 32,
+                    child: Text('#',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey))),
+                const Expanded(
+                    flex: 5,
+                    child: Text('MARKS',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey))),
+                const SizedBox(
+                    width: 38,
+                    child: Text('NM',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey))),
+                const SizedBox(
+                    width: 40,
+                    child: Text('FIN',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey))),
+                SizedBox(width: 16), // status dot space
               ],
             ),
           ),
@@ -385,13 +410,11 @@ class _WindGroupTable extends StatelessWidget {
             final i = entry.key;
             final course = entry.value;
             final rec = getCourseRecommendation(course, windDir);
-            final isEven = i % 2 == 0;
-
-            return _CourseRow(
+            return _CompactCourseRow(
               course: course,
               recommendation: rec,
-              groupColor: groupColor,
-              isEven: isEven,
+              groupColor: gc,
+              isEven: i.isEven,
               windDir: windDir,
             );
           }),
@@ -399,20 +422,14 @@ class _WindGroupTable extends StatelessWidget {
       ),
     );
   }
-
-  static const _headerStyle = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w600,
-    color: Colors.grey,
-  );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Course Row — single row in the table
+// Compact Course Row — dense single-line row like a printed sheet
 // ═══════════════════════════════════════════════════════════════════
 
-class _CourseRow extends ConsumerWidget {
-  const _CourseRow({
+class _CompactCourseRow extends ConsumerWidget {
+  const _CompactCourseRow({
     required this.course,
     required this.recommendation,
     required this.groupColor,
@@ -428,116 +445,96 @@ class _CourseRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (badgeColor, badgeBg, badgeText) = switch (recommendation) {
-      'RECOMMENDED' => (
-          Colors.green,
-          Colors.green.withAlpha(25),
-          'RECOMMENDED'
-        ),
-      'POSSIBLE' => (Colors.orange, Colors.orange.withAlpha(25), 'POSSIBLE'),
-      'AVAILABLE' => (Colors.blue, Colors.blue.withAlpha(25), 'AVAILABLE'),
-      _ => (Colors.grey.shade400, Colors.grey.withAlpha(10), ''),
-    };
+    final isRec = recommendation == 'RECOMMENDED';
+    final isPoss = recommendation == 'POSSIBLE';
+    final dotColor = isRec
+        ? Colors.green
+        : isPoss
+            ? Colors.orange
+            : Colors.transparent;
+
+    // Highlight row background for recommended courses
+    Color rowBg;
+    if (isRec) {
+      rowBg = Colors.green.withAlpha(12);
+    } else if (isPoss) {
+      rowBg = Colors.orange.withAlpha(8);
+    } else {
+      rowBg = isEven ? Colors.white : Colors.grey.shade50;
+    }
 
     return Material(
-      color: isEven ? Colors.white : Colors.grey.shade50,
+      color: rowBg,
       child: InkWell(
         onTap: () => _showCourseDetail(context, ref),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(
             children: [
-              // Course number badge
+              // Course number
               SizedBox(
-                width: 48,
-                child: CircleAvatar(
-                  backgroundColor: groupColor,
-                  radius: 15,
-                  child: Text(
-                    course.courseNumber,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
+                width: 32,
+                child: Text(
+                  course.courseNumber,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    color: groupColor,
                   ),
                 ),
               ),
-              // Course name
+              // Mark sequence — the main content
               Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(course.courseName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13)),
-                    if (course.requiresInflatable)
-                      Text(
-                        'Inflatable: ${course.inflatableType ?? "required"}',
-                        style: TextStyle(
-                            fontSize: 10, color: Colors.purple.shade400),
-                      ),
-                  ],
-                ),
-              ),
-              // Distance
-              SizedBox(
-                width: 60,
-                child: Text(
-                  course.distanceNm > 0
-                      ? '${course.distanceNm} nm'
-                      : 'Var',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-              // Mark sequence
-              Expanded(
-                flex: 4,
+                flex: 5,
                 child: Text(
                   course.markSequenceDisplay,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade700,
-                    letterSpacing: 0.3,
+                    fontFamily: 'monospace',
+                    color: Colors.grey.shade800,
+                    height: 1.2,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Distance
+              SizedBox(
+                width: 38,
+                child: Text(
+                  course.distanceNm > 0
+                      ? course.distanceNm.toString()
+                      : '—',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11),
                 ),
               ),
               // Finish
               SizedBox(
-                width: 70,
+                width: 40,
                 child: Text(
-                  course.finishLocation == 'X' ? 'Mark X' : course.finishLocation,
-                  style: const TextStyle(fontSize: 12),
+                  course.finishLocation == 'committee_boat'
+                      ? 'CB'
+                      : course.finishLocation == 'X'
+                          ? 'X'
+                          : course.finishLocation,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11),
                 ),
               ),
-              // Recommendation badge
+              // Recommendation dot
               SizedBox(
-                width: 80,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: badgeText.isNotEmpty
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: badgeBg,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: badgeColor.withAlpha(60)),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: badgeColor,
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
+                width: 16,
+                child: dotColor != Colors.transparent
+                    ? Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -553,7 +550,7 @@ class _CourseRow extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (_) => _CourseDetailDialog(
+      builder: (dialogContext) => _CourseDetailDialog(
         course: course,
         marks: marks,
         distances: distances,
