@@ -130,6 +130,12 @@ service cloud.firestore {
     match /weather/{docId} {
       allow read: if isAuthenticated();
       allow write: if false;
+
+      // Station observations subcollection (weather/stations/observations/*)
+      match /observations/{stationId} {
+        allow read: if isAuthenticated();
+        allow write: if false;
+      }
     }
 
     // ── Weather Logs (manual entries) ──
