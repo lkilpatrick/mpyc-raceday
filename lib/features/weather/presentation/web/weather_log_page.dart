@@ -266,7 +266,7 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
                   isSelected: isSelected,
                   label: w.stationType == 'coops'
                       ? (w.waterTempF != null ? 'Water ${w.waterTempF!.toStringAsFixed(0)}°F' : '—')
-                      : '${speed.toStringAsFixed(1)} $unitLabel ${w.windDirectionLabel}',
+                      : '${speed.toStringAsFixed(1)} $unitLabel ${w.windDirectionLabel} ${w.dirDeg}°',
                 ),
               ),
             );
@@ -904,9 +904,10 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
                   children: [
                     Text('${speed.toStringAsFixed(1)} $unitLabel',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    if (gust != null)
-                      Text('G ${gust.toStringAsFixed(1)}',
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                    Text(
+                      '${w.windDirectionLabel} ${w.dirDeg}°${gust != null ? ' · G ${gust.toStringAsFixed(1)}' : ''}',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                    ),
                   ],
                 ),
               ],

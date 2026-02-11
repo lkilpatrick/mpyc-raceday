@@ -27,6 +27,7 @@ import 'package:mpyc_raceday/features/crew_assignment/presentation/web/crew_avai
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/event_management_page.dart';
 import 'package:mpyc_raceday/features/crew_assignment/presentation/web/season_calendar_page.dart';
 import 'package:mpyc_raceday/features/courses/presentation/web/course_configuration_page.dart';
+import 'package:mpyc_raceday/features/courses/presentation/web/course_sheet_page.dart';
 import 'package:mpyc_raceday/features/courses/presentation/web/fleet_broadcast_history_page.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 import 'package:mpyc_raceday/web/layouts/web_scaffold.dart';
@@ -142,6 +143,7 @@ class _WebShellState extends ConsumerState<WebShell> {
       case '/situation-advisor':
         return const SituationAdvisorPage();
       case '/courses':
+        return const CourseSheetPage();
       case '/course-config':
         return const CourseConfigurationPage();
       case '/fleet-broadcasts':
