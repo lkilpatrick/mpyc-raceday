@@ -4328,6 +4328,31 @@ async function doWeatherFetch() {
     }
   }));
 
+  // Fallback: if the primary station (Ambient) failed, mirror the best
+  // available wind station to the primary doc so the dashboard stays fresh.
+  const primarySnap = await primaryDocRef.get();
+  const primaryAge = primarySnap.exists
+    ? Date.now() - (primarySnap.data()?.fetchedAt?.toMillis?.() || 0)
+    : Infinity;
+  if (primaryAge > 90000) {
+    // Primary doc is >90s old — ambient likely failed, find fallback
+    const fallbackOrder = ["KMRY", "KOAR", ...WU_STATIONS.map((s) => s.id)];
+    for (const sid of fallbackOrder) {
+      try {
+        const snap = await db.doc(`weather/stations/observations/${sid}`).get();
+        if (snap.exists && !snap.data()?.error) {
+          const d = snap.data();
+          const age = Date.now() - (d?.fetchedAt?.toMillis?.() || 0);
+          if (age < 120000) {
+            await primaryDocRef.set(d, { merge: true });
+            logger.info(`Primary doc fallback from ${sid}`);
+            break;
+          }
+        }
+      } catch (_) { /* skip */ }
+    }
+  }
+
   // Update stations metadata
   const allStations = [...AMBIENT_STATIONS, ...NWS_STATIONS, ...COOPS_STATIONS, ...WU_STATIONS];
   await db.doc("weather/stations").set({
