@@ -3889,6 +3889,7 @@ const NOAA_BASE_URL = "https://api.weather.gov";
 const NOAA_USER_AGENT = "MPYCRaceDay/1.0 (contact@mpyc.org)";
 const COOPS_BASE_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
 const WU_API_BASE = "https://api.weather.com/v2/pws/observations/current";
+const WU_PUBLIC_KEY = "6532d6454b8aa370768e63d6ba5a832e";
 const WEATHER_DOC_PATH = "weather/mpyc_station";
 const MS_TO_KTS = 1.94384;
 const MIN_FETCH_INTERVAL_MS = 30000;
@@ -4067,9 +4068,10 @@ function normalizeCoops({ data, cfg }) {
 
 // ── Weather Underground PWS fetch ────────────────────────────────
 
-async function fetchWuStation(stationId, apiKey) {
-  const url = `${WU_API_BASE}?stationId=${stationId}&format=json&units=e&apiKey=${apiKey}`;
-  const resp = await fetch(url);
+async function fetchWuStation(stationId) {
+  const url = `${WU_API_BASE}?stationId=${stationId}&format=json&units=e&apiKey=${WU_PUBLIC_KEY}`;
+  const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (resp.status === 204) throw new Error(`Station ${stationId} offline (no recent data)`);
   if (!resp.ok) throw new Error(`WU API ${resp.status} for ${stationId}`);
   const data = await resp.json();
   const obs = data?.observations?.[0];
@@ -4141,12 +4143,7 @@ async function doWeatherFetch() {
     }
   }
 
-  // Check for WU API key in config
-  let wuApiKey = null;
-  try {
-    const configDoc = await db.doc("weather/config").get();
-    wuApiKey = configDoc.data()?.wuApiKey || null;
-  } catch (_) { /* no config doc */ }
+  // WU uses public frontend API key — no user config needed
 
   let succeeded = 0;
   let failed = 0;
@@ -4184,39 +4181,41 @@ async function doWeatherFetch() {
     }
   }));
 
-  // 3) Weather Underground PWS (requires API key)
-  if (wuApiKey) {
-    await Promise.allSettled(WU_STATIONS.map(async (cfg) => {
-      try {
-        const obs = await fetchWuStation(cfg.id, wuApiKey);
-        const normalized = normalizeWu({ obs, cfg });
-        await writeStationDoc(cfg, normalized, primaryDocRef);
-        logger.info(`WU ${cfg.id}: ${normalized.speedKts} kts ${normalized.dirDeg}°`);
-        succeeded++;
-      } catch (e) {
+  // 3) Weather Underground PWS (public frontend key)
+  let wuOffline = 0;
+  await Promise.allSettled(WU_STATIONS.map(async (cfg) => {
+    try {
+      const obs = await fetchWuStation(cfg.id);
+      const normalized = normalizeWu({ obs, cfg });
+      await writeStationDoc(cfg, normalized, primaryDocRef);
+      logger.info(`WU ${cfg.id}: ${normalized.speedKts} kts ${normalized.dirDeg}°`);
+      succeeded++;
+    } catch (e) {
+      if (e.message.includes("offline")) {
+        logger.info(`WU ${cfg.id}: offline`);
+        wuOffline++;
+      } else {
         logger.warn(`WU ${cfg.id} failed: ${e.message}`);
-        await writeStationError(cfg);
-        failed++;
       }
-    }));
-  } else {
-    logger.info("WU stations skipped — no API key in weather/config.wuApiKey");
-  }
+      await writeStationError(cfg);
+      failed++;
+    }
+  }));
 
   // Update stations metadata
-  const allStations = [...NWS_STATIONS, ...COOPS_STATIONS, ...(wuApiKey ? WU_STATIONS : [])];
+  const allStations = [...NWS_STATIONS, ...COOPS_STATIONS, ...WU_STATIONS];
   await db.doc("weather/stations").set({
     stationIds: allStations.map((s) => s.id),
     stations: allStations.map((s) => ({
       id: s.id, name: s.name, lat: s.lat, lon: s.lon,
       distanceMi: s.distanceMi, isPrimary: s.isPrimary || false, type: s.type,
     })),
-    wuEnabled: !!wuApiKey,
+    wuEnabled: true,
     lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
-  logger.info(`Weather fetch complete: ${succeeded} ok, ${failed} failed, WU=${!!wuApiKey}`);
-  return { skipped: false, stationsUpdated: succeeded, stationsFailed: failed, wuEnabled: !!wuApiKey };
+  logger.info(`Weather fetch complete: ${succeeded} ok, ${failed} failed (${wuOffline} WU offline)`);
+  return { skipped: false, stationsUpdated: succeeded, stationsFailed: failed, wuOffline };
 }
 
 // Scheduled: runs every 1 minute
