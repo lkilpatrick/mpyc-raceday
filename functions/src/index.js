@@ -3882,7 +3882,7 @@ exports.syncClubspotLineItems = onCall(async (request) => {
 
 // ══════════════════════════════════════════════════════════════════
 // Multi-Source Weather Scraper
-// Sources: NOAA NWS, NOAA CO-OPS, Weather Underground PWS
+// Sources: AmbientWeather (primary), NOAA NWS, NOAA CO-OPS, Weather Underground PWS
 // ══════════════════════════════════════════════════════════════════
 
 const NOAA_BASE_URL = "https://api.weather.gov";
@@ -3894,6 +3894,9 @@ const WEATHER_DOC_PATH = "weather/mpyc_station";
 const MS_TO_KTS = 1.94384;
 const MIN_FETCH_INTERVAL_MS = 30000;
 
+const AMBIENT_API_BASE = "https://rt.ambientweather.net/v1";
+const AMBIENT_DASHBOARD_ID = "c9abd46f417ec863a55314fa860ddec2";
+
 const noaaHeaders = {
   "User-Agent": NOAA_USER_AGENT,
   "Accept": "application/geo+json",
@@ -3901,11 +3904,21 @@ const noaaHeaders = {
 
 // ── Station definitions ──────────────────────────────────────────
 
+// AmbientWeather — MPYC's own station (highest priority)
+const AMBIENT_STATIONS = [
+  {
+    id: "MPYC_AMBIENT", name: "MPYC Weather Station",
+    lat: 36.6021, lon: -121.8900, distanceMi: 0.0,
+    isPrimary: true, type: "ambient",
+    dashboardId: AMBIENT_DASHBOARD_ID,
+  },
+];
+
 const NWS_STATIONS = [
   {
     id: "KMRY", name: "Monterey Regional Airport",
     lat: 36.59047, lon: -121.84875, distanceMi: 2.7,
-    isPrimary: true, type: "nws",
+    isPrimary: false, type: "nws",
   },
   {
     id: "KOAR", name: "Marina Municipal / Fort Ord",
@@ -4066,6 +4079,104 @@ function normalizeCoops({ data, cfg }) {
   };
 }
 
+// ── AmbientWeather fetch (public dashboard scrape) ──────────────
+
+async function fetchAmbientDashboard(dashboardId) {
+  // The public dashboard tiles page embeds device data in the page.
+  // We fetch the dashboard API endpoint that returns JSON device data.
+  const url = `https://ambientweather.net/dashboard/${dashboardId}/tiles`;
+  const resp = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  });
+  if (!resp.ok) throw new Error(`AmbientWeather dashboard ${resp.status}`);
+  const htmlText = await resp.text();
+
+  // Extract device data from the page — look for JSON in script tags or data attributes
+  // The dashboard page embeds lastData in a script block
+  const dataMatch = htmlText.match(/"lastData"\s*:\s*(\{[^}]+\})/s)
+    || htmlText.match(/lastData["']?\s*[:=]\s*(\{[^}]+\})/s);
+
+  if (dataMatch) {
+    try {
+      return JSON.parse(dataMatch[1]);
+    } catch (_) { /* fall through to regex extraction */ }
+  }
+
+  // Fallback: extract individual values from the HTML tiles
+  const extract = (pattern) => {
+    const m = htmlText.match(pattern);
+    return m ? parseFloat(m[1]) : null;
+  };
+
+  const windSpeed = extract(/windspeedmph["']?\s*[:=]\s*([\d.]+)/i)
+    || extract(/([\d.]+)\s*<[^>]*>\s*mph/i);
+  const windGust = extract(/windgustmph["']?\s*[:=]\s*([\d.]+)/i);
+  const windDir = extract(/winddir["']?\s*[:=]\s*([\d.]+)/i);
+  const tempF = extract(/tempf["']?\s*[:=]\s*([\d.]+)/i)
+    || extract(/([\d.]+)\s*°/i);
+  const humidity = extract(/humidity["']?\s*[:=]\s*([\d.]+)/i);
+  const pressure = extract(/baromrel["']?\s*[:=]\s*([\d.]+)/i)
+    || extract(/([\d.]+)\s*inHg/i);
+
+  if (windSpeed === null && tempF === null) {
+    throw new Error("Could not extract AmbientWeather data from dashboard");
+  }
+
+  return {
+    windspeedmph: windSpeed,
+    windgustmph: windGust,
+    winddir: windDir,
+    tempf: tempF,
+    humidity: humidity,
+    baromrelin: pressure,
+    dateutc: Date.now(),
+  };
+}
+
+function normalizeAmbient({ data, cfg }) {
+  const speedMph = data.windspeedmph ?? 0;
+  const gustMph = data.windgustmph ?? null;
+  const speedKts = Math.round(speedMph / 1.15078 * 100) / 100;
+  const gustKts = gustMph !== null ? Math.round(gustMph / 1.15078 * 100) / 100 : null;
+  const dirDeg = data.winddir ?? 0;
+  const tempF = data.tempf ?? null;
+  const humidity = data.humidity ?? null;
+  const pressureInHg = data.baromrelin ?? data.baromabsin ?? null;
+  const dewPoint = data.dewPoint ?? null;
+  const feelsLike = data.feelsLike ?? null;
+
+  let observedAt = admin.firestore.Timestamp.now();
+  if (data.dateutc) {
+    const dt = new Date(data.dateutc);
+    if (!isNaN(dt.getTime())) observedAt = admin.firestore.Timestamp.fromDate(dt);
+  }
+
+  return {
+    stationId: cfg.id, dirDeg: Math.round(dirDeg),
+    speedMph, speedKts, gustMph, gustKts, tempF,
+    humidity: humidity !== null ? Math.round(humidity) : null,
+    pressureInHg, waterTempF: null,
+    dewPoint, feelsLike,
+    dailyRainIn: data.dailyrainin ?? null,
+    hourlyRainIn: data.hourlyrainin ?? null,
+    solarRadiation: data.solarradiation ?? null,
+    uvIndex: data.uv ?? null,
+    textDescription: `MPYC Station — ${speedMph} mph ${_dirLabel(dirDeg)}`,
+    observedAt, fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+    source: "ambient", stationType: "ambient",
+    station: { name: cfg.name, id: cfg.id, lat: cfg.lat, lon: cfg.lon, distanceMi: cfg.distanceMi, isPrimary: cfg.isPrimary || false, type: cfg.type },
+    error: null,
+  };
+}
+
+function _dirLabel(deg) {
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round((deg % 360) / 22.5) % 16] || "";
+}
+
 // ── Weather Underground PWS fetch ────────────────────────────────
 
 async function fetchWuStation(stationId) {
@@ -4148,6 +4259,21 @@ async function doWeatherFetch() {
   let succeeded = 0;
   let failed = 0;
 
+  // 0) AmbientWeather — MPYC's own station (highest priority, fetched first)
+  await Promise.allSettled(AMBIENT_STATIONS.map(async (cfg) => {
+    try {
+      const data = await fetchAmbientDashboard(cfg.dashboardId);
+      const normalized = normalizeAmbient({ data, cfg });
+      await writeStationDoc(cfg, normalized, primaryDocRef);
+      logger.info(`Ambient ${cfg.id}: ${normalized.speedKts} kts ${normalized.dirDeg}° ${normalized.tempF}°F`);
+      succeeded++;
+    } catch (e) {
+      logger.warn(`Ambient ${cfg.id} failed: ${e.message}`);
+      await writeStationError(cfg);
+      failed++;
+    }
+  }));
+
   // 1) NWS stations (free, no key)
   await Promise.allSettled(NWS_STATIONS.map(async (cfg) => {
     try {
@@ -4203,7 +4329,7 @@ async function doWeatherFetch() {
   }));
 
   // Update stations metadata
-  const allStations = [...NWS_STATIONS, ...COOPS_STATIONS, ...WU_STATIONS];
+  const allStations = [...AMBIENT_STATIONS, ...NWS_STATIONS, ...COOPS_STATIONS, ...WU_STATIONS];
   await db.doc("weather/stations").set({
     stationIds: allStations.map((s) => s.id),
     stations: allStations.map((s) => ({

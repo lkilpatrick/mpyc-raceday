@@ -1,4 +1,6 @@
+import 'dart:html' as html; // ignore: avoid_web_libraries_in_flutter
 import 'dart:math' as math;
+import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,24 @@ import '../../../crew_assignment/domain/crew_assignment_repository.dart';
 import '../../../crew_assignment/presentation/crew_assignment_providers.dart';
 import '../../../weather/data/models/live_weather.dart';
 import '../../../weather/presentation/live_weather_providers.dart';
+
+/// Register the Windy.app forecast widget iframe as a platform view.
+bool _windyViewRegistered = false;
+void _ensureWindyViewRegistered() {
+  if (_windyViewRegistered) return;
+  _windyViewRegistered = true;
+  ui_web.platformViewRegistry.registerViewFactory(
+    'windy-forecast-widget',
+    (int viewId) {
+      final iframe = html.IFrameElement()
+        ..src = 'windy_widget.html'
+        ..style.border = 'none'
+        ..style.width = '100%'
+        ..style.height = '100%';
+      return iframe;
+    },
+  );
+}
 
 class AdminDashboardPage extends ConsumerWidget {
   const AdminDashboardPage({super.key});
@@ -116,6 +136,11 @@ class AdminDashboardPage extends ConsumerWidget {
                   .toList(),
             );
           }),
+
+          const SizedBox(height: 24),
+
+          // ── Wind Forecast Widget ──
+          const _WindyForecastCard(),
 
           const SizedBox(height: 32),
 
@@ -331,6 +356,7 @@ class _WeatherCard extends StatelessWidget {
 
   Widget _stationRow(LiveWeather s) {
     final typeColor = switch (s.stationType) {
+      'ambient' => Colors.greenAccent.shade100,
       'coops' => Colors.tealAccent.shade100,
       'wunderground' => Colors.orange.shade200,
       _ => Colors.lightBlue.shade200,
@@ -376,6 +402,62 @@ class _WeatherCard extends StatelessWidget {
             Text('${s.tempF!.round()}°F',
                 style: const TextStyle(color: Colors.white60, fontSize: 11)),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Windy.app Forecast Widget (embedded iframe)
+// ═══════════════════════════════════════════════════════════════════
+
+class _WindyForecastCard extends StatefulWidget {
+  const _WindyForecastCard();
+
+  @override
+  State<_WindyForecastCard> createState() => _WindyForecastCardState();
+}
+
+class _WindyForecastCardState extends State<_WindyForecastCard> {
+  @override
+  void initState() {
+    super.initState();
+    _ensureWindyViewRegistered();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              children: [
+                Icon(Icons.air, color: Colors.blue.shade400, size: 18),
+                const SizedBox(width: 8),
+                Text('WIND FORECAST — MPYC',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    )),
+                const Spacer(),
+                Text('Powered by Windy.app',
+                    style: TextStyle(
+                        fontSize: 10, color: Colors.grey.shade400)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 420,
+            child: HtmlElementView(viewType: 'windy-forecast-widget'),
+          ),
         ],
       ),
     );
