@@ -63,7 +63,7 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
               child: Text(
-                'Live data from NOAA NWS, CO-OPS, and Weather Underground stations near Monterey Harbor',
+                'Live data from MPYC AmbientWeather, NOAA NWS, CO-OPS, and Weather Underground stations near Monterey Harbor',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ),
@@ -437,12 +437,13 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
     WindSpeedUnit unit,
   ) {
     // Group stations by type
+    final ambient = stations.where((s) => s.stationType == 'ambient').toList();
     final nws = stations.where((s) => s.stationType == 'nws').toList();
     final coops = stations.where((s) => s.stationType == 'coops').toList();
     final wu = stations.where((s) => s.stationType == 'wunderground').toList();
-    // Anything without a type goes into NWS (legacy data)
+    // Anything without a known type goes into NWS (legacy data)
     final untyped = stations.where((s) =>
-        s.stationType != 'nws' && s.stationType != 'coops' && s.stationType != 'wunderground').toList();
+        s.stationType != 'ambient' && s.stationType != 'nws' && s.stationType != 'coops' && s.stationType != 'wunderground').toList();
     final nwsAll = [...nws, ...untyped];
 
     return Column(
@@ -466,10 +467,18 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Live data from NOAA NWS, CO-OPS, and Weather Underground stations within ~10 miles of Monterey Harbor',
+          'Live data from MPYC AmbientWeather, NOAA NWS, CO-OPS, and Weather Underground stations within ~10 miles of Monterey Harbor',
           style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 20),
+
+        // MPYC AmbientWeather station
+        if (ambient.isNotEmpty) ...[          _groupHeader(context, 'MPYC Weather Station', Icons.location_on, Colors.green.shade700,
+              'Club\'s own AmbientWeather station'),
+          const SizedBox(height: 8),
+          _stationGrid(context, ambient, unit),
+          const SizedBox(height: 24),
+        ],
 
         // NWS / AWOS stations
         if (nwsAll.isNotEmpty) ...[
@@ -716,6 +725,8 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
 
   static Color _typeColor(String? type) {
     switch (type) {
+      case 'ambient':
+        return Colors.green.shade700;
       case 'nws':
         return Colors.blue.shade700;
       case 'coops':
@@ -729,6 +740,8 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
 
   static String _typeLabel(String? type) {
     switch (type) {
+      case 'ambient':
+        return 'MPYC';
       case 'nws':
         return 'NWS';
       case 'coops':
@@ -786,11 +799,12 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
     List<LiveWeather> stations,
     WindSpeedUnit unit,
   ) {
+    final ambient = stations.where((s) => s.stationType == 'ambient').toList();
     final nws = stations.where((s) => s.stationType == 'nws').toList();
     final coops = stations.where((s) => s.stationType == 'coops').toList();
     final wu = stations.where((s) => s.stationType == 'wunderground').toList();
     final untyped = stations.where((s) =>
-        s.stationType != 'nws' && s.stationType != 'coops' && s.stationType != 'wunderground').toList();
+        s.stationType != 'ambient' && s.stationType != 'nws' && s.stationType != 'coops' && s.stationType != 'wunderground').toList();
     final nwsAll = [...nws, ...untyped];
 
     return Column(
@@ -813,6 +827,11 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
         ),
         const SizedBox(height: 12),
 
+        if (ambient.isNotEmpty) ...[          _groupHeader(context, 'MPYC Weather Station', Icons.location_on, Colors.green.shade700, ''),
+          const SizedBox(height: 4),
+          ...ambient.map((w) => _compactStationTile(context, w, unit)),
+          const SizedBox(height: 12),
+        ],
         if (nwsAll.isNotEmpty) ...[
           _groupHeader(context, 'NWS / AWOS', Icons.air, Colors.blue.shade700, ''),
           const SizedBox(height: 4),

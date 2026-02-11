@@ -3908,7 +3908,7 @@ const noaaHeaders = {
 const AMBIENT_STATIONS = [
   {
     id: "MPYC_AMBIENT", name: "MPYC Weather Station",
-    lat: 36.6021, lon: -121.8900, distanceMi: 0.0,
+    lat: 36.602151, lon: -121.889857, distanceMi: 0.0,
     isPrimary: true, type: "ambient",
     dashboardId: AMBIENT_DASHBOARD_ID,
   },
