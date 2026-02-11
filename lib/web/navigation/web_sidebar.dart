@@ -79,12 +79,6 @@ const List<WebNavItem> webNavItems = [
     requiredRoles: [MemberRole.webAdmin, MemberRole.rcChair],
   ),
   WebNavItem(
-    label: 'Fleet & Boats',
-    route: '/fleet-management',
-    icon: Icons.sailing,
-    requiredRoles: [MemberRole.webAdmin, MemberRole.rcChair],
-  ),
-  WebNavItem(
     label: 'Current Weather',
     route: '/weather-logs',
     icon: Icons.cloud,
@@ -116,6 +110,12 @@ const List<WebNavItem> webNavItems = [
     icon: Icons.badge,
     requiredRoles: [MemberRole.webAdmin],
     section: 'Administration',
+  ),
+  WebNavItem(
+    label: 'Fleet & Boats',
+    route: '/fleet-management',
+    icon: Icons.sailing,
+    requiredRoles: [MemberRole.webAdmin],
   ),
   WebNavItem(
     label: 'Sync Dashboard',
