@@ -16,6 +16,8 @@ class LiveWeather {
     required this.source,
     required this.station,
     this.stationId,
+    this.stationType,
+    this.waterTempF,
     this.error,
   });
 
@@ -33,6 +35,8 @@ class LiveWeather {
   final String source;
   final StationInfo station;
   final String? stationId;
+  final String? stationType;
+  final double? waterTempF;
   final String? error;
 
   factory LiveWeather.fromFirestore(Map<String, dynamic> data) {
@@ -52,6 +56,8 @@ class LiveWeather {
       source: data['source'] as String? ?? 'unknown',
       station: StationInfo.fromMap(stationData),
       stationId: data['stationId'] as String?,
+      stationType: data['stationType'] as String?,
+      waterTempF: (data['waterTempF'] as num?)?.toDouble(),
       error: data['error'] as String?,
     );
   }
@@ -78,6 +84,7 @@ class StationInfo {
     this.id,
     this.distanceMi = 0,
     this.isPrimary = false,
+    this.type,
   });
 
   final String name;
@@ -86,6 +93,7 @@ class StationInfo {
   final String? id;
   final double distanceMi;
   final bool isPrimary;
+  final String? type;
 
   factory StationInfo.fromMap(Map<String, dynamic> data) {
     return StationInfo(
@@ -95,6 +103,7 @@ class StationInfo {
       id: data['id'] as String?,
       distanceMi: (data['distanceMi'] as num?)?.toDouble() ?? 0,
       isPrimary: data['isPrimary'] as bool? ?? false,
+      type: data['type'] as String?,
     );
   }
 }

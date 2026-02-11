@@ -3881,73 +3881,111 @@ exports.syncClubspotLineItems = onCall(async (request) => {
 
 
 // ══════════════════════════════════════════════════════════════════
-// NOAA Weather — Live Wind Data (free, no API key required)
+// Multi-Source Weather Scraper
+// Sources: NOAA NWS, NOAA CO-OPS, Weather Underground PWS
 // ══════════════════════════════════════════════════════════════════
 
 const NOAA_BASE_URL = "https://api.weather.gov";
 const NOAA_USER_AGENT = "MPYCRaceDay/1.0 (contact@mpyc.org)";
+const COOPS_BASE_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
+const WU_API_BASE = "https://api.weather.com/v2/pws/observations/current";
 const WEATHER_DOC_PATH = "weather/mpyc_station";
 const MS_TO_KTS = 1.94384;
-const MIN_FETCH_INTERVAL_MS = 30000; // 30 seconds rate limit
+const MIN_FETCH_INTERVAL_MS = 30000;
 
 const noaaHeaders = {
   "User-Agent": NOAA_USER_AGENT,
   "Accept": "application/geo+json",
 };
 
-// NOAA NWS stations near Old Fisherman's Wharf, Monterey (36.6033, -121.8947)
-const WEATHER_STATIONS = [
+// ── Station definitions ──────────────────────────────────────────
+
+const NWS_STATIONS = [
   {
-    id: "KMRY",
-    name: "Monterey Regional Airport",
-    lat: 36.59047,
-    lon: -121.84875,
-    distanceMi: 2.2,
-    isPrimary: true,
+    id: "KMRY", name: "Monterey Regional Airport",
+    lat: 36.59047, lon: -121.84875, distanceMi: 2.7,
+    isPrimary: true, type: "nws",
   },
   {
-    id: "CQ076",
-    name: "Carmel Valley",
-    lat: 36.48194,
-    lon: -121.73333,
-    distanceMi: 12.0,
-    isPrimary: false,
-  },
-  {
-    id: "KSNS",
-    name: "Salinas Municipal Airport",
-    lat: 36.66361,
-    lon: -121.60806,
-    distanceMi: 15.8,
-    isPrimary: false,
+    id: "KOAR", name: "Marina Municipal / Fort Ord",
+    lat: 36.68, lon: -121.77, distanceMi: 8.8,
+    isPrimary: false, type: "nws",
   },
 ];
 
-async function fetchStationObservation(stationId) {
+const COOPS_STATIONS = [
+  {
+    id: "9413450", name: "Monterey Harbor (NOAA Tide)",
+    lat: 36.60889, lon: -121.89139, distanceMi: 0.0,
+    isPrimary: false, type: "coops",
+  },
+];
+
+const WU_STATIONS = [
+  {
+    id: "KCAMONTE115", name: "MPYC",
+    lat: 36.601, lon: -121.891, distanceMi: 0.6,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCAMONTE140", name: "Vorticity / Old Town",
+    lat: 36.600, lon: -121.894, distanceMi: 0.7,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCAPACIF27", name: "Lovers Point",
+    lat: 36.626, lon: -121.916, distanceMi: 1.8,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCASEASI10", name: "Sand City",
+    lat: 36.621, lon: -121.849, distanceMi: 2.4,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCAMONTE4", name: "Monte Vista",
+    lat: 36.588, lon: -121.870, distanceMi: 2.2,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCAPACIF126", name: "Asilomar / Pacific Grove",
+    lat: 36.622, lon: -121.937, distanceMi: 2.8,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCASEASI29", name: "Seaside High School",
+    lat: 36.624, lon: -121.847, distanceMi: 3.0,
+    isPrimary: false, type: "wunderground",
+  },
+  {
+    id: "KCACARME151", name: "Hudson Meadow / Pt. Lobos",
+    lat: 36.522, lon: -121.945, distanceMi: 6.5,
+    isPrimary: false, type: "wunderground",
+  },
+];
+
+// ── NWS fetch + normalize ────────────────────────────────────────
+
+async function fetchNwsObservation(stationId) {
   const obsUrl = `${NOAA_BASE_URL}/stations/${stationId}/observations/latest`;
-  const obsResp = await fetch(obsUrl, { headers: noaaHeaders });
-  if (!obsResp.ok) {
-    throw new Error(`NOAA observation API error ${obsResp.status} for ${stationId}`);
-  }
-  const obsData = await obsResp.json();
-  const obs = obsData?.properties;
-  if (!obs) throw new Error(`No observation properties for ${stationId}`);
+  const resp = await fetch(obsUrl, { headers: noaaHeaders });
+  if (!resp.ok) throw new Error(`NWS API ${resp.status} for ${stationId}`);
+  const data = await resp.json();
+  const obs = data?.properties;
+  if (!obs) throw new Error(`No obs properties for ${stationId}`);
   return obs;
 }
 
 function toMs(valueObj) {
-  // NOAA returns wind with unitCode like "wmoUnit:km_h-1" (km/h) or "wmoUnit:m_s-1" (m/s)
   if (!valueObj || valueObj.value === null || valueObj.value === undefined) return null;
   const val = valueObj.value;
   const unit = (valueObj.unitCode || "").toLowerCase();
   if (unit.includes("km_h") || unit.includes("km/h")) return val / 3.6;
   if (unit.includes("mi_h") || unit.includes("mph")) return val * 0.44704;
-  // Default: assume m/s (wmoUnit:m_s-1)
   return val;
 }
 
-function normalizeNoaaObservation({ obs, stationConfig }) {
-  // NOAA returns SI units but wind can be m/s OR km/h depending on station
+function normalizeNws({ obs, cfg }) {
   const windSpeedMs = toMs(obs.windSpeed) ?? 0;
   const windGustMs = toMs(obs.windGust);
   const dirDeg = obs.windDirection?.value ?? 0;
@@ -3962,142 +4000,223 @@ function normalizeNoaaObservation({ obs, stationConfig }) {
   const tempF = tempC !== null ? Math.round((tempC * 9 / 5 + 32) * 10) / 10 : null;
   const pressureInHg = pressurePa !== null ? Math.round(pressurePa / 100 * 0.02953 * 100) / 100 : null;
 
-  // Parse observation timestamp
   let observedAt = admin.firestore.Timestamp.now();
   if (obs.timestamp) {
     const dt = new Date(obs.timestamp);
-    if (!isNaN(dt.getTime())) {
-      observedAt = admin.firestore.Timestamp.fromDate(dt);
-    }
+    if (!isNaN(dt.getTime())) observedAt = admin.firestore.Timestamp.fromDate(dt);
   }
 
-  // Text description (e.g. "Light Rain", "Partly Cloudy")
-  const textDescription = obs.textDescription || null;
-
   return {
-    stationId: stationConfig.id,
-    dirDeg: Math.round(dirDeg),
-    speedMph,
-    speedKts,
-    gustMph,
-    gustKts,
-    tempF,
+    stationId: cfg.id, dirDeg: Math.round(dirDeg),
+    speedMph, speedKts, gustMph, gustKts, tempF,
     humidity: humidity !== null ? Math.round(humidity) : null,
-    pressureInHg,
-    textDescription,
-    observedAt,
-    fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
-    source: "noaa",
-    station: {
-      name: stationConfig.name,
-      id: stationConfig.id,
-      lat: stationConfig.lat,
-      lon: stationConfig.lon,
-      distanceMi: stationConfig.distanceMi,
-      isPrimary: stationConfig.isPrimary || false,
-    },
+    pressureInHg, waterTempF: null,
+    textDescription: obs.textDescription || null,
+    observedAt, fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+    source: "noaa", stationType: "nws",
+    station: { name: cfg.name, id: cfg.id, lat: cfg.lat, lon: cfg.lon, distanceMi: cfg.distanceMi, isPrimary: cfg.isPrimary || false, type: cfg.type },
     error: null,
   };
 }
 
+// ── CO-OPS fetch (water temp + barometric pressure) ──────────────
+
+async function fetchCoops(stationId) {
+  const products = ["water_temperature", "air_pressure"];
+  const results = {};
+  for (const product of products) {
+    try {
+      const url = `${COOPS_BASE_URL}?date=latest&station=${stationId}&product=${product}&units=english&time_zone=gmt&format=json`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data?.data?.[0]) results[product] = data.data[0];
+      }
+    } catch (_) { /* skip unavailable products */ }
+  }
+  return results;
+}
+
+function normalizeCoops({ data, cfg }) {
+  const waterTemp = data.water_temperature;
+  const pressure = data.air_pressure;
+
+  const waterTempF = waterTemp ? parseFloat(waterTemp.v) : null;
+  const pressureVal = pressure ? parseFloat(pressure.v) : null;
+  // CO-OPS air_pressure in mbar; convert to inHg
+  const pressureInHg = pressureVal !== null ? Math.round(pressureVal * 0.02953 * 100) / 100 : null;
+
+  let observedAt = admin.firestore.Timestamp.now();
+  const ts = waterTemp?.t || pressure?.t;
+  if (ts) {
+    const dt = new Date(ts + "Z");
+    if (!isNaN(dt.getTime())) observedAt = admin.firestore.Timestamp.fromDate(dt);
+  }
+
+  return {
+    stationId: cfg.id, dirDeg: 0,
+    speedMph: 0, speedKts: 0, gustMph: null, gustKts: null,
+    tempF: null, humidity: null, pressureInHg, waterTempF,
+    textDescription: waterTempF !== null ? `Water: ${waterTempF.toFixed(1)}°F` : null,
+    observedAt, fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+    source: "noaa", stationType: "coops",
+    station: { name: cfg.name, id: cfg.id, lat: cfg.lat, lon: cfg.lon, distanceMi: cfg.distanceMi, isPrimary: false, type: cfg.type },
+    error: null,
+  };
+}
+
+// ── Weather Underground PWS fetch ────────────────────────────────
+
+async function fetchWuStation(stationId, apiKey) {
+  const url = `${WU_API_BASE}?stationId=${stationId}&format=json&units=e&apiKey=${apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`WU API ${resp.status} for ${stationId}`);
+  const data = await resp.json();
+  const obs = data?.observations?.[0];
+  if (!obs) throw new Error(`No WU observations for ${stationId}`);
+  return obs;
+}
+
+function normalizeWu({ obs, cfg }) {
+  const imperial = obs.imperial || {};
+  const speedMph = imperial.windSpeed ?? 0;
+  const gustMph = imperial.windGust ?? null;
+  const speedKts = Math.round(speedMph / 1.15078 * 100) / 100;
+  const gustKts = gustMph !== null ? Math.round(gustMph / 1.15078 * 100) / 100 : null;
+  const dirDeg = obs.winddir ?? 0;
+  const tempF = imperial.temp ?? null;
+  const humidity = obs.humidity ?? null;
+  const pressureInHg = imperial.pressure ?? null;
+
+  let observedAt = admin.firestore.Timestamp.now();
+  if (obs.obsTimeUtc) {
+    const dt = new Date(obs.obsTimeUtc);
+    if (!isNaN(dt.getTime())) observedAt = admin.firestore.Timestamp.fromDate(dt);
+  }
+
+  return {
+    stationId: cfg.id, dirDeg: Math.round(dirDeg),
+    speedMph, speedKts, gustMph, gustKts, tempF,
+    humidity: humidity !== null ? Math.round(humidity) : null,
+    pressureInHg, waterTempF: null,
+    textDescription: obs.neighborhood || null,
+    observedAt, fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+    source: "wunderground", stationType: "wunderground",
+    station: { name: cfg.name, id: cfg.id, lat: obs.lat || cfg.lat, lon: obs.lon || cfg.lon, distanceMi: cfg.distanceMi, isPrimary: false, type: cfg.type },
+    error: null,
+  };
+}
+
+// ── Write helper ─────────────────────────────────────────────────
+
+async function writeStationDoc(cfg, normalized, primaryDocRef) {
+  const docRef = db.doc(`weather/stations/observations/${cfg.id}`);
+  await docRef.set(normalized, { merge: true });
+  if (cfg.isPrimary) {
+    await primaryDocRef.set(normalized, { merge: true });
+  }
+}
+
+async function writeStationError(cfg) {
+  const docRef = db.doc(`weather/stations/observations/${cfg.id}`);
+  await docRef.set({
+    stationId: cfg.id,
+    station: { name: cfg.name, id: cfg.id, lat: cfg.lat, lon: cfg.lon, distanceMi: cfg.distanceMi, isPrimary: cfg.isPrimary || false, type: cfg.type },
+    error: "Fetch failed", stationType: cfg.type,
+    fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+// ── Main fetch orchestrator ──────────────────────────────────────
+
 async function doWeatherFetch() {
-  // Rate limit: check last fetch time using primary station doc
   const primaryDocRef = db.doc(WEATHER_DOC_PATH);
   const existing = await primaryDocRef.get();
 
   if (existing.exists) {
     const lastFetched = existing.data()?.fetchedAt?.toMillis?.();
     if (lastFetched && Date.now() - lastFetched < MIN_FETCH_INTERVAL_MS) {
-      logger.info("Weather fetch skipped — too recent", {
-        lastFetched: new Date(lastFetched).toISOString(),
-      });
+      logger.info("Weather fetch skipped — too recent");
       return { skipped: true, data: existing.data() };
     }
   }
 
-  // Fetch all stations in parallel
-  const results = await Promise.allSettled(
-    WEATHER_STATIONS.map(async (stationConfig) => {
-      try {
-        const obs = await fetchStationObservation(stationConfig.id);
-        const normalized = normalizeNoaaObservation({ obs, stationConfig });
+  // Check for WU API key in config
+  let wuApiKey = null;
+  try {
+    const configDoc = await db.doc("weather/config").get();
+    wuApiKey = configDoc.data()?.wuApiKey || null;
+  } catch (_) { /* no config doc */ }
 
-        // Write to station-specific doc
-        const stationDocRef = db.doc(`weather/stations/observations/${stationConfig.id}`);
-        await stationDocRef.set(normalized, { merge: true });
+  let succeeded = 0;
+  let failed = 0;
 
-        // If primary, also write to the legacy mpyc_station doc
-        if (stationConfig.isPrimary) {
-          await primaryDocRef.set(normalized, { merge: true });
-        }
+  // 1) NWS stations (free, no key)
+  await Promise.allSettled(NWS_STATIONS.map(async (cfg) => {
+    try {
+      const obs = await fetchNwsObservation(cfg.id);
+      const normalized = normalizeNws({ obs, cfg });
+      await writeStationDoc(cfg, normalized, primaryDocRef);
+      logger.info(`NWS ${cfg.id}: ${normalized.speedKts} kts ${normalized.dirDeg}°`);
+      succeeded++;
+    } catch (e) {
+      logger.warn(`NWS ${cfg.id} failed: ${e.message}`);
+      await writeStationError(cfg);
+      failed++;
+    }
+  }));
 
-        logger.info(`Weather updated for ${stationConfig.id}`, {
-          speedKts: normalized.speedKts,
-          dirDeg: normalized.dirDeg,
-        });
-        return { station: stationConfig.id, data: normalized };
-      } catch (error) {
-        logger.warn(`Weather fetch failed for ${stationConfig.id}`, {
-          error: error.message,
-        });
-        // Write error to station doc
-        const stationDocRef = db.doc(`weather/stations/observations/${stationConfig.id}`);
-        await stationDocRef.set(
-          {
-            stationId: stationConfig.id,
-            station: {
-              name: stationConfig.name,
-              id: stationConfig.id,
-              lat: stationConfig.lat,
-              lon: stationConfig.lon,
-              distanceMi: stationConfig.distanceMi,
-              isPrimary: stationConfig.isPrimary || false,
-            },
-            error: error.message || "Unknown fetch error",
-            fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        );
-        return { station: stationConfig.id, error: error.message };
+  // 2) CO-OPS stations (free, no key)
+  await Promise.allSettled(COOPS_STATIONS.map(async (cfg) => {
+    try {
+      const data = await fetchCoops(cfg.id);
+      if (!data.water_temperature && !data.air_pressure) {
+        throw new Error("No CO-OPS data available");
       }
-    }),
-  );
+      const normalized = normalizeCoops({ data, cfg });
+      await writeStationDoc(cfg, normalized, primaryDocRef);
+      logger.info(`CO-OPS ${cfg.id}: waterTemp=${normalized.waterTempF}°F`);
+      succeeded++;
+    } catch (e) {
+      logger.warn(`CO-OPS ${cfg.id} failed: ${e.message}`);
+      await writeStationError(cfg);
+      failed++;
+    }
+  }));
 
-  // Update the stations list metadata doc
+  // 3) Weather Underground PWS (requires API key)
+  if (wuApiKey) {
+    await Promise.allSettled(WU_STATIONS.map(async (cfg) => {
+      try {
+        const obs = await fetchWuStation(cfg.id, wuApiKey);
+        const normalized = normalizeWu({ obs, cfg });
+        await writeStationDoc(cfg, normalized, primaryDocRef);
+        logger.info(`WU ${cfg.id}: ${normalized.speedKts} kts ${normalized.dirDeg}°`);
+        succeeded++;
+      } catch (e) {
+        logger.warn(`WU ${cfg.id} failed: ${e.message}`);
+        await writeStationError(cfg);
+        failed++;
+      }
+    }));
+  } else {
+    logger.info("WU stations skipped — no API key in weather/config.wuApiKey");
+  }
+
+  // Update stations metadata
+  const allStations = [...NWS_STATIONS, ...COOPS_STATIONS, ...(wuApiKey ? WU_STATIONS : [])];
   await db.doc("weather/stations").set({
-    stationIds: WEATHER_STATIONS.map((s) => s.id),
-    stations: WEATHER_STATIONS.map((s) => ({
-      id: s.id,
-      name: s.name,
-      lat: s.lat,
-      lon: s.lon,
-      distanceMi: s.distanceMi,
-      isPrimary: s.isPrimary || false,
+    stationIds: allStations.map((s) => s.id),
+    stations: allStations.map((s) => ({
+      id: s.id, name: s.name, lat: s.lat, lon: s.lon,
+      distanceMi: s.distanceMi, isPrimary: s.isPrimary || false, type: s.type,
     })),
+    wuEnabled: !!wuApiKey,
     lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
-  const succeeded = results.filter(
-    (r) => r.status === "fulfilled" && !r.value.error,
-  ).length;
-  const failed = results.length - succeeded;
-  logger.info(`Multi-station weather fetch complete: ${succeeded} ok, ${failed} failed`);
-
-  // If primary station failed, record error on legacy doc
-  const primaryResult = results.find(
-    (r) => r.status === "fulfilled" && r.value.station === WEATHER_STATIONS.find((s) => s.isPrimary)?.id,
-  );
-  if (!primaryResult || primaryResult.value?.error) {
-    await primaryDocRef.set(
-      {
-        error: primaryResult?.value?.error || "Primary station fetch failed",
-        fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-  }
-
-  return { skipped: false, stationsUpdated: succeeded, stationsFailed: failed };
+  logger.info(`Weather fetch complete: ${succeeded} ok, ${failed} failed, WU=${!!wuApiKey}`);
+  return { skipped: false, stationsUpdated: succeeded, stationsFailed: failed, wuEnabled: !!wuApiKey };
 }
 
 // Scheduled: runs every 1 minute
@@ -4106,7 +4225,7 @@ exports.scheduledWeatherFetch = onSchedule(
     schedule: "* * * * *",
     timeZone: "America/Los_Angeles",
     memory: "256MiB",
-    timeoutSeconds: 30,
+    timeoutSeconds: 60,
   },
   async () => {
     const result = await doWeatherFetch();
@@ -4116,21 +4235,17 @@ exports.scheduledWeatherFetch = onSchedule(
 
 // Callable: on-demand refresh (rate-limited server-side)
 exports.refreshWeather = onCall(async (request) => {
-  // Auth optional — allow unauthenticated for public weather display
   const result = await doWeatherFetch();
   if (result.skipped && result.data) {
     const d = result.data;
     return {
-      dirDeg: d.dirDeg,
-      speedMph: d.speedMph,
-      speedKts: d.speedKts,
-      gustMph: d.gustMph,
-      gustKts: d.gustKts,
+      dirDeg: d.dirDeg, speedMph: d.speedMph, speedKts: d.speedKts,
+      gustMph: d.gustMph, gustKts: d.gustKts,
       observedAt: d.observedAt?.toMillis?.() || null,
       fetchedAt: d.fetchedAt?.toMillis?.() || null,
       cached: true,
     };
   }
-  return { refreshed: !result.error, error: result.error || null };
+  return { refreshed: !result.error, error: result.error || null, ...result };
 });
 
