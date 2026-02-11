@@ -47,12 +47,28 @@ class _ChecklistTemplatesPageState
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Center(child: Text('Error: $e')),
-                    data: (templates) => ListView(
+                    data: (templates) {
+                      // Auto-select first template if nothing selected
+                      if (_editing == null && templates.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && _editing == null) {
+                            setState(() => _editing = templates.first);
+                          }
+                        });
+                      }
+                      return ListView(
                       children: templates.map((t) {
                         final isSelected = _editing?.id == t.id;
                         return ListTile(
                           selected: isSelected,
-                          title: Text(t.name),
+                          selectedTileColor: Theme.of(context).colorScheme.primary.withAlpha(20),
+                          selectedColor: Theme.of(context).colorScheme.primary,
+                          title: Text(t.name,
+                            style: isSelected
+                                ? TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.primary)
+                                : null),
                           subtitle: Text(
                             'v${t.version} • ${t.items.length} items',
                           ),
@@ -74,7 +90,8 @@ class _ChecklistTemplatesPageState
                           onTap: () => setState(() => _editing = t),
                         );
                       }).toList(),
-                    ),
+                    );
+                    },
                   ),
                 ),
               ),
