@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../courses/data/models/course_config.dart';
+import '../../../courses/data/models/mark_distance.dart';
 import '../../../courses/presentation/courses_providers.dart';
+import '../../../courses/presentation/widgets/course_map_diagram.dart';
 import '../../../crew_assignment/domain/crew_assignment_repository.dart';
 import '../../../crew_assignment/presentation/crew_assignment_providers.dart';
 import '../../../weather/data/models/live_weather.dart';
@@ -58,9 +60,10 @@ class AdminDashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final weatherAsync = ref.watch(liveWeatherProvider);
+    final stationsAsync = ref.watch(allStationsWeatherProvider);
     final eventsAsync = ref.watch(upcomingEventsProvider);
-    final windDir = weatherAsync.value?.dirDeg.toDouble() ?? 0;
-    final recommendedCourses = ref.watch(recommendedCoursesProvider(windDir));
+    final allCourses = ref.watch(allCoursesProvider);
+    final distancesAsync = ref.watch(markDistancesProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -81,11 +84,14 @@ class AdminDashboardPage extends ConsumerWidget {
           LayoutBuilder(builder: (context, constraints) {
             final wide = constraints.maxWidth > 900;
             final children = <Widget>[
-              _WeatherCard(weather: weatherAsync),
+              _WeatherCard(
+                weather: weatherAsync,
+                stations: stationsAsync,
+              ),
               _NextRaceCard(eventsAsync: eventsAsync),
               _FeaturedCourseCard(
-                courses: recommendedCourses,
-                weather: weatherAsync.value,
+                coursesAsync: allCourses,
+                distancesAsync: distancesAsync,
               ),
             ];
             if (wide) {
@@ -154,38 +160,36 @@ class AdminDashboardPage extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Weather Card
+// Weather Card — primary station + station list
 // ═══════════════════════════════════════════════════════════════════
 
 class _WeatherCard extends StatelessWidget {
-  const _WeatherCard({required this.weather});
+  const _WeatherCard({required this.weather, required this.stations});
   final AsyncValue<LiveWeather?> weather;
+  final AsyncValue<List<LiveWeather>> stations;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF1B3A5C),
-              const Color(0xFF2A5A8C),
-            ],
+            colors: [Color(0xFF1B3A5C), Color(0xFF2A5A8C)],
           ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: weather.when(
             loading: () => const SizedBox(
-              height: 140,
+              height: 180,
               child: Center(
                   child: CircularProgressIndicator(color: Colors.white70)),
             ),
             error: (_, __) => const SizedBox(
-              height: 140,
+              height: 180,
               child: Center(
                   child: Text('Weather unavailable',
                       style: TextStyle(color: Colors.white70))),
@@ -193,15 +197,17 @@ class _WeatherCard extends StatelessWidget {
             data: (w) {
               if (w == null) {
                 return const SizedBox(
-                  height: 140,
+                  height: 180,
                   child: Center(
                       child: Text('No weather data',
                           style: TextStyle(color: Colors.white70))),
                 );
               }
+              final stationList = stations.value ?? [];
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header
                   Row(
                     children: [
                       const Icon(Icons.cloud, color: Colors.white70, size: 16),
@@ -228,13 +234,14 @@ class _WeatherCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
+                  // Primary station — big wind display
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Wind compass
-                      _WindCompass(dirDeg: w.dirDeg, size: 64),
-                      const SizedBox(width: 16),
+                      _WindCompass(dirDeg: w.dirDeg, size: 56),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,75 +249,77 @@ class _WeatherCard extends StatelessWidget {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  '${w.speedKts.round()}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
+                                Text('${w.speedKts.round()}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1,
+                                    )),
+                                const SizedBox(width: 3),
                                 Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.only(bottom: 3),
                                   child: Text('kts',
                                       style: TextStyle(
                                           color: Colors.white70,
-                                          fontSize: 14)),
+                                          fontSize: 13)),
                                 ),
                                 if (w.gustKts != null) ...[
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      'G ${w.gustKts!.round()}',
-                                      style: TextStyle(
-                                        color: Colors.amber.shade300,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                    padding: const EdgeInsets.only(bottom: 3),
+                                    child: Text('G ${w.gustKts!.round()}',
+                                        style: TextStyle(
+                                          color: Colors.amber.shade300,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        )),
                                   ),
                                 ],
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '${w.windDirectionLabel} (${w.dirDeg}°)',
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 13),
-                            ),
+                            Text('${w.windDirectionLabel} (${w.dirDeg}°)',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
                           ],
                         ),
                       ),
+                      // Temp + conditions
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (w.tempF != null)
+                            Text('${w.tempF!.round()}°F',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600)),
+                          if (w.textDescription != null &&
+                              w.textDescription!.isNotEmpty)
+                            Text(w.textDescription!,
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 11)),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Divider(color: Colors.white24, height: 1),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (w.tempF != null)
-                        _weatherStat(Icons.thermostat, '${w.tempF!.round()}°F'),
-                      if (w.humidity != null)
-                        _weatherStat(
-                            Icons.water_drop, '${w.humidity!.round()}%'),
-                      if (w.pressureInHg != null)
-                        _weatherStat(Icons.speed,
-                            '${w.pressureInHg!.toStringAsFixed(2)}" Hg'),
-                      if (w.textDescription != null &&
-                          w.textDescription!.isNotEmpty)
-                        Expanded(
-                          child: Text(
-                            w.textDescription!,
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 11),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
+
+                  // Station list
+                  if (stationList.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    const Divider(color: Colors.white24, height: 1),
+                    const SizedBox(height: 8),
+                    Text('NEARBY STATIONS',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.8,
+                        )),
+                    const SizedBox(height: 6),
+                    ...stationList.take(5).map((s) => _stationRow(s)),
+                  ],
                 ],
               );
             },
@@ -320,16 +329,53 @@ class _WeatherCard extends StatelessWidget {
     );
   }
 
-  Widget _weatherStat(IconData icon, String value) {
+  Widget _stationRow(LiveWeather s) {
+    final typeColor = switch (s.stationType) {
+      'coops' => Colors.tealAccent.shade100,
+      'wunderground' => Colors.orange.shade200,
+      _ => Colors.lightBlue.shade200,
+    };
+    final hasWind = s.speedKts > 0 || s.dirDeg > 0;
     return Padding(
-      padding: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white54, size: 14),
-          const SizedBox(width: 4),
-          Text(value,
-              style: const TextStyle(color: Colors.white, fontSize: 12)),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: s.isStale ? Colors.orange : Colors.greenAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              s.station.name,
+              style: TextStyle(color: typeColor, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (hasWind) ...[
+            Text(
+              '${s.windDirectionLabel} ${s.speedKts.round()} kts',
+              style: const TextStyle(color: Colors.white, fontSize: 11),
+            ),
+            if (s.gustKts != null && s.gustKts! > 0)
+              Text(' G${s.gustKts!.round()}',
+                  style: TextStyle(
+                      color: Colors.amber.shade300,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+          ],
+          if (!hasWind && s.waterTempF != null)
+            Text('Water ${s.waterTempF!.round()}°F',
+                style: TextStyle(color: Colors.cyan.shade200, fontSize: 11)),
+          if (s.tempF != null) ...[
+            const SizedBox(width: 8),
+            Text('${s.tempF!.round()}°F',
+                style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          ],
         ],
       ),
     );
@@ -638,32 +684,61 @@ class _NextRaceCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Featured Course Card
+// Featured Course Card — random course with diagram + turn list
 // ═══════════════════════════════════════════════════════════════════
 
-class _FeaturedCourseCard extends StatelessWidget {
-  const _FeaturedCourseCard({required this.courses, required this.weather});
-  final List<CourseConfig> courses;
-  final LiveWeather? weather;
+class _FeaturedCourseCard extends StatefulWidget {
+  const _FeaturedCourseCard({
+    required this.coursesAsync,
+    required this.distancesAsync,
+  });
+  final AsyncValue<List<CourseConfig>> coursesAsync;
+  final AsyncValue<List<MarkDistance>> distancesAsync;
+
+  @override
+  State<_FeaturedCourseCard> createState() => _FeaturedCourseCardState();
+}
+
+class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
+  CourseConfig? _featured;
+  int? _lastSeed;
+
+  void _pickRandom(List<CourseConfig> courses) {
+    if (courses.isEmpty) return;
+    // Use day-of-year as seed so it changes daily but stays stable per session
+    final seed = DateTime.now().difference(DateTime(2024)).inDays;
+    if (_lastSeed == seed && _featured != null) return;
+    _lastSeed = seed;
+    final rng = math.Random(seed);
+    _featured = courses[rng.nextInt(courses.length)];
+  }
+
+  void _shuffle(List<CourseConfig> courses) {
+    if (courses.isEmpty) return;
+    final rng = math.Random();
+    setState(() {
+      _featured = courses[rng.nextInt(courses.length)];
+      _lastSeed = -1; // force override
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasCourses = courses.isNotEmpty;
-    final featured = hasCourses ? courses.first : null;
+    final courses = widget.coursesAsync.value ?? [];
+    final distances = widget.distancesAsync.value ?? [];
+    _pickRandom(courses);
+    final featured = _featured;
     final wg = featured?.windGroup;
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: BoxDecoration(
-          gradient: hasCourses && wg != null
+          gradient: featured != null && wg != null
               ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    _parseHex(wg.bgColor),
-                    Colors.white,
-                  ],
+                  colors: [_parseHex(wg.bgColor), Colors.white],
                 )
               : null,
         ),
@@ -672,11 +747,12 @@ class _FeaturedCourseCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
                 children: [
-                  Icon(Icons.map, color: Colors.grey.shade500, size: 16),
+                  Icon(Icons.school, color: Colors.grey.shade500, size: 16),
                   const SizedBox(width: 6),
-                  Text('FEATURED COURSE',
+                  Text('LEARN A COURSE',
                       style: TextStyle(
                         color: Colors.grey.shade500,
                         fontSize: 11,
@@ -684,104 +760,98 @@ class _FeaturedCourseCard extends StatelessWidget {
                         letterSpacing: 1,
                       )),
                   const Spacer(),
-                  if (weather != null)
-                    Text(
-                      'Wind ${weather!.windDirectionLabel} @ ${weather!.speedKts.round()} kts',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade500),
+                  if (courses.isNotEmpty)
+                    InkWell(
+                      onTap: () => _shuffle(courses),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.refresh,
+                              size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text('Shuffle',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey.shade500)),
+                        ],
+                      ),
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
-              if (!hasCourses)
-                SizedBox(
-                  height: 100,
-                  child: Center(
-                    child: Text(
-                      weather == null
-                          ? 'Waiting for weather data…'
-                          : 'No recommended courses for current wind',
-                      style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 14),
-                    ),
-                  ),
+              const SizedBox(height: 12),
+
+              if (featured == null)
+                const SizedBox(
+                  height: 140,
+                  child: Center(child: CircularProgressIndicator()),
                 )
               else ...[
+                // Course title + wind group badge
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _parseHex(wg?.color ?? '#666666').withAlpha(25),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                            color: _parseHex(wg?.color ?? '#666666')
-                                .withAlpha(80)),
-                      ),
-                      child: Text(
-                        'RECOMMENDED',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: _parseHex(wg?.color ?? '#666666'),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
+                    Text('Course ${featured.courseNumber}',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
                     if (wg != null)
-                      Text(wg.label,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Course ${featured!.courseNumber}',
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                if (featured.courseName.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(featured.courseName,
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey.shade600)),
-                ],
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(180),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Text(
-                    featured.markSequenceDisplay,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _courseStat('Distance', '${featured.distanceNm} nm'),
-                    const SizedBox(width: 16),
-                    _courseStat('Finish', featured.finishLocation),
-                    const Spacer(),
-                    if (courses.length > 1)
-                      Text(
-                        '+${courses.length - 1} more',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              _parseHex(wg.color).withAlpha(20),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                              color: _parseHex(wg.color).withAlpha(80)),
+                        ),
+                        child: Text(wg.label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: _parseHex(wg.color),
+                            )),
                       ),
                   ],
                 ),
+                if (featured.courseName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(featured.courseName,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600)),
+                  ),
+
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text('${featured.distanceNm} nm',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700)),
+                    const SizedBox(width: 12),
+                    Text('Finish: ${featured.finishLocation}',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600)),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Course diagram
+                if (distances.isNotEmpty)
+                  Center(
+                    child: CourseMapDiagram(
+                      course: featured,
+                      distances: distances,
+                      size: const Size(220, 180),
+                    ),
+                  ),
+
+                const SizedBox(height: 12),
+
+                // Turn-by-turn list
+                ..._buildTurnList(featured),
+
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
@@ -803,17 +873,67 @@ class _FeaturedCourseCard extends StatelessWidget {
     );
   }
 
-  Widget _courseStat(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
-        Text(value,
-            style:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-      ],
-    );
+  List<Widget> _buildTurnList(CourseConfig course) {
+    final marks = course.marks;
+    if (marks.isEmpty) return [];
+
+    final items = <Widget>[];
+    for (int i = 0; i < marks.length; i++) {
+      final m = marks[i];
+      final String label;
+      final String detail;
+      final IconData icon;
+      final Color color;
+
+      if (m.isStart) {
+        label = 'Start';
+        detail = 'Cross the start line';
+        icon = Icons.flag;
+        color = Colors.green;
+      } else if (m.isFinish) {
+        final loc = course.finishLocation;
+        label = 'Finish';
+        detail = loc == 'X' ? 'Finish at Mark X' : 'Finish at committee boat';
+        icon = Icons.sports_score;
+        color = Colors.green;
+      } else {
+        final rounding = m.rounding == MarkRounding.port ? 'port' : 'starboard';
+        label = 'Mark ${m.markName}';
+        detail = 'Leave to $rounding';
+        icon = m.rounding == MarkRounding.port
+            ? Icons.turn_left
+            : Icons.turn_right;
+        color = m.rounding == MarkRounding.port ? Colors.red : Colors.green;
+      }
+
+      items.add(Padding(
+        padding: const EdgeInsets.only(bottom: 3),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: color.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(icon, size: 12, color: color),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 6),
+            Text(detail,
+                style: TextStyle(
+                    fontSize: 11, color: Colors.grey.shade600)),
+          ],
+        ),
+      ));
+    }
+    return items;
   }
 
   static Color _parseHex(String hex) {
