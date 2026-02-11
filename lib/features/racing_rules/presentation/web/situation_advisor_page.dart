@@ -1,6 +1,13 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../incidents/data/models/race_incident.dart';
+import '../../../incidents/data/services/protest_form_generator.dart';
+import '../../../incidents/presentation/incidents_providers.dart';
 import '../../data/racing_rules_service.dart';
 import '../racing_rules_providers.dart';
 
@@ -588,9 +595,38 @@ class _SituationAdvisorPageState extends ConsumerState<SituationAdvisorPage> {
               icon: const Icon(Icons.refresh),
               label: const Text('Start Over'),
             ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: () => _fileProtest(applicableRules),
+              icon: const Icon(Icons.description, size: 18),
+              label: const Text('File Protest with These Rules'),
+            ),
           ],
         ),
       ],
+    );
+  }
+
+  void _fileProtest(List<_RuleResult> rules) {
+    final ruleNumbers = rules.map((r) => r.ruleNumber).toList();
+    final ruleLabels = rules
+        .map((r) => '${r.ruleNumber} – ${r.explanation.split('.').first}')
+        .toList();
+    final explanations = rules.map((r) => r.explanation).toList();
+
+    // Navigate to incidents page with pre-filled data via query params
+    // We encode the situation advisor data and pass it
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _AdvisorProtestBridge(
+          encounterType: _encounterLabel(),
+          details: _subAnswerLabel(),
+          ruleNumbers: ruleNumbers,
+          ruleLabels: ruleLabels,
+          explanations: explanations,
+          additionalFactors: _additionalFactors.toList(),
+        ),
+      ),
     );
   }
 
@@ -810,4 +846,385 @@ class _RuleResult {
   final String ruleNumber;
   final String relevance;
   final String explanation;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Advisor → Protest Bridge
+// Creates an incident from advisor data and generates the protest form.
+// ═══════════════════════════════════════════════════════════════════
+
+class _AdvisorProtestBridge extends ConsumerStatefulWidget {
+  const _AdvisorProtestBridge({
+    required this.encounterType,
+    required this.details,
+    required this.ruleNumbers,
+    required this.ruleLabels,
+    required this.explanations,
+    required this.additionalFactors,
+  });
+
+  final String encounterType;
+  final String details;
+  final List<String> ruleNumbers;
+  final List<String> ruleLabels;
+  final List<String> explanations;
+  final List<String> additionalFactors;
+
+  @override
+  ConsumerState<_AdvisorProtestBridge> createState() =>
+      _AdvisorProtestBridgeState();
+}
+
+class _AdvisorProtestBridgeState extends ConsumerState<_AdvisorProtestBridge> {
+  final _descCtrl = TextEditingController();
+  final _eventIdCtrl = TextEditingController();
+  int _raceNumber = 1;
+  CourseLocationOnIncident _location = CourseLocationOnIncident.openWater;
+  final List<_SimpleBoat> _boats = [];
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill description from advisor context
+    final buf = StringBuffer();
+    buf.writeln('Encounter: ${widget.encounterType} — ${widget.details}');
+    if (widget.additionalFactors.isNotEmpty) {
+      buf.writeln('Factors: ${widget.additionalFactors.join(', ')}');
+    }
+    buf.writeln();
+    buf.writeln('Applicable rules:');
+    for (int i = 0; i < widget.ruleLabels.length; i++) {
+      buf.writeln('• Rule ${widget.ruleLabels[i]}');
+    }
+    _descCtrl.text = buf.toString();
+  }
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    _eventIdCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('File Protest from Situation Advisor'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Advisor summary card
+                Card(
+                  color: Colors.blue.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.auto_awesome,
+                                color: Colors.blue.shade700),
+                            const SizedBox(width: 8),
+                            Text('Situation Advisor Analysis',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.blue.shade800)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                            'Encounter: ${widget.encounterType} — ${widget.details}'),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: widget.ruleNumbers
+                              .map((r) => Chip(
+                                    label: Text('Rule $r',
+                                        style: const TextStyle(fontSize: 11)),
+                                    visualDensity: VisualDensity.compact,
+                                    backgroundColor: Colors.blue.shade100,
+                                  ))
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                Text('Incident Details',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+
+                // Event ID + Race Number
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: _eventIdCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Event ID',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: _raceNumber,
+                        decoration: const InputDecoration(
+                          labelText: 'Race #',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: List.generate(10, (i) => i + 1)
+                            .map((n) => DropdownMenuItem(
+                                value: n, child: Text('Race $n')))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _raceNumber = v ?? 1),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Location
+                Text('Location on Course',
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: CourseLocationOnIncident.values.map((loc) {
+                    final label = _locLabel(loc);
+                    return ChoiceChip(
+                      label: Text(label, style: const TextStyle(fontSize: 12)),
+                      selected: _location == loc,
+                      onSelected: (_) => setState(() => _location = loc),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // Boats
+                Text('Boats Involved',
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 6),
+                ..._boats.asMap().entries.map((e) {
+                  final i = e.key;
+                  final b = e.value;
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              decoration: const InputDecoration(
+                                  labelText: 'Sail #', isDense: true),
+                              onChanged: (v) => b.sailNumber = v,
+                              controller:
+                                  TextEditingController(text: b.sailNumber),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              decoration: const InputDecoration(
+                                  labelText: 'Boat Name', isDense: true),
+                              onChanged: (v) => b.boatName = v,
+                              controller:
+                                  TextEditingController(text: b.boatName),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              decoration: const InputDecoration(
+                                  labelText: 'Skipper', isDense: true),
+                              onChanged: (v) => b.skipperName = v,
+                              controller:
+                                  TextEditingController(text: b.skipperName),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SegmentedButton<BoatInvolvedRole>(
+                            segments: const [
+                              ButtonSegment(
+                                  value: BoatInvolvedRole.protesting,
+                                  label: Text('P',
+                                      style: TextStyle(fontSize: 10))),
+                              ButtonSegment(
+                                  value: BoatInvolvedRole.protested,
+                                  label: Text('D',
+                                      style: TextStyle(fontSize: 10))),
+                              ButtonSegment(
+                                  value: BoatInvolvedRole.witness,
+                                  label: Text('W',
+                                      style: TextStyle(fontSize: 10))),
+                            ],
+                            selected: {b.role},
+                            onSelectionChanged: (roles) =>
+                                setState(() => b.role = roles.first),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () =>
+                                setState(() => _boats.removeAt(i)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 4),
+                OutlinedButton.icon(
+                  onPressed: () => setState(() => _boats.add(_SimpleBoat())),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Boat'),
+                ),
+                const SizedBox(height: 16),
+
+                // Description
+                Text('Description',
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _descCtrl,
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Describe the incident...',
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Actions
+                Row(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _submitting ? null : _submitAndGenerate,
+                      icon: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.description),
+                      label: const Text(
+                          'Create Incident & Generate Protest Form'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitAndGenerate() async {
+    if (_boats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add at least one boat')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+
+    final now = DateTime.now();
+    final incident = RaceIncident(
+      id: '',
+      eventId: _eventIdCtrl.text.trim().isEmpty
+          ? 'advisor_${now.millisecondsSinceEpoch}'
+          : _eventIdCtrl.text.trim(),
+      raceNumber: _raceNumber,
+      reportedAt: now,
+      reportedBy:
+          FirebaseAuth.instance.currentUser?.displayName ?? 'Admin',
+      incidentTime: now,
+      description: _descCtrl.text.trim(),
+      locationOnCourse: _location,
+      involvedBoats: _boats
+          .map((b) => BoatInvolved(
+                boatId: b.sailNumber.toLowerCase().replaceAll(' ', '_'),
+                sailNumber: b.sailNumber,
+                boatName: b.boatName,
+                skipperName: b.skipperName,
+                role: b.role,
+              ))
+          .toList(),
+      rulesAlleged: widget.ruleLabels,
+      status: RaceIncidentStatus.protestFiled,
+    );
+
+    // Create the incident in Firestore
+    await ref.read(incidentsRepositoryProvider).createIncident(incident);
+
+    // Generate protest form with advisor data pre-filled
+    final formData = ProtestFormData(
+      incidentDescription: _descCtrl.text.trim(),
+      situationEncounterType: widget.encounterType,
+      situationDetails: widget.details,
+      situationRules: widget.ruleNumbers,
+      situationExplanations: widget.explanations,
+    );
+    const gen = ProtestFormGenerator();
+    final htmlContent =
+        gen.generateProtestFormHtml(incident, formData: formData);
+    final blob = html.Blob([htmlContent], 'text/html');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.window.open(url, 'Protest Form');
+
+    setState(() => _submitting = false);
+
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Incident created and protest form generated')),
+      );
+    }
+  }
+
+  String _locLabel(CourseLocationOnIncident loc) => switch (loc) {
+        CourseLocationOnIncident.startLine => 'Start Line',
+        CourseLocationOnIncident.windwardMark => 'Windward Mark',
+        CourseLocationOnIncident.gate => 'Gate',
+        CourseLocationOnIncident.leewardMark => 'Leeward Mark',
+        CourseLocationOnIncident.reachingMark => 'Reaching Mark',
+        CourseLocationOnIncident.openWater => 'Open Water',
+      };
+}
+
+class _SimpleBoat {
+  String sailNumber = '';
+  String boatName = '';
+  String skipperName = '';
+  BoatInvolvedRole role = BoatInvolvedRole.protesting;
 }

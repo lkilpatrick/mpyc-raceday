@@ -1,8 +1,12 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/race_incident.dart';
+import '../../data/services/protest_form_generator.dart';
 import '../incidents_providers.dart';
 
 class IncidentDetailPanel extends ConsumerStatefulWidget {
@@ -490,16 +494,228 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
   }
 
   void _generateProtestForm(RaceIncident incident) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Generating protest form PDF...')),
+    _showProtestFormDialog(incident);
+  }
+
+  void _openHtmlInNewTab(String htmlContent, String title) {
+    final blob = html.Blob([htmlContent], 'text/html');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.window.open(url, title);
+  }
+
+  void _showProtestFormDialog(RaceIncident incident, {ProtestFormData? prefill}) {
+    String hearingType = prefill?.hearingType ?? 'protest';
+    String informedHow = prefill?.informedHow ?? 'hail';
+    bool flagDisplayed = prefill?.flagDisplayed ?? true;
+    final hailWordsCtrl = TextEditingController(text: prefill?.hailWords ?? 'Protest!');
+    final hailWhenCtrl = TextEditingController(text: prefill?.hailWhen ?? '');
+    final flagTypeCtrl = TextEditingController(text: prefill?.flagType ?? 'Red flag');
+    final flagWhenCtrl = TextEditingController(text: prefill?.flagWhen ?? '');
+    final descCtrl = TextEditingController(
+        text: prefill?.incidentDescription ?? incident.description);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Generate Hearing Request Form'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Type of Hearing',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      _hearingTypeChip(hearingType, 'protest', 'Protest', setDialogState,
+                          (v) => hearingType = v),
+                      _hearingTypeChip(hearingType, 'redress', 'Redress', setDialogState,
+                          (v) => hearingType = v),
+                      _hearingTypeChip(hearingType, 'reopening', 'Reopen Hearing',
+                          setDialogState, (v) => hearingType = v),
+                      _hearingTypeChip(hearingType, 'ruleBreachByRC', 'RC Rule Breach',
+                          setDialogState, (v) => hearingType = v),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('How was the Protestee Informed?',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('By hailing'),
+                        selected: informedHow == 'hail',
+                        onSelected: (_) =>
+                            setDialogState(() => informedHow = 'hail'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Other'),
+                        selected: informedHow == 'other',
+                        onSelected: (_) =>
+                            setDialogState(() => informedHow = 'other'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: hailWordsCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Words of Hail'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: hailWhenCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'When Hailed'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    title: const Text('Red flag displayed'),
+                    value: flagDisplayed,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) =>
+                        setDialogState(() => flagDisplayed = v ?? true),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: flagTypeCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Flag Type'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: flagWhenCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'When Flag Displayed'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Incident Description',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Describe what happened in detail...',
+                    ),
+                  ),
+                  if (prefill != null &&
+                      prefill.situationRules.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      color: Colors.blue.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.auto_awesome,
+                                    size: 16, color: Colors.blue.shade700),
+                                const SizedBox(width: 6),
+                                Text('Pre-filled from Situation Advisor',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.blue.shade700)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Encounter: ${prefill.situationEncounterType}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            ...prefill.situationRules.map((r) => Text(
+                                  '• Rule $r',
+                                  style: const TextStyle(fontSize: 11),
+                                )),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                final formData = ProtestFormData(
+                  hearingType: hearingType,
+                  informedHow: informedHow,
+                  hailWords: hailWordsCtrl.text.trim(),
+                  hailWhen: hailWhenCtrl.text.trim(),
+                  flagDisplayed: flagDisplayed,
+                  flagType: flagTypeCtrl.text.trim(),
+                  flagWhen: flagWhenCtrl.text.trim(),
+                  incidentDescription: descCtrl.text.trim(),
+                  situationEncounterType:
+                      prefill?.situationEncounterType ?? '',
+                  situationRules: prefill?.situationRules ?? [],
+                  situationExplanations:
+                      prefill?.situationExplanations ?? [],
+                );
+                const gen = ProtestFormGenerator();
+                final htmlContent = gen.generateProtestFormHtml(
+                  incident,
+                  formData: formData,
+                );
+                _openHtmlInNewTab(htmlContent, 'Protest Form');
+                Navigator.pop(dialogContext);
+              },
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('Generate & Print'),
+            ),
+          ],
+        ),
+      ),
     );
-    // Delegate to ProtestFormGenerator service
+  }
+
+  Widget _hearingTypeChip(String current, String value, String label,
+      StateSetter setState, ValueChanged<String> onChanged) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: current == value,
+      onSelected: (_) => setState(() => onChanged(value)),
+    );
   }
 
   void _generateDecision(RaceIncident incident) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Generating decision document...')),
-    );
+    const gen = ProtestFormGenerator();
+    final htmlContent = gen.generateDecisionHtml(incident);
+    _openHtmlInNewTab(htmlContent, 'Hearing Decision');
   }
 
   (String, Color) _statusInfo(RaceIncidentStatus status) => switch (status) {
