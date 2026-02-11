@@ -68,6 +68,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
       lastRacedAt: (d['lastRacedAt'] as Timestamp?)?.toDate(),
       raceCount: d['raceCount'] as int? ?? 0,
       isActive: d['isActive'] as bool? ?? true,
+      isRCFleet: d['isRCFleet'] as bool? ?? false,
       phone: d['phone'] as String?,
       email: d['email'] as String?,
     );
@@ -83,6 +84,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
             b.lastRacedAt != null ? Timestamp.fromDate(b.lastRacedAt!) : null,
         'raceCount': b.raceCount,
         'isActive': b.isActive,
+        'isRCFleet': b.isRCFleet,
         'phone': b.phone,
         'email': b.email,
       };

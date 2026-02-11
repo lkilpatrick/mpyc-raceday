@@ -7,6 +7,32 @@ enum CourseLocationOnIncident {
   openWater,
 }
 
+class WeatherSnapshot {
+  const WeatherSnapshot({
+    this.windSpeedKts,
+    this.windSpeedMph,
+    this.windDirDeg,
+    this.windDirLabel,
+    this.gustKts,
+    this.tempF,
+    this.humidity,
+    this.pressureInHg,
+    this.source,
+    this.stationName,
+  });
+
+  final double? windSpeedKts;
+  final double? windSpeedMph;
+  final int? windDirDeg;
+  final String? windDirLabel;
+  final double? gustKts;
+  final double? tempF;
+  final double? humidity;
+  final double? pressureInHg;
+  final String? source;
+  final String? stationName;
+}
+
 enum BoatInvolvedRole { protesting, protested, witness }
 
 class BoatInvolved {
@@ -16,6 +42,7 @@ class BoatInvolved {
     required this.boatName,
     required this.skipperName,
     required this.role,
+    this.boatClass = '',
   });
 
   final String boatId;
@@ -23,6 +50,7 @@ class BoatInvolved {
   final String boatName;
   final String skipperName;
   final BoatInvolvedRole role;
+  final String boatClass;
 }
 
 enum RaceIncidentStatus {
@@ -74,12 +102,15 @@ class RaceIncident {
   const RaceIncident({
     required this.id,
     required this.eventId,
+    this.eventName = '',
     required this.raceNumber,
     required this.reportedAt,
     required this.reportedBy,
     required this.incidentTime,
     required this.description,
     required this.locationOnCourse,
+    this.locationDetail = '',
+    this.courseName = '',
     required this.involvedBoats,
     this.rulesAlleged = const [],
     required this.status,
@@ -89,16 +120,20 @@ class RaceIncident {
     this.witnesses = const [],
     this.attachments = const [],
     this.comments = const [],
+    this.weatherSnapshot,
   });
 
   final String id;
   final String eventId;
+  final String eventName;
   final int raceNumber;
   final DateTime reportedAt;
   final String reportedBy;
   final DateTime incidentTime;
   final String description;
   final CourseLocationOnIncident locationOnCourse;
+  final String locationDetail;
+  final String courseName;
   final List<BoatInvolved> involvedBoats;
   final List<String> rulesAlleged;
   final RaceIncidentStatus status;
@@ -108,4 +143,5 @@ class RaceIncident {
   final List<String> witnesses;
   final List<String> attachments;
   final List<IncidentComment> comments;
+  final WeatherSnapshot? weatherSnapshot;
 }

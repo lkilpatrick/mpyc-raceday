@@ -9,6 +9,7 @@ class Boat {
     this.lastRacedAt,
     this.raceCount = 0,
     this.isActive = true,
+    this.isRCFleet = false,
     this.phone,
     this.email,
   });
@@ -22,6 +23,7 @@ class Boat {
   final DateTime? lastRacedAt;
   final int raceCount;
   final bool isActive;
+  final bool isRCFleet;
   final String? phone;
   final String? email;
 }

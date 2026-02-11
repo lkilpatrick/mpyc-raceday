@@ -22,6 +22,7 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
     return RaceIncident(
       id: doc.id,
       eventId: d['eventId'] as String? ?? '',
+      eventName: d['eventName'] as String? ?? '',
       raceNumber: d['raceNumber'] as int? ?? 0,
       reportedAt: (d['reportedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       reportedBy: d['reportedBy'] as String? ?? '',
@@ -32,6 +33,8 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
         (v) => v.name == (d['locationOnCourse'] as String? ?? ''),
         orElse: () => CourseLocationOnIncident.openWater,
       ),
+      locationDetail: d['locationDetail'] as String? ?? '',
+      courseName: d['courseName'] as String? ?? '',
       involvedBoats: (d['involvedBoats'] as List<dynamic>?)
               ?.map((b) {
                 final bd = b as Map<String, dynamic>;
@@ -44,6 +47,7 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
                     (r) => r.name == (bd['role'] as String? ?? ''),
                     orElse: () => BoatInvolvedRole.witness,
                   ),
+                  boatClass: bd['boatClass'] as String? ?? '',
                 );
               })
               .toList() ??
@@ -74,6 +78,9 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
               })
               .toList() ??
           [],
+      weatherSnapshot: d['weatherSnapshot'] != null
+          ? _weatherFromMap(d['weatherSnapshot'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -87,14 +94,30 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
         decisionNotes: d['decisionNotes'] as String? ?? '',
       );
 
+  WeatherSnapshot _weatherFromMap(Map<String, dynamic> d) => WeatherSnapshot(
+        windSpeedKts: (d['windSpeedKts'] as num?)?.toDouble(),
+        windSpeedMph: (d['windSpeedMph'] as num?)?.toDouble(),
+        windDirDeg: (d['windDirDeg'] as num?)?.toInt(),
+        windDirLabel: d['windDirLabel'] as String?,
+        gustKts: (d['gustKts'] as num?)?.toDouble(),
+        tempF: (d['tempF'] as num?)?.toDouble(),
+        humidity: (d['humidity'] as num?)?.toDouble(),
+        pressureInHg: (d['pressureInHg'] as num?)?.toDouble(),
+        source: d['source'] as String?,
+        stationName: d['stationName'] as String?,
+      );
+
   Map<String, dynamic> _toMap(RaceIncident i) => {
         'eventId': i.eventId,
+        'eventName': i.eventName,
         'raceNumber': i.raceNumber,
         'reportedAt': Timestamp.fromDate(i.reportedAt),
         'reportedBy': i.reportedBy,
         'incidentTime': Timestamp.fromDate(i.incidentTime),
         'description': i.description,
         'locationOnCourse': i.locationOnCourse.name,
+        'locationDetail': i.locationDetail,
+        'courseName': i.courseName,
         'involvedBoats': i.involvedBoats
             .map((b) => {
                   'boatId': b.boatId,
@@ -102,6 +125,7 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
                   'boatName': b.boatName,
                   'skipperName': b.skipperName,
                   'role': b.role.name,
+                  'boatClass': b.boatClass,
                 })
             .toList(),
         'rulesAlleged': i.rulesAlleged,
@@ -132,6 +156,20 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
                   'createdAt': Timestamp.fromDate(c.createdAt),
                 })
             .toList(),
+        'weatherSnapshot': i.weatherSnapshot != null
+            ? {
+                'windSpeedKts': i.weatherSnapshot!.windSpeedKts,
+                'windSpeedMph': i.weatherSnapshot!.windSpeedMph,
+                'windDirDeg': i.weatherSnapshot!.windDirDeg,
+                'windDirLabel': i.weatherSnapshot!.windDirLabel,
+                'gustKts': i.weatherSnapshot!.gustKts,
+                'tempF': i.weatherSnapshot!.tempF,
+                'humidity': i.weatherSnapshot!.humidity,
+                'pressureInHg': i.weatherSnapshot!.pressureInHg,
+                'source': i.weatherSnapshot!.source,
+                'stationName': i.weatherSnapshot!.stationName,
+              }
+            : null,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 

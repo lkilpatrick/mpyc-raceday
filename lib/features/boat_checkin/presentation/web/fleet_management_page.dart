@@ -16,6 +16,9 @@ class FleetManagementPage extends ConsumerStatefulWidget {
 
 class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
   String _searchQuery = '';
+  String _classFilter = 'All';
+
+  static const _classFilters = ['All', 'Shields', 'Santana 22', 'PHRF A', 'PHRF B', 'RC Fleet'];
 
   @override
   Widget build(BuildContext context) {
@@ -46,25 +49,64 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search fleet...',
-              prefixIcon: Icon(Icons.search),
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 280,
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Search fleet...',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _classFilters.map((f) {
+                      final isActive = _classFilter == f;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(f, style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          )),
+                          selected: isActive,
+                          onSelected: (_) => setState(() => _classFilter = f),
+                          showCheckmark: false,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(height: 4),
         Expanded(
           child: fleetAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (boats) {
               var filtered = boats;
+              // Class filter
+              if (_classFilter == 'RC Fleet') {
+                filtered = filtered.where((b) => b.isRCFleet).toList();
+              } else if (_classFilter != 'All') {
+                filtered = filtered.where((b) =>
+                    b.boatClass.toLowerCase() == _classFilter.toLowerCase()).toList();
+              }
               if (_searchQuery.isNotEmpty) {
-                filtered = boats
+                filtered = filtered
                     .where((b) =>
                         b.sailNumber.toLowerCase().contains(_searchQuery) ||
                         b.boatName.toLowerCase().contains(_searchQuery) ||
@@ -83,6 +125,7 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
                       DataColumn(label: Text('Owner/Skipper')),
                       DataColumn(label: Text('Class')),
                       DataColumn(label: Text('PHRF')),
+                      DataColumn(label: Text('RC')),
                       DataColumn(label: Text('Last Raced')),
                       DataColumn(label: Text('Race Count')),
                       DataColumn(label: Text('Actions')),
@@ -96,6 +139,9 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
                         DataCell(Text(b.ownerName)),
                         DataCell(Text(b.boatClass)),
                         DataCell(Text(b.phrfRating?.toString() ?? '—')),
+                        DataCell(b.isRCFleet
+                            ? Icon(Icons.anchor, size: 16, color: Colors.blue.shade700)
+                            : const SizedBox.shrink()),
                         DataCell(Text(b.lastRacedAt != null
                             ? DateFormat.yMMMd().format(b.lastRacedAt!)
                             : 'Never')),
@@ -168,65 +214,121 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
         TextEditingController(text: existing?.boatClass ?? '');
     final phrfCtrl = TextEditingController(
         text: existing?.phrfRating?.toString() ?? '');
+    bool isRCFleet = existing?.isRCFleet ?? false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(existing != null ? 'Edit Boat' : 'Add Boat'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: sailCtrl,
-                decoration: const InputDecoration(labelText: 'Sail Number'),
-              ),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Boat Name'),
-              ),
-              TextField(
-                controller: ownerCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Owner/Skipper'),
-              ),
-              TextField(
-                controller: classCtrl,
-                decoration: const InputDecoration(labelText: 'Class'),
-              ),
-              TextField(
-                controller: phrfCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'PHRF Rating'),
-              ),
-            ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(existing != null ? 'Edit Boat' : 'Add Boat'),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: sailCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Sail Number',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Boat Name',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ownerCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Owner/Skipper',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        value: classCtrl.text.isNotEmpty ? classCtrl.text : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Class / Fleet',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'Shields', child: Text('Shields')),
+                          DropdownMenuItem(value: 'Santana 22', child: Text('Santana 22')),
+                          DropdownMenuItem(value: 'PHRF A', child: Text('PHRF A')),
+                          DropdownMenuItem(value: 'PHRF B', child: Text('PHRF B')),
+                          DropdownMenuItem(value: 'Other', child: Text('Other')),
+                        ],
+                        onChanged: (v) => classCtrl.text = v ?? '',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: phrfCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'PHRF Rating',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  title: const Text('Race Committee Fleet'),
+                  subtitle: const Text('Club-owned boat used for RC duties'),
+                  value: isRCFleet,
+                  onChanged: (v) => setDialogState(() => isRCFleet = v),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                final boat = Boat(
+                  id: existing?.id ?? '',
+                  sailNumber: sailCtrl.text.trim(),
+                  boatName: nameCtrl.text.trim(),
+                  ownerName: ownerCtrl.text.trim(),
+                  boatClass: classCtrl.text.trim(),
+                  phrfRating: int.tryParse(phrfCtrl.text),
+                  lastRacedAt: existing?.lastRacedAt,
+                  raceCount: existing?.raceCount ?? 0,
+                  isRCFleet: isRCFleet,
+                );
+                await ref
+                    .read(boatCheckinRepositoryProvider)
+                    .saveBoat(boat);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final boat = Boat(
-                id: existing?.id ?? '',
-                sailNumber: sailCtrl.text.trim(),
-                boatName: nameCtrl.text.trim(),
-                ownerName: ownerCtrl.text.trim(),
-                boatClass: classCtrl.text.trim(),
-                phrfRating: int.tryParse(phrfCtrl.text),
-                lastRacedAt: existing?.lastRacedAt,
-                raceCount: existing?.raceCount ?? 0,
-              );
-              await ref
-                  .read(boatCheckinRepositoryProvider)
-                  .saveBoat(boat);
-              if (dialogContext.mounted) Navigator.pop(dialogContext);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
