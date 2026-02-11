@@ -2,17 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
+import '../../../shared/services/audit_service.dart';
 import '../domain/crew_assignment_repository.dart';
 
 class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
   CrewAssignmentRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
+    AuditService? audit,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _functions = functions ?? FirebaseFunctions.instance;
+        _functions = functions ?? FirebaseFunctions.instance,
+        _audit = audit ?? AuditService();
 
   final FirebaseFirestore _firestore;
   final FirebaseFunctions _functions;
+  final AuditService _audit;
 
   CollectionReference<Map<String, dynamic>> get _eventsCol =>
       _firestore.collection('race_events');
@@ -294,11 +298,24 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
   @override
   Future<void> saveEvent(RaceEvent event) async {
     await _eventsCol.doc(event.id).set(_eventToMap(event), SetOptions(merge: true));
+    _audit.log(
+      action: 'save_event',
+      entityType: 'race_event',
+      entityId: event.id,
+      category: 'crew',
+      details: {'name': event.name, 'status': event.status.name},
+    );
   }
 
   @override
   Future<void> deleteEvent(String eventId) async {
     await _eventsCol.doc(eventId).delete();
+    _audit.log(
+      action: 'delete_event',
+      entityType: 'race_event',
+      entityId: eventId,
+      category: 'crew',
+    );
   }
 
   @override
@@ -356,6 +373,13 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
   @override
   Future<void> saveSeries(SeriesDefinition series) async {
     await _seriesCol.doc(series.id).set(_seriesToMap(series), SetOptions(merge: true));
+    _audit.log(
+      action: 'save_series',
+      entityType: 'season_series',
+      entityId: series.id,
+      category: 'crew',
+      details: {'name': series.name},
+    );
   }
 
   @override

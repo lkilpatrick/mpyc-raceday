@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../shared/services/audit_service.dart';
 import '../domain/courses_repository.dart';
 import 'models/course_config.dart';
 import 'models/fleet_broadcast.dart';
@@ -7,10 +8,12 @@ import 'models/mark.dart';
 import 'models/mark_distance.dart';
 
 class CoursesRepositoryImpl implements CoursesRepository {
-  CoursesRepositoryImpl({FirebaseFirestore? firestore})
-      : _fs = firestore ?? FirebaseFirestore.instance;
+  CoursesRepositoryImpl({FirebaseFirestore? firestore, AuditService? audit})
+      : _fs = firestore ?? FirebaseFirestore.instance,
+        _audit = audit ?? AuditService();
 
   final FirebaseFirestore _fs;
+  final AuditService _audit;
 
   CollectionReference<Map<String, dynamic>> get _coursesCol =>
       _fs.collection('courses');
@@ -173,15 +176,35 @@ class CoursesRepositoryImpl implements CoursesRepository {
   @override
   Future<void> saveCourse(CourseConfig course) async {
     if (course.id.isEmpty) {
-      await _coursesCol.add(_courseToMap(course));
+      final ref = await _coursesCol.add(_courseToMap(course));
+      _audit.log(
+        action: 'create_course',
+        entityType: 'course',
+        entityId: ref.id,
+        category: 'course',
+        details: {'courseNumber': course.courseNumber, 'name': course.courseName},
+      );
     } else {
       await _coursesCol.doc(course.id).set(_courseToMap(course), SetOptions(merge: true));
+      _audit.log(
+        action: 'update_course',
+        entityType: 'course',
+        entityId: course.id,
+        category: 'course',
+        details: {'courseNumber': course.courseNumber, 'name': course.courseName},
+      );
     }
   }
 
   @override
   Future<void> deleteCourse(String id) async {
     await _coursesCol.doc(id).delete();
+    _audit.log(
+      action: 'delete_course',
+      entityType: 'course',
+      entityId: id,
+      category: 'course',
+    );
   }
 
   // ── Marks ──
@@ -234,11 +257,24 @@ class CoursesRepositoryImpl implements CoursesRepository {
     } else {
       await _marksCol.doc(mark.id).set(data, SetOptions(merge: true));
     }
+    _audit.log(
+      action: mark.id.isEmpty ? 'create_mark' : 'update_mark',
+      entityType: 'mark',
+      entityId: mark.id,
+      category: 'course',
+      details: {'name': mark.name, 'type': mark.type},
+    );
   }
 
   @override
   Future<void> deleteMark(String id) async {
     await _marksCol.doc(id).delete();
+    _audit.log(
+      action: 'delete_mark',
+      entityType: 'mark',
+      entityId: id,
+      category: 'course',
+    );
   }
 
   @override
@@ -263,6 +299,13 @@ class CoursesRepositoryImpl implements CoursesRepository {
       'courseId': courseId,
       'courseSelectedAt': FieldValue.serverTimestamp(),
     });
+    _audit.log(
+      action: 'select_course',
+      entityType: 'race_event',
+      entityId: eventId,
+      category: 'course',
+      details: {'courseId': courseId},
+    );
   }
 
   @override
@@ -286,6 +329,13 @@ class CoursesRepositoryImpl implements CoursesRepository {
       'sentAt': Timestamp.fromDate(broadcast.sentAt),
       'deliveryCount': broadcast.deliveryCount,
     });
+    _audit.log(
+      action: 'send_broadcast',
+      entityType: 'fleet_broadcast',
+      entityId: broadcast.eventId,
+      category: 'course',
+      details: {'type': broadcast.type.name, 'message': broadcast.message},
+    );
   }
 
   @override

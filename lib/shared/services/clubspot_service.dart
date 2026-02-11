@@ -199,10 +199,12 @@ class ClubspotService {
       finishedAt: finishedAt,
     );
 
-    await _firestore.collection('auditLogs').add({
+    await _firestore.collection('audit_logs').add({
       'id': '',
       'userId': 'system',
+      'userName': 'System',
       'action': 'clubspot_member_sync',
+      'category': 'sync',
       'entityType': 'member',
       'entityId': clubId,
       'details': result.toJson(),

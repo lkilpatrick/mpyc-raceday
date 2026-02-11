@@ -772,6 +772,18 @@ class _AuditLogTab extends StatefulWidget {
 class _AuditLogTabState extends State<_AuditLogTab> {
   String _actionFilter = 'all';
 
+  static const _filters = [
+    ('all', 'All Actions'),
+    ('checkin', 'Check-Ins'),
+    ('checklist', 'Checklists'),
+    ('course', 'Courses'),
+    ('crew', 'Crew / Events'),
+    ('incident', 'Incidents'),
+    ('maintenance', 'Maintenance'),
+    ('settings', 'Settings / Members'),
+    ('sync', 'Sync'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -782,17 +794,17 @@ class _AuditLogTabState extends State<_AuditLogTab> {
             children: [
               DropdownButton<String>(
                 value: _actionFilter,
-                items: const [
-                  DropdownMenuItem(value: 'all', child: Text('All Actions')),
-                  DropdownMenuItem(value: 'checkin', child: Text('Check-Ins')),
-                  DropdownMenuItem(value: 'incident', child: Text('Incidents')),
-                  DropdownMenuItem(
-                      value: 'maintenance', child: Text('Maintenance')),
-                  DropdownMenuItem(value: 'settings', child: Text('Settings')),
-                  DropdownMenuItem(value: 'sync', child: Text('Sync')),
-                ],
+                items: _filters
+                    .map((f) => DropdownMenuItem(
+                        value: f.$1, child: Text(f.$2)))
+                    .toList(),
                 onChanged: (v) =>
                     setState(() => _actionFilter = v ?? 'all'),
+              ),
+              const Spacer(),
+              Text(
+                'Showing latest 200 entries',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
@@ -801,6 +813,9 @@ class _AuditLogTabState extends State<_AuditLogTab> {
           child: StreamBuilder<QuerySnapshot>(
             stream: _buildQuery().snapshots(),
             builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
               final docs = snap.data?.docs ?? [];
               if (docs.isEmpty) {
                 return const Center(child: Text('No audit log entries'));
@@ -809,33 +824,55 @@ class _AuditLogTabState extends State<_AuditLogTab> {
                 scrollDirection: Axis.horizontal,
                 child: SingleChildScrollView(
                   child: DataTable(
+                    columnSpacing: 24,
+                    headingRowColor: WidgetStateProperty.all(
+                        Colors.grey.shade100),
                     columns: const [
                       DataColumn(label: Text('Time')),
-                      DataColumn(label: Text('Action')),
                       DataColumn(label: Text('User')),
+                      DataColumn(label: Text('Action')),
+                      DataColumn(label: Text('Entity')),
                       DataColumn(label: Text('Details')),
                     ],
                     rows: docs.map((doc) {
                       final d = doc.data() as Map<String, dynamic>;
                       final ts = d['timestamp'] as Timestamp?;
                       final timeStr = ts != null
-                          ? DateFormat.yMMMd()
-                              .add_Hm()
+                          ? DateFormat('MMM d, h:mm a')
                               .format(ts.toDate())
                           : '';
+                      final userName = d['userName'] as String? ??
+                          d['userId'] as String? ??
+                          '';
+                      final action = d['action'] as String? ?? '';
+                      final entityType =
+                          d['entityType'] as String? ?? '';
+                      final entityId =
+                          d['entityId'] as String? ?? '';
+                      final details = d['details'];
+                      final detailStr = _formatDetails(details);
+
                       return DataRow(cells: [
                         DataCell(Text(timeStr,
                             style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(d['action'] as String? ?? '',
+                        DataCell(Text(userName,
                             style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(d['userId'] as String? ?? '',
-                            style: const TextStyle(fontSize: 12))),
+                        DataCell(_actionChip(action)),
+                        DataCell(Text(
+                          entityType.isNotEmpty
+                              ? '$entityType${entityId.isNotEmpty ? ' ($entityId)' : ''}'
+                              : '',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[600]),
+                          overflow: TextOverflow.ellipsis,
+                        )),
                         DataCell(SizedBox(
-                          width: 300,
+                          width: 350,
                           child: Text(
-                            d['details'] as String? ?? '',
+                            detailStr,
                             style: const TextStyle(fontSize: 12),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
                           ),
                         )),
                       ]);
@@ -850,17 +887,55 @@ class _AuditLogTabState extends State<_AuditLogTab> {
     );
   }
 
+  Widget _actionChip(String action) {
+    final color = switch (action) {
+      String a when a.startsWith('create') || a.startsWith('save') =>
+        Colors.green,
+      String a when a.startsWith('update') || a.startsWith('assign') =>
+        Colors.blue,
+      String a when a.startsWith('delete') || a.startsWith('deactivate') =>
+        Colors.red,
+      String a when a.contains('role') => Colors.purple,
+      String a when a.contains('sync') => Colors.teal,
+      _ => Colors.grey,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withAlpha(80)),
+      ),
+      child: Text(
+        action.replaceAll('_', ' '),
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  String _formatDetails(dynamic details) {
+    if (details == null) return '';
+    if (details is String) return details;
+    if (details is Map) {
+      return details.entries
+          .where((e) => e.value != null && e.value.toString().isNotEmpty)
+          .map((e) => '${e.key}: ${e.value}')
+          .join(', ');
+    }
+    return details.toString();
+  }
+
   Query<Map<String, dynamic>> _buildQuery() {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('audit_logs')
         .orderBy('timestamp', descending: true)
-        .limit(100);
+        .limit(200);
     if (_actionFilter != 'all') {
       query = FirebaseFirestore.instance
           .collection('audit_logs')
           .where('category', isEqualTo: _actionFilter)
           .orderBy('timestamp', descending: true)
-          .limit(100);
+          .limit(200);
     }
     return query;
   }

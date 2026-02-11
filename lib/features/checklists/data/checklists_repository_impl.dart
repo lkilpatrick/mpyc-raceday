@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../../../shared/services/audit_service.dart';
 import '../domain/checklists_repository.dart';
 import 'models/checklist.dart';
 
@@ -10,11 +11,14 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
   ChecklistsRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
+    AuditService? audit,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+        _storage = storage ?? FirebaseStorage.instance,
+        _audit = audit ?? AuditService();
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final AuditService _audit;
 
   CollectionReference<Map<String, dynamic>> get _templatesCol =>
       _firestore.collection('checklists');
@@ -210,11 +214,24 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
     await _templatesCol
         .doc(checklist.id)
         .set(_checklistToMap(checklist), SetOptions(merge: true));
+    _audit.log(
+      action: 'save_template',
+      entityType: 'checklist',
+      entityId: checklist.id,
+      category: 'checklist',
+      details: {'name': checklist.name, 'itemCount': checklist.items.length},
+    );
   }
 
   @override
   Future<void> deleteTemplate(String checklistId) async {
     await _templatesCol.doc(checklistId).delete();
+    _audit.log(
+      action: 'delete_template',
+      entityType: 'checklist',
+      entityId: checklistId,
+      category: 'checklist',
+    );
   }
 
   // ── Completions ──
@@ -345,6 +362,12 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
       'status': 'completedPendingSignoff',
       'completedAt': Timestamp.fromDate(DateTime.now()),
     });
+    _audit.log(
+      action: 'request_signoff',
+      entityType: 'checklist_completion',
+      entityId: completionId,
+      category: 'checklist',
+    );
   }
 
   @override
@@ -357,6 +380,13 @@ class ChecklistsRepositoryImpl implements ChecklistsRepository {
       'signOffBy': signOffUserId,
       'signOffAt': Timestamp.fromDate(DateTime.now()),
     });
+    _audit.log(
+      action: 'sign_off',
+      entityType: 'checklist_completion',
+      entityId: completionId,
+      category: 'checklist',
+      details: {'signOffBy': signOffUserId},
+    );
   }
 
   // ── Photo upload ──

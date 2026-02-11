@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../shared/services/audit_service.dart';
 import '../domain/incidents_repository.dart';
 import 'models/race_incident.dart';
 
 class IncidentsRepositoryImpl implements IncidentsRepository {
-  IncidentsRepositoryImpl({FirebaseFirestore? firestore})
-      : _fs = firestore ?? FirebaseFirestore.instance;
+  IncidentsRepositoryImpl({FirebaseFirestore? firestore, AuditService? audit})
+      : _fs = firestore ?? FirebaseFirestore.instance,
+        _audit = audit ?? AuditService();
 
   final FirebaseFirestore _fs;
+  final AuditService _audit;
 
   CollectionReference<Map<String, dynamic>> get _incidentsCol =>
       _fs.collection('incidents');
@@ -158,12 +161,26 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
     final map = _toMap(incident);
     map['createdAt'] = FieldValue.serverTimestamp();
     final docRef = await _incidentsCol.add(map);
+    _audit.log(
+      action: 'create_incident',
+      entityType: 'incident',
+      entityId: docRef.id,
+      category: 'incident',
+      details: {'status': incident.status.name, 'reportedBy': incident.reportedBy},
+    );
     return docRef.id;
   }
 
   @override
   Future<void> updateIncident(RaceIncident incident) async {
     await _incidentsCol.doc(incident.id).set(_toMap(incident), SetOptions(merge: true));
+    _audit.log(
+      action: 'update_incident',
+      entityType: 'incident',
+      entityId: incident.id,
+      category: 'incident',
+      details: {'status': incident.status.name},
+    );
   }
 
   @override
@@ -172,11 +189,24 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
       'status': status.name,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _audit.log(
+      action: 'update_incident_status',
+      entityType: 'incident',
+      entityId: id,
+      category: 'incident',
+      details: {'newStatus': status.name},
+    );
   }
 
   @override
   Future<void> deleteIncident(String id) async {
     await _incidentsCol.doc(id).delete();
+    _audit.log(
+      action: 'delete_incident',
+      entityType: 'incident',
+      entityId: id,
+      category: 'incident',
+    );
   }
 
   // ── Comments ──
@@ -195,6 +225,13 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
       ]),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _audit.log(
+      action: 'add_comment',
+      entityType: 'incident',
+      entityId: incidentId,
+      category: 'incident',
+      details: {'authorName': comment.authorName},
+    );
   }
 
   // ── Hearing ──
@@ -215,6 +252,13 @@ class IncidentsRepositoryImpl implements IncidentsRepository {
       },
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _audit.log(
+      action: 'update_hearing',
+      entityType: 'incident',
+      entityId: incidentId,
+      category: 'incident',
+      details: {'penalty': hearing.penalty},
+    );
   }
 
   // ── Attachments ──

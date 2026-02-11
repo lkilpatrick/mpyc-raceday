@@ -3,6 +3,7 @@ import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mpyc_raceday/features/auth/data/models/member.dart';
+import 'package:mpyc_raceday/shared/services/audit_service.dart';
 import 'package:mpyc_raceday/shared/services/clubspot_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -384,6 +385,16 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
       }
     }
     await batch.commit();
+    final audit = AuditService();
+    for (final id in _selectedIds) {
+      audit.log(
+        action: add ? 'add_role' : 'remove_role',
+        entityType: 'member',
+        entityId: id,
+        category: 'settings',
+        details: {'role': selected},
+      );
+    }
     setState(() => _selectedIds.clear());
   }
 
@@ -407,11 +418,20 @@ class _MemberManagementPageState extends State<MemberManagementPage> {
     if (confirm != true) return;
 
     final batch = FirebaseFirestore.instance.batch();
+    final audit = AuditService();
     for (final id in _selectedIds) {
       final doc = FirebaseFirestore.instance.collection('members').doc(id);
       batch.update(doc, {'isActive': false});
     }
     await batch.commit();
+    for (final id in _selectedIds) {
+      audit.log(
+        action: 'deactivate_member',
+        entityType: 'member',
+        entityId: id,
+        category: 'settings',
+      );
+    }
     setState(() => _selectedIds.clear());
   }
 
@@ -894,6 +914,13 @@ class _MemberDetailPanel extends StatelessWidget {
                       'roles': FieldValue.arrayRemove([entry.$1]),
                     });
                   }
+                  AuditService().log(
+                    action: selected ? 'add_role' : 'remove_role',
+                    entityType: 'member',
+                    entityId: id,
+                    category: 'settings',
+                    details: {'role': entry.$1, 'memberName': '${member['firstName']} ${member['lastName']}'},
+                  );
                   onRolesChanged();
                 },
               );

@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_storage/firebase_storage.dart';
 
-
+import '../../../shared/services/audit_service.dart';
 
 import '../domain/maintenance_repository.dart';
 
@@ -22,15 +22,21 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
 
     FirebaseStorage? storage,
 
+    AuditService? audit,
+
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
 
-        _storage = storage ?? FirebaseStorage.instance;
+        _storage = storage ?? FirebaseStorage.instance,
+
+        _audit = audit ?? AuditService();
 
 
 
   final FirebaseFirestore _firestore;
 
   final FirebaseStorage _storage;
+
+  final AuditService _audit;
 
 
 
@@ -422,6 +428,14 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
 
         .set(_requestToMap(request), SetOptions(merge: true));
 
+    _audit.log(
+      action: 'update_maintenance_request',
+      entityType: 'maintenance_request',
+      entityId: request.id,
+      category: 'maintenance',
+      details: {'title': request.title, 'status': request.status.name},
+    );
+
   }
 
 
@@ -448,6 +462,14 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
 
     await _requestsCol.doc(requestId).update(updates);
 
+    _audit.log(
+      action: 'update_maintenance_status',
+      entityType: 'maintenance_request',
+      entityId: requestId,
+      category: 'maintenance',
+      details: {'newStatus': _statusToStr(status)},
+    );
+
   }
 
 
@@ -457,6 +479,14 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
   Future<void> assignRequest(String requestId, String assignedTo) async {
 
     await _requestsCol.doc(requestId).update({'assignedTo': assignedTo});
+
+    _audit.log(
+      action: 'assign_maintenance',
+      entityType: 'maintenance_request',
+      entityId: requestId,
+      category: 'maintenance',
+      details: {'assignedTo': assignedTo},
+    );
 
   }
 
@@ -487,6 +517,13 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
   Future<void> deleteRequest(String requestId) async {
 
     await _requestsCol.doc(requestId).delete();
+
+    _audit.log(
+      action: 'delete_maintenance_request',
+      entityType: 'maintenance_request',
+      entityId: requestId,
+      category: 'maintenance',
+    );
 
   }
 
@@ -602,6 +639,14 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
 
         .set(_scheduleToMap(item), SetOptions(merge: true));
 
+    _audit.log(
+      action: 'save_scheduled_maintenance',
+      entityType: 'scheduled_maintenance',
+      entityId: item.id,
+      category: 'maintenance',
+      details: {'title': item.title},
+    );
+
   }
 
 
@@ -611,6 +656,13 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
   Future<void> deleteScheduledMaintenance(String id) async {
 
     await _scheduleCol.doc(id).delete();
+
+    _audit.log(
+      action: 'delete_scheduled_maintenance',
+      entityType: 'scheduled_maintenance',
+      entityId: id,
+      category: 'maintenance',
+    );
 
   }
 

@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../shared/services/audit_service.dart';
 import '../domain/boat_checkin_repository.dart';
 import 'models/boat.dart';
 import 'models/boat_checkin.dart';
 
 class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
-  BoatCheckinRepositoryImpl({FirebaseFirestore? firestore})
-      : _fs = firestore ?? FirebaseFirestore.instance;
+  BoatCheckinRepositoryImpl({FirebaseFirestore? firestore, AuditService? audit})
+      : _fs = firestore ?? FirebaseFirestore.instance,
+        _audit = audit ?? AuditService();
 
   final FirebaseFirestore _fs;
+  final AuditService _audit;
 
   CollectionReference<Map<String, dynamic>> get _checkinsCol =>
       _fs.collection('boat_checkins');
@@ -112,11 +115,24 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
         });
       }
     }
+    _audit.log(
+      action: 'check_in_boat',
+      entityType: 'boat_checkin',
+      entityId: docRef.id,
+      category: 'checkin',
+      details: {'sailNumber': checkin.sailNumber, 'boatName': checkin.boatName},
+    );
   }
 
   @override
   Future<void> removeCheckin(String checkinId) async {
     await _checkinsCol.doc(checkinId).delete();
+    _audit.log(
+      action: 'remove_checkin',
+      entityType: 'boat_checkin',
+      entityId: checkinId,
+      category: 'checkin',
+    );
   }
 
   @override
@@ -125,6 +141,12 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
       'checkinsClosed': true,
       'checkinsClosedAt': FieldValue.serverTimestamp(),
     });
+    _audit.log(
+      action: 'close_checkins',
+      entityType: 'race_event',
+      entityId: eventId,
+      category: 'checkin',
+    );
   }
 
   @override
@@ -160,11 +182,24 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
     } else {
       await _fleetCol.doc(boat.id).set(_boatToMap(boat), SetOptions(merge: true));
     }
+    _audit.log(
+      action: boat.id.isEmpty ? 'create_boat' : 'update_boat',
+      entityType: 'boat',
+      entityId: boat.id,
+      category: 'checkin',
+      details: {'sailNumber': boat.sailNumber, 'boatName': boat.boatName},
+    );
   }
 
   @override
   Future<void> deleteBoat(String boatId) async {
     await _fleetCol.doc(boatId).update({'isActive': false});
+    _audit.log(
+      action: 'deactivate_boat',
+      entityType: 'boat',
+      entityId: boatId,
+      category: 'checkin',
+    );
   }
 
   static List<String> _parseCsvLine(String line) {
