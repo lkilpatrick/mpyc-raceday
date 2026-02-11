@@ -18,12 +18,15 @@ class _SyncDashboardPanelState extends State<SyncDashboardPanel> {
   bool _syncing = false;
   String? _syncMessage;
 
+  static const _defaultSyncUrl =
+      'https://manualmembersync-kxa7ukqkaq-uc.a.run.app';
+
   String? get _manualSyncUrl {
     if (!kIsWeb) {
-      return dotenv.maybeGet('MANUAL_SYNC_URL');
+      return dotenv.maybeGet('MANUAL_SYNC_URL') ?? _defaultSyncUrl;
     }
     const fromDefine = String.fromEnvironment('MANUAL_SYNC_URL');
-    return fromDefine.isEmpty ? null : fromDefine;
+    return fromDefine.isNotEmpty ? fromDefine : _defaultSyncUrl;
   }
 
   @override
