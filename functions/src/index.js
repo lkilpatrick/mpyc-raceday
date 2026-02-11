@@ -3890,51 +3890,49 @@ const WEATHER_DOC_PATH = "weather/mpyc_station";
 const MS_TO_KTS = 1.94384;
 const MIN_FETCH_INTERVAL_MS = 30000; // 30 seconds rate limit
 
-// Monterey Bay area
-const STATION_LAT = 36.6002;
-const STATION_LON = -121.8947;
-
 const noaaHeaders = {
   "User-Agent": NOAA_USER_AGENT,
   "Accept": "application/geo+json",
 };
 
-async function fetchNoaaData() {
-  // Step 1: Get nearest observation stations for this point
-  const pointUrl = `${NOAA_BASE_URL}/points/${STATION_LAT},${STATION_LON}`;
-  const pointResp = await fetch(pointUrl, { headers: noaaHeaders });
-  if (!pointResp.ok) {
-    throw new Error(`NOAA points API error ${pointResp.status}`);
-  }
-  const pointData = await pointResp.json();
-  const stationsUrl = pointData?.properties?.observationStations;
-  if (!stationsUrl) throw new Error("No observation stations URL from NOAA");
+// NOAA NWS stations near Old Fisherman's Wharf, Monterey (36.6033, -121.8947)
+const WEATHER_STATIONS = [
+  {
+    id: "KMRY",
+    name: "Monterey Regional Airport",
+    lat: 36.59047,
+    lon: -121.84875,
+    distanceMi: 2.2,
+    isPrimary: true,
+  },
+  {
+    id: "CQ076",
+    name: "Carmel Valley",
+    lat: 36.48194,
+    lon: -121.73333,
+    distanceMi: 12.0,
+    isPrimary: false,
+  },
+  {
+    id: "KSNS",
+    name: "Salinas Municipal Airport",
+    lat: 36.66361,
+    lon: -121.60806,
+    distanceMi: 15.8,
+    isPrimary: false,
+  },
+];
 
-  // Step 2: Get station list
-  const stationsResp = await fetch(stationsUrl, { headers: noaaHeaders });
-  if (!stationsResp.ok) {
-    throw new Error(`NOAA stations API error ${stationsResp.status}`);
-  }
-  const stationsData = await stationsResp.json();
-  const features = stationsData?.features;
-  if (!features || features.length === 0) {
-    throw new Error("No NOAA observation stations found");
-  }
-  const stationId = features[0]?.properties?.stationIdentifier;
-  const stationName = features[0]?.properties?.name || "NOAA Station";
-  if (!stationId) throw new Error("No station identifier from NOAA");
-
-  // Step 3: Get latest observation
+async function fetchStationObservation(stationId) {
   const obsUrl = `${NOAA_BASE_URL}/stations/${stationId}/observations/latest`;
   const obsResp = await fetch(obsUrl, { headers: noaaHeaders });
   if (!obsResp.ok) {
-    throw new Error(`NOAA observation API error ${obsResp.status}`);
+    throw new Error(`NOAA observation API error ${obsResp.status} for ${stationId}`);
   }
   const obsData = await obsResp.json();
   const obs = obsData?.properties;
-  if (!obs) throw new Error("No observation properties from NOAA");
-
-  return { obs, stationId, stationName };
+  if (!obs) throw new Error(`No observation properties for ${stationId}`);
+  return obs;
 }
 
 function toMs(valueObj) {
@@ -3948,7 +3946,7 @@ function toMs(valueObj) {
   return val;
 }
 
-function normalizeNoaaObservation({ obs, stationName }) {
+function normalizeNoaaObservation({ obs, stationConfig }) {
   // NOAA returns SI units but wind can be m/s OR km/h depending on station
   const windSpeedMs = toMs(obs.windSpeed) ?? 0;
   const windGustMs = toMs(obs.windGust);
@@ -3973,7 +3971,11 @@ function normalizeNoaaObservation({ obs, stationName }) {
     }
   }
 
+  // Text description (e.g. "Light Rain", "Partly Cloudy")
+  const textDescription = obs.textDescription || null;
+
   return {
+    stationId: stationConfig.id,
     dirDeg: Math.round(dirDeg),
     speedMph,
     speedKts,
@@ -3982,22 +3984,26 @@ function normalizeNoaaObservation({ obs, stationName }) {
     tempF,
     humidity: humidity !== null ? Math.round(humidity) : null,
     pressureInHg,
+    textDescription,
     observedAt,
     fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
     source: "noaa",
     station: {
-      name: stationName,
-      lat: STATION_LAT,
-      lon: STATION_LON,
+      name: stationConfig.name,
+      id: stationConfig.id,
+      lat: stationConfig.lat,
+      lon: stationConfig.lon,
+      distanceMi: stationConfig.distanceMi,
+      isPrimary: stationConfig.isPrimary || false,
     },
     error: null,
   };
 }
 
 async function doWeatherFetch() {
-  // Rate limit: check last fetch time
-  const docRef = db.doc(WEATHER_DOC_PATH);
-  const existing = await docRef.get();
+  // Rate limit: check last fetch time using primary station doc
+  const primaryDocRef = db.doc(WEATHER_DOC_PATH);
+  const existing = await primaryDocRef.get();
 
   if (existing.exists) {
     const lastFetched = existing.data()?.fetchedAt?.toMillis?.();
@@ -4009,24 +4015,89 @@ async function doWeatherFetch() {
     }
   }
 
-  try {
-    const noaaResult = await fetchNoaaData();
-    const normalized = normalizeNoaaObservation(noaaResult);
-    await docRef.set(normalized, { merge: true });
-    logger.info("Weather updated from NOAA", { speedKts: normalized.speedKts, dirDeg: normalized.dirDeg });
-    return { skipped: false, data: normalized };
-  } catch (error) {
-    // On error, keep last known data but record the error
-    logger.error("NOAA weather fetch failed", { error: error.message });
-    await docRef.set(
+  // Fetch all stations in parallel
+  const results = await Promise.allSettled(
+    WEATHER_STATIONS.map(async (stationConfig) => {
+      try {
+        const obs = await fetchStationObservation(stationConfig.id);
+        const normalized = normalizeNoaaObservation({ obs, stationConfig });
+
+        // Write to station-specific doc
+        const stationDocRef = db.doc(`weather/stations/observations/${stationConfig.id}`);
+        await stationDocRef.set(normalized, { merge: true });
+
+        // If primary, also write to the legacy mpyc_station doc
+        if (stationConfig.isPrimary) {
+          await primaryDocRef.set(normalized, { merge: true });
+        }
+
+        logger.info(`Weather updated for ${stationConfig.id}`, {
+          speedKts: normalized.speedKts,
+          dirDeg: normalized.dirDeg,
+        });
+        return { station: stationConfig.id, data: normalized };
+      } catch (error) {
+        logger.warn(`Weather fetch failed for ${stationConfig.id}`, {
+          error: error.message,
+        });
+        // Write error to station doc
+        const stationDocRef = db.doc(`weather/stations/observations/${stationConfig.id}`);
+        await stationDocRef.set(
+          {
+            stationId: stationConfig.id,
+            station: {
+              name: stationConfig.name,
+              id: stationConfig.id,
+              lat: stationConfig.lat,
+              lon: stationConfig.lon,
+              distanceMi: stationConfig.distanceMi,
+              isPrimary: stationConfig.isPrimary || false,
+            },
+            error: error.message || "Unknown fetch error",
+            fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+        return { station: stationConfig.id, error: error.message };
+      }
+    }),
+  );
+
+  // Update the stations list metadata doc
+  await db.doc("weather/stations").set({
+    stationIds: WEATHER_STATIONS.map((s) => s.id),
+    stations: WEATHER_STATIONS.map((s) => ({
+      id: s.id,
+      name: s.name,
+      lat: s.lat,
+      lon: s.lon,
+      distanceMi: s.distanceMi,
+      isPrimary: s.isPrimary || false,
+    })),
+    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  const succeeded = results.filter(
+    (r) => r.status === "fulfilled" && !r.value.error,
+  ).length;
+  const failed = results.length - succeeded;
+  logger.info(`Multi-station weather fetch complete: ${succeeded} ok, ${failed} failed`);
+
+  // If primary station failed, record error on legacy doc
+  const primaryResult = results.find(
+    (r) => r.status === "fulfilled" && r.value.station === WEATHER_STATIONS.find((s) => s.isPrimary)?.id,
+  );
+  if (!primaryResult || primaryResult.value?.error) {
+    await primaryDocRef.set(
       {
-        error: error.message || "Unknown fetch error",
+        error: primaryResult?.value?.error || "Primary station fetch failed",
         fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
-    return { skipped: false, error: error.message };
   }
+
+  return { skipped: false, stationsUpdated: succeeded, stationsFailed: failed };
 }
 
 // Scheduled: runs every 1 minute

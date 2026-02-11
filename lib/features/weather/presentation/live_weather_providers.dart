@@ -17,6 +17,27 @@ final liveWeatherProvider = StreamProvider<LiveWeather?>((ref) {
   });
 });
 
+/// Listens to all station observation docs under weather/stations/observations/*
+final allStationsWeatherProvider = StreamProvider<List<LiveWeather>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('weather')
+      .doc('stations')
+      .collection('observations')
+      .snapshots()
+      .map((snap) {
+    return snap.docs
+        .where((doc) => doc.data()['error'] == null)
+        .map((doc) => LiveWeather.fromFirestore(doc.data()))
+        .toList()
+      ..sort((a, b) {
+        // Primary station first, then by distance
+        if (a.station.isPrimary && !b.station.isPrimary) return -1;
+        if (!a.station.isPrimary && b.station.isPrimary) return 1;
+        return a.station.distanceMi.compareTo(b.station.distanceMi);
+      });
+  });
+});
+
 final windSpeedUnitProvider = StateProvider<WindSpeedUnit>((ref) {
   return WindSpeedUnit.kts;
 });

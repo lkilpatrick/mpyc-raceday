@@ -12,6 +12,7 @@ class WeatherLogPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final weatherAsync = ref.watch(liveWeatherProvider);
+    final stationsAsync = ref.watch(allStationsWeatherProvider);
     final unit = ref.watch(windSpeedUnitProvider);
 
     return SingleChildScrollView(
@@ -71,6 +72,17 @@ class WeatherLogPage extends ConsumerWidget {
                 );
               }
               return _buildWeatherContent(context, ref, weather, unit);
+            },
+          ),
+
+          // Multi-station comparison section
+          const SizedBox(height: 32),
+          stationsAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (stations) {
+              if (stations.length < 2) return const SizedBox.shrink();
+              return _buildStationComparison(context, stations, unit);
             },
           ),
         ],
@@ -230,6 +242,230 @@ class WeatherLogPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStationComparison(
+    BuildContext context,
+    List<LiveWeather> stations,
+    WindSpeedUnit unit,
+  ) {
+    final unitLabel = unit == WindSpeedUnit.kts ? 'kts' : 'mph';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.compare_arrows, size: 20),
+            const SizedBox(width: 8),
+            Text('Nearby Stations',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text('${stations.length} stations',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  )),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Comparing NOAA weather stations within ~16 miles of Old Fisherman\'s Wharf',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 16),
+
+        // Station comparison cards
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = constraints.maxWidth > 900
+                ? (constraints.maxWidth - 32) / 3
+                : constraints.maxWidth > 600
+                    ? (constraints.maxWidth - 16) / 2
+                    : constraints.maxWidth;
+
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: stations.map((w) {
+                final speed = unit == WindSpeedUnit.kts ? w.speedKts : w.speedMph;
+                final gust = unit == WindSpeedUnit.kts ? w.gustKts : w.gustMph;
+
+                return SizedBox(
+                  width: cardWidth,
+                  child: Card(
+                    elevation: w.station.isPrimary ? 3 : 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: w.station.isPrimary
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2)
+                          : BorderSide.none,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Station header
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      w.station.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${w.stationId ?? w.station.id ?? ''} · ${w.station.distanceMi.toStringAsFixed(1)} mi away',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (w.station.isPrimary)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text('Primary',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer,
+                                      )),
+                                ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+
+                          // Wind info — prominent
+                          Row(
+                            children: [
+                              Transform.rotate(
+                                angle: (w.dirDeg * 3.14159 / 180) + 3.14159,
+                                child: Icon(Icons.navigation,
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${speed.toStringAsFixed(1)} $unitLabel',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${w.windDirectionLabel} (${w.dirDeg}°)'
+                                    '${gust != null ? ' · G ${gust.toStringAsFixed(1)}' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Other conditions
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 6,
+                            children: [
+                              if (w.tempF != null)
+                                _miniStat(Icons.thermostat,
+                                    '${w.tempF!.toStringAsFixed(1)}°F'),
+                              if (w.humidity != null)
+                                _miniStat(Icons.water_drop,
+                                    '${w.humidity!.toStringAsFixed(0)}%'),
+                              if (w.pressureInHg != null)
+                                _miniStat(Icons.speed,
+                                    '${w.pressureInHg!.toStringAsFixed(2)} inHg'),
+                            ],
+                          ),
+
+                          if (w.textDescription != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                w.textDescription!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 8),
+                          Text(
+                            'Observed ${DateFormat.jm().format(w.observedAt)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _miniStat(IconData icon, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.grey.shade600),
+        const SizedBox(width: 4),
+        Text(value, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+      ],
     );
   }
 

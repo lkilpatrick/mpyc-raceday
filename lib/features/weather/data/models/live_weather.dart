@@ -10,10 +10,12 @@ class LiveWeather {
     this.tempF,
     this.humidity,
     this.pressureInHg,
+    this.textDescription,
     required this.observedAt,
     required this.fetchedAt,
     required this.source,
     required this.station,
+    this.stationId,
     this.error,
   });
 
@@ -25,10 +27,12 @@ class LiveWeather {
   final double? tempF;
   final double? humidity;
   final double? pressureInHg;
+  final String? textDescription;
   final DateTime observedAt;
   final DateTime fetchedAt;
   final String source;
   final StationInfo station;
+  final String? stationId;
   final String? error;
 
   factory LiveWeather.fromFirestore(Map<String, dynamic> data) {
@@ -42,10 +46,12 @@ class LiveWeather {
       tempF: (data['tempF'] as num?)?.toDouble(),
       humidity: (data['humidity'] as num?)?.toDouble(),
       pressureInHg: (data['pressureInHg'] as num?)?.toDouble(),
+      textDescription: data['textDescription'] as String?,
       observedAt: (data['observedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       fetchedAt: (data['fetchedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       source: data['source'] as String? ?? 'unknown',
       station: StationInfo.fromMap(stationData),
+      stationId: data['stationId'] as String?,
       error: data['error'] as String?,
     );
   }
@@ -69,17 +75,26 @@ class StationInfo {
     required this.name,
     required this.lat,
     required this.lon,
+    this.id,
+    this.distanceMi = 0,
+    this.isPrimary = false,
   });
 
   final String name;
   final double lat;
   final double lon;
+  final String? id;
+  final double distanceMi;
+  final bool isPrimary;
 
   factory StationInfo.fromMap(Map<String, dynamic> data) {
     return StationInfo(
       name: data['name'] as String? ?? 'MPYC Weather Station',
       lat: (data['lat'] as num?)?.toDouble() ?? 36.6053,
       lon: (data['lon'] as num?)?.toDouble() ?? -121.8885,
+      id: data['id'] as String?,
+      distanceMi: (data['distanceMi'] as num?)?.toDouble() ?? 0,
+      isPrimary: data['isPrimary'] as bool? ?? false,
     );
   }
 }
