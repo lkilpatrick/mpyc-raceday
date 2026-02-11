@@ -26,7 +26,17 @@ final allStationsWeatherProvider = StreamProvider<List<LiveWeather>>((ref) {
       .snapshots()
       .map((snap) {
     return snap.docs
-        .where((doc) => doc.data()['error'] == null)
+        .where((doc) {
+          final d = doc.data();
+          // Always include primary/ambient stations even with errors
+          // so they appear on the map; exclude other errored stations
+          if (d['error'] != null) {
+            final isPrimary = (d['station'] as Map?)?['isPrimary'] == true;
+            final isAmbient = d['stationType'] == 'ambient';
+            return isPrimary || isAmbient;
+          }
+          return true;
+        })
         .map((doc) => LiveWeather.fromFirestore(doc.data()))
         .toList()
       ..sort((a, b) {

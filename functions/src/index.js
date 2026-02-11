@@ -4079,51 +4079,138 @@ function normalizeCoops({ data, cfg }) {
   };
 }
 
-// ── AmbientWeather fetch (public dashboard scrape) ──────────────
+// ── AmbientWeather fetch (multi-strategy) ───────────────────────
 
-async function fetchAmbientDashboard(dashboardId) {
-  // The public dashboard tiles page embeds device data in the page.
-  // We fetch the dashboard API endpoint that returns JSON device data.
-  const url = `https://ambientweather.net/dashboard/${dashboardId}/tiles`;
+// Strategy 1: REST API (requires keys in weather/config doc)
+async function fetchAmbientRestApi() {
+  const configSnap = await db.doc("weather/config").get();
+  const cfg = configSnap.data() || {};
+  const appKey = cfg.ambientAppKey;
+  const apiKey = cfg.ambientApiKey;
+  if (!appKey || !apiKey) return null;
+
+  const url = `https://rt.ambientweather.net/v1/devices?applicationKey=${appKey}&apiKey=${apiKey}`;
   const resp = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
+    headers: { "Accept": "application/json" },
   });
-  if (!resp.ok) throw new Error(`AmbientWeather dashboard ${resp.status}`);
-  const htmlText = await resp.text();
-
-  // Extract device data from the page — look for JSON in script tags or data attributes
-  // The dashboard page embeds lastData in a script block
-  const dataMatch = htmlText.match(/"lastData"\s*:\s*(\{[^}]+\})/s)
-    || htmlText.match(/lastData["']?\s*[:=]\s*(\{[^}]+\})/s);
-
-  if (dataMatch) {
-    try {
-      return JSON.parse(dataMatch[1]);
-    } catch (_) { /* fall through to regex extraction */ }
+  if (!resp.ok) {
+    logger.warn(`AmbientWeather REST API ${resp.status}`);
+    return null;
   }
+  const devices = await resp.json();
+  if (!Array.isArray(devices) || devices.length === 0) return null;
 
-  // Fallback: extract individual values from the HTML tiles
-  const extract = (pattern) => {
-    const m = htmlText.match(pattern);
-    return m ? parseFloat(m[1]) : null;
+  // Return the first device's lastData
+  const device = devices[0];
+  if (device.lastData) {
+    logger.info("AmbientWeather: got data via REST API");
+    return device.lastData;
+  }
+  return null;
+}
+
+// Strategy 2: Public dashboard page — multiple URL patterns + extraction
+async function fetchAmbientDashboardScrape(dashboardId) {
+  const urls = [
+    `https://ambientweather.net/dashboard/${dashboardId}`,
+    `https://ambientweather.net/dashboard/${dashboardId}/tiles`,
+    `https://ambientweather.net/dashboard/${dashboardId}/share`,
+  ];
+  const browserHeaders = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
   };
 
-  const windSpeed = extract(/windspeedmph["']?\s*[:=]\s*([\d.]+)/i)
-    || extract(/([\d.]+)\s*<[^>]*>\s*mph/i);
-  const windGust = extract(/windgustmph["']?\s*[:=]\s*([\d.]+)/i);
-  const windDir = extract(/winddir["']?\s*[:=]\s*([\d.]+)/i);
-  const tempF = extract(/tempf["']?\s*[:=]\s*([\d.]+)/i)
-    || extract(/([\d.]+)\s*°/i);
-  const humidity = extract(/humidity["']?\s*[:=]\s*([\d.]+)/i);
-  const pressure = extract(/baromrel["']?\s*[:=]\s*([\d.]+)/i)
-    || extract(/([\d.]+)\s*inHg/i);
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, { headers: browserHeaders, redirect: "follow" });
+      if (!resp.ok) continue;
+      const html = await resp.text();
+      if (!html || html.length < 200) continue;
 
-  if (windSpeed === null && tempF === null) {
-    throw new Error("Could not extract AmbientWeather data from dashboard");
+      // Try multiple JSON extraction patterns
+      const jsonPatterns = [
+        // Full lastData object (greedy, handles nested braces)
+        /"lastData"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s,
+        /lastData["']?\s*[:=]\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s,
+        // Device data in __NEXT_DATA__ or similar SSR payloads
+        /"deviceData"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s,
+        /"currentConditions"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s,
+        // Embedded JSON in script tags
+        /data-device=['"](\{.*?\})['"]/s,
+      ];
+
+      for (const pattern of jsonPatterns) {
+        const m = html.match(pattern);
+        if (m) {
+          try {
+            const parsed = JSON.parse(m[1]);
+            if (parsed.windspeedmph !== undefined || parsed.tempf !== undefined) {
+              logger.info(`AmbientWeather: extracted JSON from ${url}`);
+              return parsed;
+            }
+          } catch (_) { /* try next pattern */ }
+        }
+      }
+
+      // Fallback: extract individual values from HTML content
+      const data = extractValuesFromHtml(html);
+      if (data) {
+        logger.info(`AmbientWeather: extracted values from HTML at ${url}`);
+        return data;
+      }
+    } catch (e) {
+      logger.warn(`AmbientWeather scrape ${url}: ${e.message}`);
+    }
   }
+  return null;
+}
+
+// Extract weather values from HTML using multiple regex strategies
+function extractValuesFromHtml(html) {
+  const extract = (patterns) => {
+    for (const p of patterns) {
+      const m = html.match(p);
+      if (m) return parseFloat(m[1]);
+    }
+    return null;
+  };
+
+  const windSpeed = extract([
+    /windspeedmph["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /wind[_\s-]*speed["']?\s*[:=]\s*["']?([\d.]+)/i,
+    />([\d.]+)\s*<\/[^>]*>\s*mph/i,
+    /([\d.]+)\s*mph/i,
+  ]);
+  const windGust = extract([
+    /windgustmph["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /wind[_\s-]*gust["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /gust[s]?\s*[:=]?\s*([\d.]+)/i,
+  ]);
+  const windDir = extract([
+    /winddir["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /wind[_\s-]*dir(?:ection)?["']?\s*[:=]\s*["']?([\d.]+)/i,
+  ]);
+  const tempF = extract([
+    /tempf["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /temp["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /temperature["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /outdoor[_\s-]*temp[^"]*["']?\s*[:=]\s*["']?([\d.]+)/i,
+  ]);
+  const humidity = extract([
+    /(?<!in)humidity["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /outdoor[_\s-]*humidity["']?\s*[:=]\s*["']?([\d.]+)/i,
+  ]);
+  const pressure = extract([
+    /baromrel(?:in)?["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /baromabs(?:in)?["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /pressure["']?\s*[:=]\s*["']?([\d.]+)/i,
+    /([\d.]+)\s*inHg/i,
+  ]);
+
+  if (windSpeed === null && tempF === null && humidity === null) return null;
 
   return {
     windspeedmph: windSpeed,
@@ -4134,6 +4221,19 @@ async function fetchAmbientDashboard(dashboardId) {
     baromrelin: pressure,
     dateutc: Date.now(),
   };
+}
+
+// Main fetch orchestrator for AmbientWeather — tries REST API first, then scrape
+async function fetchAmbientDashboard(dashboardId) {
+  // Strategy 1: REST API (best, if keys are configured)
+  const apiData = await fetchAmbientRestApi();
+  if (apiData) return apiData;
+
+  // Strategy 2: Dashboard scrape (multiple URLs + extraction patterns)
+  const scrapeData = await fetchAmbientDashboardScrape(dashboardId);
+  if (scrapeData) return scrapeData;
+
+  throw new Error("All AmbientWeather fetch strategies failed");
 }
 
 function normalizeAmbient({ data, cfg }) {
@@ -4232,10 +4332,13 @@ async function writeStationDoc(cfg, normalized, primaryDocRef) {
 
 async function writeStationError(cfg) {
   const docRef = db.doc(`weather/stations/observations/${cfg.id}`);
+  // Merge so we preserve the last good weather values (speed, dir, temp, etc.)
+  // but mark the error and update fetchedAt so the station always shows on the map
   await docRef.set({
     stationId: cfg.id,
     station: { name: cfg.name, id: cfg.id, lat: cfg.lat, lon: cfg.lon, distanceMi: cfg.distanceMi, isPrimary: cfg.isPrimary || false, type: cfg.type },
     error: "Fetch failed", stationType: cfg.type,
+    source: cfg.type === "ambient" ? "ambient" : cfg.type === "nws" ? "noaa" : cfg.type,
     fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 }
