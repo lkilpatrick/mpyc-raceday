@@ -615,7 +615,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       seqParts.add('FINISH');
     }
 
-    // Build map points for polyline (start at Mark 1)
+    // Build map points for polyline (start at Mark 1, end at finish)
     final points = <_LatLng>[];
     final markNames = <String>[];
     final mark1 = marks.where((m) => m.name == '1').firstOrNull;
@@ -628,6 +628,20 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       if (mark?.latitude != null && mark?.longitude != null) {
         points.add(_LatLng(mark!.latitude!, mark.longitude!));
         markNames.add(leg.markName);
+      }
+    }
+    // Add finish point
+    if (_legs.isNotEmpty) {
+      if (_finishType == 'club_mark' && _finishMarkId != null) {
+        final fm = marks.where((m) => m.id == _finishMarkId).firstOrNull;
+        if (fm?.latitude != null && fm?.longitude != null) {
+          points.add(_LatLng(fm!.latitude!, fm.longitude!));
+          markNames.add(fm.name);
+        }
+      } else if (mark1?.latitude != null && mark1?.longitude != null) {
+        // Committee boat finish = back to Mark 1
+        points.add(_LatLng(mark1!.latitude!, mark1.longitude!));
+        markNames.add('1');
       }
     }
 
@@ -787,6 +801,15 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       if (mark?.latitude != null && mark?.longitude != null) {
         points.add(_LatLng(mark!.latitude!, mark.longitude!));
       }
+    }
+    // Add finish point
+    if (_finishType == 'club_mark' && _finishMarkId != null) {
+      final fm = marks.where((m) => m.id == _finishMarkId).firstOrNull;
+      if (fm?.latitude != null && fm?.longitude != null) {
+        points.add(_LatLng(fm!.latitude!, fm.longitude!));
+      }
+    } else if (mark1?.latitude != null && mark1?.longitude != null) {
+      points.add(_LatLng(mark1!.latitude!, mark1.longitude!));
     }
     if (points.length < 2) return 0;
 
