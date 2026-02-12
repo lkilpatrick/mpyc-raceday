@@ -324,56 +324,78 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
         const SizedBox(height: 8),
 
         // Sequence list
-        if (_legs.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: const Column(
-              children: [
-                Icon(Icons.add_road, size: 32, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('Add marks to define the course.',
-                    style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          )
-        else
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(7)),
-                  ),
-                  child: const Row(
-                    children: [
-                      SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      Expanded(child: Text('Mark', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      SizedBox(width: 80, child: Text('Rounding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      SizedBox(width: 96, child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                    ],
-                  ),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(7)),
                 ),
-                // Rows
+                child: const Row(
+                  children: [
+                    SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                    Expanded(child: Text('Mark', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                    SizedBox(width: 80, child: Text('Rounding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                    SizedBox(width: 96, child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  ],
+                ),
+              ),
+              // Locked START row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      child: Icon(Icons.flag, size: 14, color: Colors.green.shade700),
+                    ),
+                    Expanded(
+                      child: Text('START (Mark 1)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.green.shade700)),
+                    ),
+                    const SizedBox(width: 80),
+                    SizedBox(
+                      width: 96,
+                      child: Icon(Icons.lock_outline,
+                          size: 14, color: Colors.grey.shade400),
+                    ),
+                  ],
+                ),
+              ),
+              // User-added rows
+              if (_legs.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: const Text('Add marks to define the course.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                )
+              else
                 for (var i = 0; i < _legs.length; i++)
                   _buildLegRow(i, marks),
-              ],
-            ),
+            ],
           ),
+        ),
       ],
     );
   }
@@ -593,12 +615,19 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       seqParts.add('FINISH');
     }
 
-    // Build map points for polyline
+    // Build map points for polyline (start at Mark 1)
     final points = <_LatLng>[];
+    final markNames = <String>[];
+    final mark1 = marks.where((m) => m.name == '1').firstOrNull;
+    if (mark1?.latitude != null && mark1?.longitude != null) {
+      points.add(_LatLng(mark1!.latitude!, mark1.longitude!));
+      markNames.add('1');
+    }
     for (final leg in _legs) {
       final mark = marks.where((m) => m.name == leg.markName).firstOrNull;
       if (mark?.latitude != null && mark?.longitude != null) {
         points.add(_LatLng(mark!.latitude!, mark.longitude!));
+        markNames.add(leg.markName);
       }
     }
 
@@ -685,7 +714,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                     borderRadius: BorderRadius.circular(7),
                     child: _CourseMapPreview(
                       points: points,
-                      markNames: _legs.map((l) => l.markName).toList(),
+                      markNames: markNames,
                     ),
                   )
                 : const Center(
@@ -748,6 +777,11 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
     if (_legs.isEmpty) return 0;
 
     final points = <_LatLng>[];
+    // Start at Mark 1
+    final mark1 = marks.where((m) => m.name == '1').firstOrNull;
+    if (mark1?.latitude != null && mark1?.longitude != null) {
+      points.add(_LatLng(mark1!.latitude!, mark1.longitude!));
+    }
     for (final leg in _legs) {
       final mark = marks.where((m) => m.name == leg.markName).firstOrNull;
       if (mark?.latitude != null && mark?.longitude != null) {
