@@ -66,6 +66,13 @@ class MoreScreen extends StatelessWidget {
           subtitle: 'View all maintenance requests',
           onTap: () => context.push('/maintenance/feed'),
         ),
+        _MoreItem(
+          icon: Icons.science,
+          label: 'Demo Mode',
+          subtitle: 'Simulate a race day for testing',
+          onTap: () => context.push('/demo'),
+          color: Colors.amber.shade800,
+        ),
         const Divider(),
         _MoreItem(
           icon: Icons.person,

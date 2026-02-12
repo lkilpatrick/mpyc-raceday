@@ -71,7 +71,9 @@ class _CourseSelectionScreenState extends ConsumerState<CourseSelectionScreen> {
                     final aRec = recommendedIds.contains(a.id) ? 0 : 1;
                     final bRec = recommendedIds.contains(b.id) ? 0 : 1;
                     if (aRec != bRec) return aRec.compareTo(bRec);
-                    return a.courseNumber.compareTo(b.courseNumber);
+                    final aNum = int.tryParse(a.courseNumber) ?? 9999;
+                    final bNum = int.tryParse(b.courseNumber) ?? 9999;
+                    return aNum.compareTo(bNum);
                   });
 
                 if (sorted.isEmpty) {

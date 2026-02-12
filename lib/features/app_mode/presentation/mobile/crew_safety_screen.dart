@@ -12,9 +12,7 @@ class CrewSafetyScreen extends ConsumerWidget {
     final memberAsync = ref.watch(currentUserProvider);
     final member = memberAsync.value;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Safety & Emergency')),
-      body: ListView(
+    return ListView(
         padding: const EdgeInsets.all(12),
         children: [
           // MOB quick action
@@ -148,7 +146,6 @@ class CrewSafetyScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
     );
   }
 

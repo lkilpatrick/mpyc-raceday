@@ -6,7 +6,7 @@ import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_nav_config.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_timing_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
-import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_chat_screen.dart';
+// crew_chat_screen removed — chat not needed in any mode
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
@@ -63,10 +63,10 @@ class _MobileShellState extends ConsumerState<MobileShell> {
         '/report' => const ReportTabScreen(),
         '/more' => const MoreScreen(),
         '/rc-timing' => const RcTimingScreen(),
-        '/race-mode' => const RaceModeScreen(),
+        '/race-mode' => const RaceModeScreen(embedded: true),
         '/rules/advisor' => const SituationAdvisorScreen(),
         '/crew-dashboard' => const CrewDashboardScreen(),
-        '/crew-chat' => const CrewChatScreen(),
+        // crew-chat removed
         '/crew-safety' => const CrewSafetyScreen(),
         '/spectator' => const SpectatorScreen(),
         '/leaderboard' => const LeaderboardScreen(),

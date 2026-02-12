@@ -34,6 +34,7 @@ import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_s
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/skipper_checkin_screen.dart';
+import 'package:mpyc_raceday/features/demo/presentation/demo_mode_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -254,6 +255,10 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/skipper-checkin',
       builder: (context, state) => const SkipperCheckinScreen(),
+    ),
+    GoRoute(
+      path: '/demo',
+      builder: (context, state) => const DemoModeScreen(),
     ),
     // Shell routes for mode-specific bottom nav tabs
     GoRoute(

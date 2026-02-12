@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../demo/demo_mode_service.dart';
+
 /// RC Timing hub — shows today's event, start sequence, finish recording,
 /// check-in management, and scoring all in one place.
 class RcTimingScreen extends ConsumerStatefulWidget {
@@ -20,11 +22,21 @@ class _RcTimingScreenState extends ConsumerState<RcTimingScreen> {
   String? _eventId;
   String _eventName = '';
   String _status = '';
+  bool _creatingDemo = false;
 
   @override
   void initState() {
     super.initState();
     _loadTodaysEvent();
+  }
+
+  Future<void> _createDemoRace() async {
+    setState(() => _creatingDemo = true);
+    try {
+      await DemoModeService.createDemoRace();
+      await _loadTodaysEvent();
+    } catch (_) {}
+    if (mounted) setState(() => _creatingDemo = false);
   }
 
   Future<void> _loadTodaysEvent() async {
@@ -61,6 +73,22 @@ class _RcTimingScreenState extends ConsumerState<RcTimingScreen> {
             const SizedBox(height: 12),
             const Text('No race event today',
                 style: TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _creatingDemo ? null : _createDemoRace,
+              icon: _creatingDemo
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.science),
+              label: Text(_creatingDemo ? 'Creating...' : 'Create Demo Race'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.amber.shade700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('Creates a test event with sample boats',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       );

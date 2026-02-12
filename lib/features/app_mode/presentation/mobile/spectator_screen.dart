@@ -1,133 +1,111 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 
-class SpectatorScreen extends ConsumerWidget {
+/// Spectator Live Race screen — shows a live map with GPS tracks from
+/// skippers and RC, plus quick links to leaderboard and past results.
+class SpectatorScreen extends ConsumerStatefulWidget {
   const SpectatorScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Live Race View')),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          // Race status
-          const _RaceStatusCard(),
-          const SizedBox(height: 12),
+  ConsumerState<SpectatorScreen> createState() => _SpectatorScreenState();
+}
 
-          // Live leaderboard mini
-          const _LiveLeaderboardMini(),
-          const SizedBox(height: 12),
+class _SpectatorScreenState extends ConsumerState<SpectatorScreen> {
+  final _mapController = MapController();
 
-          // Weather
-          const _WeatherMini(),
-          const SizedBox(height: 12),
+  // MPYC harbor center
+  static const _mpycCenter = LatLng(36.6022, -121.8899);
 
-          // Race replay access
-          Card(
-            child: InkWell(
-              onTap: () => context.push('/race-replay'),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // Race status
+        const _RaceStatusCard(),
+        const SizedBox(height: 12),
+
+        // Live Race Map
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.replay, color: Colors.purple.shade700),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Race Replay',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15)),
-                          Text('View recorded GPS tracks from today',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, color: Colors.grey),
+                    const Icon(Icons.map, color: Colors.blue, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('Live Race Map',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                    const Spacer(),
+                    Text('GPS tracks from fleet',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600)),
                   ],
                 ),
               ),
-            ),
+              SizedBox(
+                height: 280,
+                child: _LiveRaceMap(mapController: _mapController),
+              ),
+              // Legend
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Wrap(
+                  spacing: 12,
+                  children: [
+                    _LegendDot(color: Colors.blue, label: 'Boats'),
+                    _LegendDot(color: Colors.red, label: 'RC'),
+                    _LegendDot(color: Colors.orange, label: 'Marks'),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+        ),
+        const SizedBox(height: 12),
 
-          // Notice board
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.campaign, color: Colors.amber),
-                      SizedBox(width: 8),
-                      Text('Notice Board',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('notices')
-                        .orderBy('createdAt', descending: true)
-                        .limit(5)
-                        .snapshots(),
-                    builder: (context, snap) {
-                      final docs = snap.data?.docs ?? [];
-                      if (docs.isEmpty) {
-                        return const Text('No notices posted',
-                            style: TextStyle(color: Colors.grey));
-                      }
-                      return Column(
-                        children: docs.map((doc) {
-                          final d = doc.data() as Map<String, dynamic>;
-                          final title = d['title'] as String? ?? '';
-                          final body = d['body'] as String? ?? '';
-                          final ts = d['createdAt'] as Timestamp?;
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13)),
-                            subtitle: Text(body,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12)),
-                            trailing: ts != null
-                                ? Text(
-                                    DateFormat.jm().format(ts.toDate()),
-                                    style: const TextStyle(
-                                        fontSize: 10, color: Colors.grey),
-                                  )
-                                : null,
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ],
+        // Quick links row
+        Row(
+          children: [
+            Expanded(
+              child: _QuickLink(
+                icon: Icons.leaderboard,
+                label: 'Leaderboard',
+                color: Colors.amber,
+                onTap: () => context.push('/leaderboard'),
               ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _QuickLink(
+                icon: Icons.history,
+                label: 'Past Races',
+                color: Colors.purple,
+                onTap: () => context.push('/leaderboard'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Weather mini
+        const _WeatherMini(),
+        const SizedBox(height: 12),
+
+        // Checked-in boats
+        const _CheckedInBoatsMini(),
+      ],
     );
   }
 }
@@ -224,45 +202,259 @@ class _RaceStatusCard extends StatelessWidget {
   }
 }
 
-class _LiveLeaderboardMini extends StatelessWidget {
-  const _LiveLeaderboardMini();
+/// Live race map showing GPS tracks from race_tracks collection.
+class _LiveRaceMap extends StatelessWidget {
+  const _LiveRaceMap({required this.mapController});
+  final MapController mapController;
+
+  static const _mpycCenter = LatLng(36.6022, -121.8899);
+
+  // Boat-specific colors for track lines
+  static const _boatColors = [
+    Colors.blue,
+    Colors.teal,
+    Colors.indigo,
+    Colors.cyan,
+    Colors.lightBlue,
+    Colors.blueAccent,
+    Colors.deepPurple,
+    Colors.green,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('race_tracks')
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .orderBy('date', descending: true)
+          .limit(20)
+          .snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+
+        // Build polylines and markers from tracks
+        final polylines = <Polyline>[];
+        final markers = <Marker>[];
+
+        for (var i = 0; i < docs.length; i++) {
+          final d = docs[i].data() as Map<String, dynamic>;
+          final points = d['points'] as List<dynamic>? ?? [];
+          final boatName = d['boatName'] as String? ?? 'Boat ${i + 1}';
+          final sailNumber = d['sailNumber'] as String? ?? '';
+          final color = _boatColors[i % _boatColors.length];
+
+          if (points.isEmpty) continue;
+
+          final latLngs = <LatLng>[];
+          for (final p in points) {
+            if (p is Map<String, dynamic>) {
+              final lat = (p['lat'] as num?)?.toDouble();
+              final lon = (p['lon'] as num?)?.toDouble();
+              if (lat != null && lon != null) {
+                latLngs.add(LatLng(lat, lon));
+              }
+            }
+          }
+
+          if (latLngs.isEmpty) continue;
+
+          polylines.add(Polyline(
+            points: latLngs,
+            color: color,
+            strokeWidth: 3,
+          ));
+
+          // Latest position marker
+          markers.add(Marker(
+            point: latLngs.last,
+            width: 60,
+            height: 30,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                sailNumber.isNotEmpty ? sailNumber : boatName,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ));
+        }
+
+        // Add course marks from Firestore
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('marks').snapshots(),
+          builder: (context, markSnap) {
+            final markDocs = markSnap.data?.docs ?? [];
+            for (final doc in markDocs) {
+              final md = doc.data() as Map<String, dynamic>;
+              final lat = (md['lat'] as num?)?.toDouble();
+              final lon = (md['lon'] as num?)?.toDouble();
+              final name = md['name'] as String? ?? doc.id;
+              if (lat != null && lon != null) {
+                markers.add(Marker(
+                  point: LatLng(lat, lon),
+                  width: 40,
+                  height: 40,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on,
+                          color: Colors.orange, size: 22),
+                      Text(name,
+                          style: const TextStyle(
+                              fontSize: 8, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ));
+              }
+            }
+
+            return FlutterMap(
+              mapController: mapController,
+              options: MapOptions(
+                initialCenter: _mpycCenter,
+                initialZoom: 13.5,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                ),
+                if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+                if (markers.isNotEmpty) MarkerLayer(markers: markers),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+class _QuickLink extends StatelessWidget {
+  const _QuickLink({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        onTap: () => context.push('/leaderboard'),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.leaderboard, color: Colors.amber.shade800),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Live Leaderboard',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text('Real-time scoring & corrected times',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shows today's checked-in boats count
+class _CheckedInBoatsMini extends StatelessWidget {
+  const _CheckedInBoatsMini();
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('race_events')
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isLessThan: Timestamp.fromDate(todayEnd))
+          .limit(1)
+          .snapshots(),
+      builder: (context, eventSnap) {
+        final eventDocs = eventSnap.data?.docs ?? [];
+        if (eventDocs.isEmpty) return const SizedBox.shrink();
+
+        final eventId = eventDocs.first.id;
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('boat_checkins')
+              .where('eventId', isEqualTo: eventId)
+              .snapshots(),
+          builder: (context, snap) {
+            final count = snap.data?.docs.length ?? 0;
+            if (count == 0) return const SizedBox.shrink();
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.sailing, color: Colors.teal),
+                    const SizedBox(width: 10),
+                    Text('$count boats checked in',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    const Spacer(),
+                    Text('Racing today',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -14,7 +14,10 @@ import '../../../auth/data/auth_providers.dart';
 import '../../data/models/race_track.dart';
 
 class RaceModeScreen extends ConsumerStatefulWidget {
-  const RaceModeScreen({super.key});
+  const RaceModeScreen({super.key, this.embedded = false});
+
+  /// When true, omits the Scaffold/AppBar (used inside MobileShell tabs).
+  final bool embedded;
 
   @override
   ConsumerState<RaceModeScreen> createState() => _RaceModeScreenState();
@@ -289,10 +292,252 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
     return '${m}m ${s}s';
   }
 
+  Widget _buildBody(bool isRacing) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Event info
+          if (_eventName.isNotEmpty)
+            Card(
+              color: isRacing ? Colors.white.withValues(alpha: 0.1) : null,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.sailing,
+                        color: isRacing ? Colors.white70 : Colors.indigo),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_eventName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isRacing ? Colors.white : null,
+                              )),
+                          if (_courseId.isNotEmpty)
+                            Text('Course: $_courseId',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isRacing
+                                      ? Colors.white60
+                                      : Colors.grey,
+                                )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 16),
+
+          // Timer display
+          if (_state != _RaceState.idle) ...[
+            Text(
+              _formatDuration(_elapsed),
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                color: isRacing ? Colors.white : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_startTime != null)
+              Text(
+                'Started ${DateFormat.jm().format(_startTime!)}',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isRacing ? Colors.white60 : Colors.grey,
+                ),
+              ),
+            if (_finishTime != null)
+              Text(
+                'Finished ${DateFormat.jm().format(_finishTime!)}',
+                style: const TextStyle(fontSize: 13, color: Colors.green),
+              ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // Stats grid
+          if (_state != _RaceState.idle)
+            Row(
+              children: [
+                _StatTile(
+                  label: 'Speed',
+                  value: '${_currentSpeedKnots.toStringAsFixed(1)}',
+                  unit: 'kts',
+                  isRacing: isRacing,
+                ),
+                const SizedBox(width: 8),
+                _StatTile(
+                  label: 'Max',
+                  value: '${_maxSpeedKnots.toStringAsFixed(1)}',
+                  unit: 'kts',
+                  isRacing: isRacing,
+                ),
+                const SizedBox(width: 8),
+                _StatTile(
+                  label: 'Distance',
+                  value: _totalDistanceNm.toStringAsFixed(2),
+                  unit: 'NM',
+                  isRacing: isRacing,
+                ),
+                const SizedBox(width: 8),
+                _StatTile(
+                  label: 'Points',
+                  value: '${_trackPoints.length}',
+                  unit: '',
+                  isRacing: isRacing,
+                ),
+              ],
+            ),
+
+          const Spacer(),
+
+          // Action buttons
+          if (_state == _RaceState.idle) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 80,
+              child: FilledButton.icon(
+                onPressed: _startRace,
+                icon: const Icon(Icons.play_arrow, size: 32),
+                label: const Text('Start GPS Tracking',
+                    style: TextStyle(fontSize: 20)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'GPS tracking will begin when you start',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+
+          if (_state == _RaceState.racing) ...[
+            // GPS indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.gps_fixed,
+                    size: 14,
+                    color: _trackPoints.isNotEmpty
+                        ? Colors.green
+                        : Colors.orange),
+                const SizedBox(width: 4),
+                Text(
+                  _trackPoints.isNotEmpty
+                      ? 'GPS tracking active — ${_trackPoints.length} points'
+                      : 'Acquiring GPS...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _trackPoints.isNotEmpty
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 80,
+              child: FilledButton.icon(
+                onPressed: _finishRace,
+                icon: const Icon(Icons.stop, size: 32),
+                label: const Text('STOP TRACKING',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          if (_state == _RaceState.finished) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: _uploading ? null : _uploadTrack,
+                icon: _uploading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.cloud_upload),
+                label: Text(_uploading ? 'Uploading...' : 'Upload Track'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: _resetRace,
+              child: const Text('Discard & Start Over'),
+            ),
+          ],
+
+          if (_state == _RaceState.uploaded) ...[
+            const Icon(Icons.check_circle, size: 48, color: Colors.green),
+            const SizedBox(height: 8),
+            const Text('Track uploaded successfully!',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green)),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _resetRace,
+              child: const Text('New Race'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () {
+                if (widget.embedded) {
+                  _resetRace();
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Done'),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRacing = _state == _RaceState.racing;
     final bgColor = isRacing ? const Color(0xFF0D1B2A) : null;
+    final body = _buildBody(isRacing);
+
+    if (widget.embedded) {
+      return Container(color: bgColor, child: SafeArea(child: body));
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -301,236 +546,7 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
         backgroundColor: isRacing ? const Color(0xFF0D1B2A) : null,
         foregroundColor: isRacing ? Colors.white : null,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Event info
-              if (_eventName.isNotEmpty)
-                Card(
-                  color: isRacing ? Colors.white.withValues(alpha: 0.1) : null,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.sailing,
-                            color: isRacing ? Colors.white70 : Colors.indigo),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_eventName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isRacing ? Colors.white : null,
-                                  )),
-                              if (_courseId.isNotEmpty)
-                                Text('Course: $_courseId',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isRacing
-                                          ? Colors.white60
-                                          : Colors.grey,
-                                    )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 16),
-
-              // Timer display
-              if (_state != _RaceState.idle) ...[
-                Text(
-                  _formatDuration(_elapsed),
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: isRacing ? Colors.white : null,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_startTime != null)
-                  Text(
-                    'Started ${DateFormat.jm().format(_startTime!)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isRacing ? Colors.white60 : Colors.grey,
-                    ),
-                  ),
-                if (_finishTime != null)
-                  Text(
-                    'Finished ${DateFormat.jm().format(_finishTime!)}',
-                    style: const TextStyle(fontSize: 13, color: Colors.green),
-                  ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Stats grid
-              if (_state != _RaceState.idle)
-                Row(
-                  children: [
-                    _StatTile(
-                      label: 'Speed',
-                      value: '${_currentSpeedKnots.toStringAsFixed(1)}',
-                      unit: 'kts',
-                      isRacing: isRacing,
-                    ),
-                    const SizedBox(width: 8),
-                    _StatTile(
-                      label: 'Max',
-                      value: '${_maxSpeedKnots.toStringAsFixed(1)}',
-                      unit: 'kts',
-                      isRacing: isRacing,
-                    ),
-                    const SizedBox(width: 8),
-                    _StatTile(
-                      label: 'Distance',
-                      value: _totalDistanceNm.toStringAsFixed(2),
-                      unit: 'NM',
-                      isRacing: isRacing,
-                    ),
-                    const SizedBox(width: 8),
-                    _StatTile(
-                      label: 'Points',
-                      value: '${_trackPoints.length}',
-                      unit: '',
-                      isRacing: isRacing,
-                    ),
-                  ],
-                ),
-
-              const Spacer(),
-
-              // Action buttons
-              if (_state == _RaceState.idle) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 80,
-                  child: FilledButton.icon(
-                    onPressed: _startRace,
-                    icon: const Icon(Icons.play_arrow, size: 32),
-                    label: const Text('Start Race',
-                        style: TextStyle(fontSize: 20)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'GPS tracking will begin when you start',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-
-              if (_state == _RaceState.racing) ...[
-                // GPS indicator
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.gps_fixed,
-                        size: 14,
-                        color: _trackPoints.isNotEmpty
-                            ? Colors.green
-                            : Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      _trackPoints.isNotEmpty
-                          ? 'GPS tracking active'
-                          : 'Acquiring GPS...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _trackPoints.isNotEmpty
-                            ? Colors.green
-                            : Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 80,
-                  child: FilledButton.icon(
-                    onPressed: _finishRace,
-                    icon: const Icon(Icons.flag, size: 32),
-                    label: const Text('FINISH',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-
-              if (_state == _RaceState.finished) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: _uploading ? null : _uploadTrack,
-                    icon: _uploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.cloud_upload),
-                    label: Text(_uploading ? 'Uploading...' : 'Upload Track'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: _resetRace,
-                  child: const Text('Discard & Start Over'),
-                ),
-              ],
-
-              if (_state == _RaceState.uploaded) ...[
-                const Icon(Icons.check_circle, size: 48, color: Colors.green),
-                const SizedBox(height: 8),
-                const Text('Track uploaded successfully!',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green)),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _resetRace,
-                  child: const Text('New Race'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Done'),
-                ),
-              ],
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+      body: body,
     );
   }
 }

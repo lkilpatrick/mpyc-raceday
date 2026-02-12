@@ -93,9 +93,7 @@ class _CrewDashboardScreenState extends ConsumerState<CrewDashboardScreen> {
     final memberAsync = ref.watch(currentUserProvider);
     final member = memberAsync.value;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crew Dashboard')),
-      body: ListView(
+    return ListView(
         padding: const EdgeInsets.all(12),
         children: [
           // Your assignment
@@ -241,7 +239,6 @@ class _CrewDashboardScreenState extends ConsumerState<CrewDashboardScreen> {
               ),
             ),
         ],
-      ),
     );
   }
 }
