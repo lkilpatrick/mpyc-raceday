@@ -45,8 +45,9 @@ The mobile app adapts its entire interface based on your role. Switch modes anyt
 Everything the RC needs to run a race from the committee boat.
 
 - **Guided Race Flow (Stepper)** — A 6-step guided workflow: Setup → Check-In → Start → Running → Scoring → Review. Each step has a dedicated UI with status tracking and state machine transitions.
-- **Course Selection & Broadcast** — Choose from 57 courses filtered by live wind direction. One tap broadcasts the course to the entire fleet via SMS and push notification.
-- **Start Sequence & Horn Detection** — Automated countdown with flag state tracking. Microphone-based horn detection to sync timing automatically.
+- **Multi-Fleet Course Selection & Broadcast** — Assign separate courses to up to 4 fleets. Choose from 57 courses filtered by live wind direction. One tap broadcasts all fleet course assignments via push notification. Per-fleet course dropdowns with fleet renaming and VHF channel broadcast.
+- **Start Sequence & Horn Detection** — Automated countdown with flag state tracking. Microphone-based horn detection to sync timing automatically. "Advance to Next Signal" button to skip the timer forward to the next signal point (4:00 prep, 1:00 prep down, 0:00 start).
+- **Shorten Course & Abandon Race** — Solid, high-contrast teal and red buttons on the start sequence screen. Sends fleet-wide broadcasts automatically.
 - **Finish Line Recording** — Big, tactile "FINISH" button. Each tap locks in a boat's crossing time with sail number entry. Supports OCS, DNS, DNF, DSQ, and RET letter scores with undo.
 - **Live Race Map** — Real-time boat positions on a map during the race with boat count badge and abandon/scoring actions.
 - **Race Check-In Management** — See which boats have checked in (including remote GPS check-ins from skippers), souls on board counts, and boats still missing.
@@ -96,7 +97,7 @@ Follow the racing from the dock, the clubhouse, or anywhere — no login require
 
 ### Shared Features (All Modes)
 
-- **Mode Switcher** — Tap the mode indicator bar at the top of any screen to switch between RC, Skipper, Crew, and Onshore modes. Mode persists to Firestore.
+- **Mode Switcher** — Tap the mode indicator bar at the top of any screen to switch between RC, Skipper, Crew, and Onshore modes. Mode persists to Firestore. Each mode has fully isolated bottom nav routes to prevent shell/standalone route conflicts.
 - **Racing Rules Reference** — Complete Racing Rules of Sailing database with search, quick reference chips, browse by Part/Section, bookmarks, recent lookups, and adjustable text size.
 - **Situation Advisor** — Step-by-step guide through crossing, overtaking, mark rounding, start line, tacking/gybing, and obstruction encounters with applicable rules and explanations.
 - **Profile** — View your roles, member number, membership status, emergency contact, notification preferences, and Clubspot member portal link.
@@ -129,6 +130,10 @@ The command center for race management, accessible to RC Chairs, Club Board, and
 
 ### Course Configuration
 - **57 Courses** across 6 wind groups with color coding (S/SW red, W blue, NW green, N amber, Inflatable purple, Long teal).
+- **Course Builder (List-Reorder UI)** — Build courses mark-by-mark inside the Edit Course modal. Add marks from a catalog, reorder via Move Up/Down buttons, set Port (red) / Starboard (green) rounding per leg, choose finish type (Committee Boat or Club Mark). Two-column layout with live preview panel.
+- **Live Course Diagram** — Read-only map preview updates in real time as marks are added, removed, or reordered. Polyline with labeled mark pins, Start (S) and Finish (F) indicators.
+- **Auto Distance Calculation** — Total distance in nautical miles computed automatically via haversine great-circle formula. Updates on every sequence change. "Auto" badge on the distance field.
+- **Structured Course Data** — Courses stored as ordered `CourseLeg[]` with `markId`, `rounding`, and `order`. Legacy description string (`START - Xp - 1s - FINISH`) auto-generated on save for backward compatibility.
 - **Interactive Course Diagrams** — North-up orientation, mark-type icons (permanent, government, harbor, inflatable), leg arrows, START/FINISH rectangles.
 - **13 Race Marks** — Full mark management with codes, types, and coordinates.
 - **Distance Matrix** — 56 mark-to-mark distances for course length calculation.
@@ -236,7 +241,7 @@ The command center for race management, accessible to RC Chairs, Club Board, and
 - **Flutter 3.x** — Dart, Material 3, single codebase for Android, iOS, and Web
 - **Firebase** — Firestore, Auth, Cloud Functions, Hosting, Storage, FCM
 - **Riverpod 3.x** — reactive state management with StreamProviders
-- **GoRouter** — declarative routing with shell routes and mode-aware navigation
+- **GoRouter** — declarative routing with mode-specific shell routes (RC, Skipper, Crew, Onshore each with unique tab paths)
 - **Geolocator** — high-accuracy GPS tracking for race mode and check-ins
 - **NOAA / CO-OPS / Weather Underground / AmbientWeather** — multi-source weather via Cloud Functions
 - **Clubspot API** — member sync, score push, member portal sessions, billing data
@@ -436,6 +441,7 @@ Clubspot API ←→ Cloud Functions ←→ Firestore
 - **Background GPS Tracking** — Foreground service for continuous position publishing even when the app is backgrounded
 - **Offline Position Queue** — Queue GPS updates locally when offline and flush when reconnected
 - **Finish Line Geofence** — Line-segment finish detection (two coordinates) instead of radius-based zone
+- **Course Builder v2** — Drag-and-drop reorder, rounding arrows on map preview, duplicate leg action, keyboard shortcuts
 - **US Sailing / PHRF Certificate Sync** — Pull handicap ratings and certifications automatically
 - **Race Replay Viewer** — Animated playback of GPS tracks on the course diagram
 - **Crew Weight Tracker** — Class compliance weight tracking for one-design fleets
