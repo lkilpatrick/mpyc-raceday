@@ -92,7 +92,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
 
     return Dialog(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900, maxHeight: 800),
+        constraints: const BoxConstraints(maxWidth: 1050, maxHeight: 900),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Form(
@@ -363,7 +363,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                     children: [
                       SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                       Expanded(child: Text('Mark', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      SizedBox(width: 120, child: Text('Rounding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                      SizedBox(width: 80, child: Text('Rounding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                       SizedBox(width: 96, child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                     ],
                   ),
@@ -419,28 +419,27 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
               ],
             ),
           ),
-          // Rounding toggle
+          // Rounding toggle — red P / green S
           SizedBox(
-            width: 120,
-            child: SegmentedButton<MarkRounding>(
-              segments: const [
-                ButtonSegment(
-                  value: MarkRounding.port,
-                  label: Text('Port', style: TextStyle(fontSize: 11)),
+            width: 80,
+            child: Row(
+              children: [
+                _RoundingButton(
+                  label: 'P',
+                  color: Colors.red,
+                  selected: leg.rounding == MarkRounding.port,
+                  onTap: () => setState(() =>
+                      _legs[index] = leg.copyWith(rounding: MarkRounding.port)),
                 ),
-                ButtonSegment(
-                  value: MarkRounding.starboard,
-                  label: Text('Stbd', style: TextStyle(fontSize: 11)),
+                const SizedBox(width: 4),
+                _RoundingButton(
+                  label: 'S',
+                  color: Colors.green,
+                  selected: leg.rounding == MarkRounding.starboard,
+                  onTap: () => setState(() =>
+                      _legs[index] = leg.copyWith(rounding: MarkRounding.starboard)),
                 ),
               ],
-              selected: {leg.rounding},
-              onSelectionChanged: (v) {
-                setState(() => _legs[index] = leg.copyWith(rounding: v.first));
-              },
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
             ),
           ),
           // Actions
@@ -821,6 +820,50 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       notes: _notesCtrl.text.trim(),
     );
     Navigator.pop(context, course);
+  }
+}
+
+// ── Rounding Button ──
+
+class _RoundingButton extends StatelessWidget {
+  const _RoundingButton({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 28,
+        decoration: BoxDecoration(
+          color: selected ? color : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: selected ? color.withAlpha(200) : Colors.grey.shade300,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: selected ? Colors.white : Colors.grey.shade500,
+          ),
+        ),
+      ),
+    );
   }
 }
 
