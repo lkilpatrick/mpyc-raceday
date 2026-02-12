@@ -93,19 +93,7 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_eventId == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.event_busy, size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            const Text('No race event today',
-                style: TextStyle(fontSize: 16, color: Colors.grey)),
-          ],
-        ),
-      );
-    }
+    final hasEvent = _eventId != null;
 
     final (statusLabel, statusColor) = switch (_status) {
       'setup' => ('Setup', Colors.orange),
@@ -123,113 +111,151 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
       padding: const EdgeInsets.all(12),
       children: [
         // Event header
-        Card(
-          color: statusColor.withValues(alpha: 0.08),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.sailing, color: statusColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_eventName,
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text(DateFormat.yMMMd().format(DateTime.now()),
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey)),
-                        ],
+        if (hasEvent)
+          Card(
+            color: statusColor.withValues(alpha: 0.08),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.sailing, color: statusColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_eventName,
+                                style: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text(DateFormat.yMMMd().format(DateTime.now()),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor,
-                        borderRadius: BorderRadius.circular(12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(statusLabel,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      child: Text(statusLabel,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  if (_isDemo) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 36,
+                      child: OutlinedButton.icon(
+                        onPressed: _resetDemo,
+                        icon: const Icon(Icons.refresh, size: 16, color: Colors.orange),
+                        label: const Text('Reset Demo Race',
+                            style: TextStyle(fontSize: 12, color: Colors.orange)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.orange),
+                        ),
+                      ),
                     ),
                   ],
-                ),
-                if (_isDemo) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 36,
-                    child: OutlinedButton.icon(
-                      onPressed: _resetDemo,
-                      icon: const Icon(Icons.refresh, size: 16, color: Colors.orange),
-                      label: const Text('Reset Demo Race',
-                          style: TextStyle(fontSize: 12, color: Colors.orange)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.orange),
-                      ),
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Run Race — primary action
-        Card(
-          color: Colors.indigo.shade50,
-          child: InkWell(
-            onTap: () => context.push('/rc-race/$_eventId'),
-            borderRadius: BorderRadius.circular(12),
+          )
+        else
+          Card(
+            color: Colors.grey.shade100,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.flag,
-                        color: Colors.indigo, size: 28),
-                  ),
-                  const SizedBox(width: 14),
+                  Icon(Icons.event_busy, size: 32, color: Colors.grey.shade400),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Run Race',
+                        const Text('No race event today',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.indigo.shade800)),
-                        const Text(
-                          'Setup → Check-In → Start → Score → Review',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(DateFormat.yMMMd().format(DateTime.now()),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios,
-                      color: Colors.indigo, size: 18),
+                  FilledButton.icon(
+                    onPressed: () => context.push('/demo'),
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text('Demo', style: TextStyle(fontSize: 12)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ),
         const SizedBox(height: 12),
 
-        // Race Control quick actions
+        // Run Race — primary action (only with event)
+        if (hasEvent) ...[
+          Card(
+            color: Colors.indigo.shade50,
+            child: InkWell(
+              onTap: () => context.push('/rc-race/$_eventId'),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.flag,
+                          color: Colors.indigo, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Run Race',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Colors.indigo.shade800)),
+                          const Text(
+                            'Setup → Check-In → Start → Score → Review',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios,
+                        color: Colors.indigo, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // Race Control quick actions — always visible
         Card(
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -250,38 +276,61 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _QuickAction(
-                      icon: Icons.how_to_reg,
-                      label: 'Check-In',
-                      onTap: () => context.push('/checkin/$_eventId'),
-                    ),
-                    _QuickAction(
-                      icon: Icons.timer,
-                      label: 'Start Sequence',
-                      onTap: () =>
-                          context.push('/timing/start/$_eventId'),
-                    ),
-                    _QuickAction(
-                      icon: Icons.sports_score,
-                      label: 'Record Finishes',
-                      onTap: () => context.push('/timing/$_eventId'),
-                    ),
-                    _QuickAction(
-                      icon: Icons.map,
-                      label: 'Select Course',
-                      onTap: () =>
-                          context.push('/courses/select/$_eventId'),
-                    ),
-                    _QuickAction(
-                      icon: Icons.report,
-                      label: 'Incident',
-                      onTap: () =>
-                          context.push('/incidents/report/$_eventId'),
-                    ),
+                    if (hasEvent) ...[
+                      _QuickAction(
+                        icon: Icons.how_to_reg,
+                        label: 'Check-In',
+                        onTap: () => context.push('/checkin/$_eventId'),
+                      ),
+                      _QuickAction(
+                        icon: Icons.timer,
+                        label: 'Start Sequence',
+                        onTap: () =>
+                            context.push('/timing/start/$_eventId'),
+                      ),
+                      _QuickAction(
+                        icon: Icons.sports_score,
+                        label: 'Record Finishes',
+                        onTap: () => context.push('/timing/$_eventId'),
+                      ),
+                      _QuickAction(
+                        icon: Icons.map,
+                        label: 'Select Course',
+                        onTap: () =>
+                            context.push('/courses/select/$_eventId'),
+                      ),
+                      _QuickAction(
+                        icon: Icons.report,
+                        label: 'Incident',
+                        onTap: () =>
+                            context.push('/incidents/report/$_eventId'),
+                      ),
+                      _QuickAction(
+                        icon: Icons.campaign,
+                        label: 'Broadcast',
+                        onTap: () =>
+                            context.push('/courses/broadcast/$_eventId'),
+                      ),
+                    ],
                     _QuickAction(
                       icon: Icons.history,
                       label: 'Race History',
                       onTap: () => context.push('/rc-race-history'),
+                    ),
+                    _QuickAction(
+                      icon: Icons.checklist,
+                      label: 'Checklists',
+                      onTap: () => context.push('/checklists'),
+                    ),
+                    _QuickAction(
+                      icon: Icons.build,
+                      label: 'Maintenance',
+                      onTap: () => context.push('/maintenance/feed'),
+                    ),
+                    _QuickAction(
+                      icon: Icons.play_circle,
+                      label: 'Demo Race',
+                      onTap: () => context.push('/demo'),
                     ),
                   ],
                 ),
@@ -291,54 +340,56 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Fleet Broadcast
-        Card(
-          color: Colors.red.shade50,
-          child: InkWell(
-            onTap: () => context.push('/courses/broadcast/$_eventId'),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+        // Fleet Broadcast (only with event)
+        if (hasEvent) ...[
+          Card(
+            color: Colors.red.shade50,
+            child: InkWell(
+              onTap: () => context.push('/courses/broadcast/$_eventId'),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.campaign,
+                          color: Colors.red, size: 24),
                     ),
-                    child: const Icon(Icons.campaign,
-                        color: Colors.red, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Fleet Broadcast',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Colors.red.shade800)),
-                        const Text(
-                          'Send messages to all racers, skippers, or onshore',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Fleet Broadcast',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Colors.red.shade800)),
+                          const Text(
+                            'Send messages to all racers, skippers, or onshore',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.chevron_right, color: Colors.red),
-                ],
+                    const Icon(Icons.chevron_right, color: Colors.red),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-        // Live Race Map (expandable to fullscreen)
-        _RcLiveMapCard(eventId: _eventId!),
-        const SizedBox(height: 16),
+          // Live Race Map (expandable to fullscreen)
+          _RcLiveMapCard(eventId: _eventId!),
+          const SizedBox(height: 16),
+        ],
       ],
     );
   }
@@ -574,9 +625,8 @@ class _RcLiveMapCard extends StatelessWidget {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.mpyc.raceday',
-                      ),
+                            'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                        ),
                     ],
                   ),
                   Center(
@@ -606,9 +656,8 @@ class _RcLiveMapCard extends StatelessWidget {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.mpyc.raceday',
-                ),
+                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                  ),
                 if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],
             );
@@ -816,9 +865,8 @@ class _FullscreenMapPage extends StatelessWidget {
                 children: [
                   TileLayer(
                     urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.mpyc.raceday',
-                  ),
+                        'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                    ),
                   if (markers.isNotEmpty)
                     MarkerLayer(markers: markers),
                 ],

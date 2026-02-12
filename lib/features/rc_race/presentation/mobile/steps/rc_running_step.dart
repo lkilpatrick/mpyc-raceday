@@ -216,8 +216,7 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.mpyc.raceday',
+                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
                 ),
                 if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],

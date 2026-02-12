@@ -239,8 +239,7 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.mpyc.raceday',
+          urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
         ),
         MarkerLayer(
           markers: stations.map((w) {

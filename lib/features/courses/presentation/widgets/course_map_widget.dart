@@ -59,8 +59,7 @@ class _CourseMapWidgetState extends State<CourseMapWidget> {
           children: [
             // OpenStreetMap tiles
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'org.mpyc.raceday',
+              urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
               maxZoom: 19,
             ),
 
