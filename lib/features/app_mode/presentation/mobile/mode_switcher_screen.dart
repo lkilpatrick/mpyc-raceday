@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/app_mode.dart';
 
@@ -38,7 +39,7 @@ class ModeSwitcherScreen extends ConsumerWidget {
               child: InkWell(
                 onTap: () {
                   setAppMode(ref, mode);
-                  Navigator.pop(context);
+                  context.go('/home');
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(

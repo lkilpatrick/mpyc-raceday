@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mpyc_raceday/core/theme.dart';
+import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
 import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 
@@ -214,6 +215,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 12),
 
+            // App Mode switcher
+            _AppModeCard(),
+            const SizedBox(height: 12),
+
             // Member Portal
             Card(
               child: ListTile(
@@ -275,6 +280,114 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ],
         );
       },
+      ),
+    );
+  }
+}
+
+class _AppModeCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(appModeProvider).value ?? currentAppMode();
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: mode.color.withValues(alpha: 0.08),
+            child: Row(
+              children: [
+                Icon(mode.icon, color: mode.color, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'App Mode',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        '${mode.label} Mode',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: mode.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: () => context.push('/mode-switcher'),
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('Switch'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: mode.color,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Quick-switch row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: AppMode.values.map((m) {
+                final isActive = m == mode;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Material(
+                      color: isActive
+                          ? m.color.withValues(alpha: 0.15)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: isActive
+                            ? null
+                            : () => setAppMode(ref, m),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            children: [
+                              Icon(m.icon,
+                                  size: 20,
+                                  color: isActive ? m.color : Colors.grey),
+                              const SizedBox(height: 2),
+                              Text(
+                                m == AppMode.raceCommittee ? 'RC' : m.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isActive
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isActive ? m.color : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
