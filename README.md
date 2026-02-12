@@ -20,7 +20,7 @@ MPYC Race Day is a **purpose-built, real-time race management system** that tran
 
 - **Race Committee** gets a digital command center — course selection with live wind data, automated start sequences with horn detection, one-tap finish recording, and instant score publishing to Clubspot.
 - **Skippers** get GPS-tracked race mode, remote check-in with souls on board, a synced countdown timer, one-tap protest filing with automatic weather and GPS capture, and a virtual protest flag.
-- **Crew** get a role-specific dashboard, boat-level crew chat, safety and MOB procedures, synced race timer, and post-race sign-off.
+- **Crew** get a role-specific dashboard, safety and MOB procedures, synced race timer, and post-race sign-off.
 - **Onshore spectators** get a live leaderboard with corrected times updating in real time, a notice board, weather hub, and access to GPS race replays.
 
 The **web dashboard** gives RC Chairs, Club Board members, and Admins full control over the season — calendar management, crew assignments, course configuration, fleet management, incident review, maintenance tracking, weather analytics, and Clubspot integration.
