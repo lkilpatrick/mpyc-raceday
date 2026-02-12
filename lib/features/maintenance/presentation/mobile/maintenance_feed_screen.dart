@@ -27,7 +27,7 @@ class _MaintenanceFeedScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('Maintenance')),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/maintenance/report'),
+        onPressed: () => context.push('/maintenance/report'),
         child: const Icon(Icons.add),
       ),
       body: Column(
@@ -143,7 +143,7 @@ class _RequestCard extends StatelessWidget {
 
     return Card(
       child: InkWell(
-        onTap: () => context.go('/maintenance/detail/${request.id}'),
+        onTap: () => context.push('/maintenance/detail/${request.id}'),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),

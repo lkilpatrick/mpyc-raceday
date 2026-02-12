@@ -24,7 +24,7 @@ class NextDutyHomeScreen extends ConsumerWidget {
           Card(
             color: Colors.red.shade50,
             child: InkWell(
-              onTap: () => context.go('/maintenance/feed'),
+              onTap: () => context.push('/maintenance/feed'),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.all(14),
