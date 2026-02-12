@@ -949,39 +949,11 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
   }
 
   List<Widget> _buildTurnList(CourseConfig course) {
-    final marks = course.marks;
-    if (marks.isEmpty) return [];
+    final seq = course.sequenceMarks;
+    if (seq.isEmpty) return [];
 
-    final items = <Widget>[];
-    for (int i = 0; i < marks.length; i++) {
-      final m = marks[i];
-      final String label;
-      final String detail;
-      final IconData icon;
-      final Color color;
-
-      if (m.isStart) {
-        label = 'Start';
-        detail = 'Cross the start line';
-        icon = Icons.flag;
-        color = Colors.green;
-      } else if (m.isFinish) {
-        final loc = course.finishLocation;
-        label = 'Finish';
-        detail = loc == 'X' ? 'Finish at Mark X' : 'Finish at committee boat';
-        icon = Icons.sports_score;
-        color = Colors.green;
-      } else {
-        final rounding = m.rounding == MarkRounding.port ? 'port' : 'starboard';
-        label = 'Mark ${m.markName}';
-        detail = 'Leave to $rounding';
-        icon = m.rounding == MarkRounding.port
-            ? Icons.turn_left
-            : Icons.turn_right;
-        color = m.rounding == MarkRounding.port ? Colors.red : Colors.green;
-      }
-
-      items.add(Padding(
+    Widget row(IconData icon, Color color, String label, String detail) {
+      return Padding(
         padding: const EdgeInsets.only(bottom: 3),
         child: Row(
           children: [
@@ -1006,8 +978,28 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                     fontSize: 11, color: Colors.grey.shade600)),
           ],
         ),
+      );
+    }
+
+    final items = <Widget>[
+      row(Icons.flag, Colors.green, 'Start', 'Cross the start line'),
+    ];
+
+    for (final m in seq) {
+      final rounding = m.rounding == MarkRounding.port ? 'port' : 'starboard';
+      items.add(row(
+        m.rounding == MarkRounding.port ? Icons.turn_left : Icons.turn_right,
+        m.rounding == MarkRounding.port ? Colors.red : Colors.green,
+        'Mark ${m.markName}',
+        'Leave to $rounding',
       ));
     }
+
+    final finishDetail = course.finishType == 'club_mark' && course.finishMarkId != null
+        ? 'Finish at Mark ${course.finishMarkId}'
+        : 'Finish at committee boat';
+    items.add(row(Icons.sports_score, Colors.green, 'Finish', finishDetail));
+
     return items;
   }
 
