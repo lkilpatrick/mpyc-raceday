@@ -1,4 +1,4 @@
-# MPYC Race Day
+# MPYC RaceSheet
 
 <p align="center">
   <img src="assets/images/burgee.png" alt="MPYC Burgee" width="140" />
