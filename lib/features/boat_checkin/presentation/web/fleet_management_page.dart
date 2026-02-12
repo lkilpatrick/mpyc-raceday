@@ -115,6 +115,31 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
                     .toList();
               }
 
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sailing, size: 64, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text(
+                        boats.isEmpty
+                            ? 'No boats in the fleet yet'
+                            : 'No boats match your search',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      if (boats.isEmpty) ...[
+                        const SizedBox(height: 8),
+                        FilledButton.icon(
+                          onPressed: () => _showBoatDialog(null),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add your first boat'),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SingleChildScrollView(

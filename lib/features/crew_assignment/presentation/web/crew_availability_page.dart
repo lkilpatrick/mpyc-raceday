@@ -17,20 +17,72 @@ class CrewAvailabilityPage extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (events) {
+        if (events.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.group_off, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 12),
+                const Text(
+                  'No upcoming events with crew assignments',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Create race events and assign crew to see the rotation matrix here.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
         final members = _memberList(events);
         final dutyCount = _dutyCount(events);
 
+        if (members.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.person_off, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 12),
+                const Text(
+                  'No crew members assigned yet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Assign crew to events from the Race Events page.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                onPressed: () => _exportReport(context, dutyCount),
-                icon: const Icon(Icons.download),
-                label: const Text('Export rotation report'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Text('Crew Management',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () => _exportReport(context, dutyCount),
+                    icon: const Icon(Icons.download),
+                    label: const Text('Export rotation report'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +29,28 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
     final eventsAsync = ref.watch(upcomingEventsProvider);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Header row with title + Add Event ──
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Text('Race Events',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _addEvent,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Event'),
+              ),
+            ],
+          ),
+        ),
+        // ── Filters ──
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -101,6 +123,31 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (events) {
               final filtered = events.where(_matchesFilter).toList();
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.event_busy, size: 64, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text(
+                        events.isEmpty
+                            ? 'No race events yet'
+                            : 'No events match your filters',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      if (events.isEmpty) ...[
+                        const SizedBox(height: 8),
+                        FilledButton.icon(
+                          onPressed: _addEvent,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create your first event'),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
               return DataTable2(
                 columns: const [
                   DataColumn2(label: Text('Date')),
@@ -193,6 +240,103 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
         .read(crewAssignmentRepositoryProvider)
         .bulkCancelEvents(_selectedIds.toList());
     setState(_selectedIds.clear);
+  }
+
+  Future<void> _addEvent() async {
+    final result = await _showEventDialog(null);
+    if (result == null) return;
+    await ref.read(crewAssignmentRepositoryProvider).saveEvent(result);
+  }
+
+  Future<RaceEvent?> _showEventDialog(RaceEvent? existing) async {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final notesCtrl = TextEditingController(text: existing?.notes ?? '');
+    DateTime selectedDate = existing?.date ?? DateTime.now();
+    String selectedSeries = existing?.seriesName ?? 'Spring Series';
+
+    return showDialog<RaceEvent>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'Add Race Event' : 'Edit Race Event'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Event Name'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Date: ${DateFormat.yMMMd().format(selectedDate)}'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(DateTime.now().year - 1),
+                          lastDate: DateTime(DateTime.now().year + 2),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedDate = picked);
+                        }
+                      },
+                      child: const Text('Pick Date'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedSeries,
+                  decoration: const InputDecoration(labelText: 'Series'),
+                  items: const [
+                    DropdownMenuItem(value: 'Spring Series', child: Text('Spring Series')),
+                    DropdownMenuItem(value: 'Summer Series', child: Text('Summer Series')),
+                    DropdownMenuItem(value: 'Fall Series', child: Text('Fall Series')),
+                    DropdownMenuItem(value: 'Special', child: Text('Special')),
+                  ],
+                  onChanged: (v) => setDialogState(() => selectedSeries = v ?? selectedSeries),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final event = RaceEvent(
+                  id: existing?.id ?? '',
+                  name: nameCtrl.text.trim(),
+                  date: selectedDate,
+                  seriesId: selectedSeries.replaceAll(' ', '_').toLowerCase(),
+                  seriesName: selectedSeries,
+                  status: existing?.status ?? EventStatus.scheduled,
+                  notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  crewSlots: existing?.crewSlots ?? const [],
+                );
+                Navigator.pop(dialogContext, event);
+              },
+              child: Text(existing == null ? 'Create' : 'Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _reassignSelected() async {
