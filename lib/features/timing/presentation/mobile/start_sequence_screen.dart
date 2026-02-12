@@ -278,6 +278,30 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Advance to next signal (skip timer forward)
+                    if (_running && !_started)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton.icon(
+                          onPressed: _advanceToNextSignal,
+                          icon: const Icon(Icons.skip_next, size: 22),
+                          label: Text(
+                            'ADVANCE TO ${_nextSignalLabel}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.cyan.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_running && !_started) const SizedBox(height: 12),
                     // Shorten Course + Abandon row
                     Row(
                       children: [
@@ -387,6 +411,33 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     // Rapid beeps at 10-second countdown
     if (_countdownSeconds > 0 && _countdownSeconds <= 10) {
       _haptic();
+    }
+  }
+
+  /// Label for the next signal point the timer would advance to.
+  String get _nextSignalLabel {
+    if (_countdownSeconds > 240) return 'PREP (4:00)';
+    if (_countdownSeconds > 60) return 'PREP DOWN (1:00)';
+    if (_countdownSeconds > 0) return 'START (0:00)';
+    return 'START';
+  }
+
+  /// Advance the timer to the next signal point, firing the appropriate signal.
+  void _advanceToNextSignal() {
+    if (!_running || _started) return;
+
+    if (_countdownSeconds > 240) {
+      // Jump to 4:00 — fire prep signal
+      setState(() => _countdownSeconds = 240);
+      _firePrepSignal();
+    } else if (_countdownSeconds > 60) {
+      // Jump to 1:00 — remove prep
+      setState(() => _countdownSeconds = 60);
+      _removePrepSignal();
+    } else if (_countdownSeconds > 0) {
+      // Jump to 0:00 — start!
+      setState(() => _countdownSeconds = 0);
+      _fireStartSignal();
     }
   }
 

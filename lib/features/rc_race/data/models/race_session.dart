@@ -99,6 +99,7 @@ class RaceSession {
     this.notes,
     this.isDemo = false,
     this.checkinsClosed = false,
+    this.fleetCourses = const {},
   });
 
   final String id;
@@ -120,6 +121,8 @@ class RaceSession {
   final String? notes;
   final bool isDemo;
   final bool checkinsClosed;
+  /// Per-fleet course assignments: { 'PHRF A': { 'courseId': ..., 'courseName': ..., 'courseNumber': ... }, ... }
+  final Map<String, Map<String, String>> fleetCourses;
 
   factory RaceSession.fromDoc(String id, Map<String, dynamic> d) {
     return RaceSession(
@@ -142,7 +145,25 @@ class RaceSession {
       notes: d['notes'] as String?,
       isDemo: d['isDemo'] as bool? ?? false,
       checkinsClosed: d['checkinsClosed'] as bool? ?? false,
+      fleetCourses: _parseFleetCourses(d['fleetCourses']),
     );
+  }
+
+  static Map<String, Map<String, String>> _parseFleetCourses(dynamic raw) {
+    if (raw == null || raw is! Map) return {};
+    final result = <String, Map<String, String>>{};
+    for (final entry in raw.entries) {
+      final key = entry.key as String;
+      final val = entry.value;
+      if (val is Map) {
+        result[key] = {
+          'courseId': val['courseId'] as String? ?? '',
+          'courseName': val['courseName'] as String? ?? '',
+          'courseNumber': val['courseNumber'] as String? ?? '',
+        };
+      }
+    }
+    return result;
   }
 
   RaceSession copyWith({
@@ -165,6 +186,7 @@ class RaceSession {
     String? notes,
     bool? isDemo,
     bool? checkinsClosed,
+    Map<String, Map<String, String>>? fleetCourses,
   }) {
     return RaceSession(
       id: id ?? this.id,
@@ -186,6 +208,7 @@ class RaceSession {
       notes: notes ?? this.notes,
       isDemo: isDemo ?? this.isDemo,
       checkinsClosed: checkinsClosed ?? this.checkinsClosed,
+      fleetCourses: fleetCourses ?? this.fleetCourses,
     );
   }
 }
