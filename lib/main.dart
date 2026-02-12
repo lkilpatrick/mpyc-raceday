@@ -9,6 +9,7 @@ import 'package:mpyc_raceday/core/offline_queue.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 import 'package:mpyc_raceday/firebase_options.dart';
 import 'package:mpyc_raceday/mobile/mobile_router.dart';
+import 'package:mpyc_raceday/shared/widgets/broadcast_listener.dart';
 import 'package:mpyc_raceday/shared/widgets/network_status_banner.dart';
 import 'package:mpyc_raceday/web/web_router.dart';
 
@@ -61,7 +62,9 @@ class MpycRacedayApp extends StatelessWidget {
         if (child == null) return const SizedBox.shrink();
         // Wrap with network status banner on mobile
         if (!kIsWeb) {
-          return NetworkStatusBanner(child: child);
+          return BroadcastListener(
+            child: NetworkStatusBanner(child: child),
+          );
         }
         return child;
       },

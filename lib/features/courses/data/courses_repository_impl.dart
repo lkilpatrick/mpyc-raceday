@@ -328,13 +328,20 @@ class CoursesRepositoryImpl implements CoursesRepository {
       'type': broadcast.type.name,
       'sentAt': Timestamp.fromDate(broadcast.sentAt),
       'deliveryCount': broadcast.deliveryCount,
+      'target': broadcast.target.name,
+      'requiresAck': broadcast.requiresAck,
+      'ackCount': broadcast.ackCount,
     });
     _audit.log(
       action: 'send_broadcast',
       entityType: 'fleet_broadcast',
       entityId: broadcast.eventId,
       category: 'course',
-      details: {'type': broadcast.type.name, 'message': broadcast.message},
+      details: {
+        'type': broadcast.type.name,
+        'message': broadcast.message,
+        'target': broadcast.target.name,
+      },
     );
   }
 
@@ -359,6 +366,12 @@ class CoursesRepositoryImpl implements CoursesRepository {
             ),
             sentAt: (d['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
             deliveryCount: d['deliveryCount'] as int? ?? 0,
+            target: BroadcastTarget.values.firstWhere(
+              (t) => t.name == (d['target'] as String? ?? ''),
+              orElse: () => BroadcastTarget.everyone,
+            ),
+            requiresAck: d['requiresAck'] as bool? ?? false,
+            ackCount: d['ackCount'] as int? ?? 0,
           );
         }).toList());
   }

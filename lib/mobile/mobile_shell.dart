@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_nav_config.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_home_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_timing_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
 // crew_chat_screen removed — chat not needed in any mode
@@ -63,6 +64,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
   Widget _screenForRoute(String route) => switch (route) {
         '/home' => const HomeScreen(),
+        '/rc-home' => const RcHomeScreen(),
         '/course' => const CourseTabScreen(),
         '/weather' => const WeatherDashboardScreen(),
         '/report' => const ReportTabScreen(),

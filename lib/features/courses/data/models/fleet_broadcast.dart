@@ -7,6 +7,17 @@ enum BroadcastType {
   shortenedCourse,
   cancellation,
   general,
+  vhfChannelChange,
+  shortenCourse,
+  abandonTooMuchWind,
+  abandonTooLittleWind,
+}
+
+/// Who should receive the broadcast.
+enum BroadcastTarget {
+  everyone,
+  skippersOnly,
+  onshore,
 }
 
 class FleetBroadcast {
@@ -18,6 +29,9 @@ class FleetBroadcast {
     required this.type,
     required this.sentAt,
     required this.deliveryCount,
+    this.target = BroadcastTarget.everyone,
+    this.requiresAck = false,
+    this.ackCount = 0,
   });
 
   final String id;
@@ -27,4 +41,7 @@ class FleetBroadcast {
   final BroadcastType type;
   final DateTime sentAt;
   final int deliveryCount;
+  final BroadcastTarget target;
+  final bool requiresAck;
+  final int ackCount;
 }

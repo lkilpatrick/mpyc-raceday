@@ -20,6 +20,8 @@ class FleetBroadcastScreen extends ConsumerStatefulWidget {
 class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
   final _messageCtrl = TextEditingController();
   BroadcastType _type = BroadcastType.general;
+  BroadcastTarget _target = BroadcastTarget.everyone;
+  bool _requiresAck = true;
   bool _sending = false;
 
   @override
@@ -43,22 +45,48 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DropdownButtonFormField<BroadcastType>(
-                  value: _type,
-                  decoration: const InputDecoration(
-                    labelText: 'Broadcast Type',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: BroadcastType.values
-                      .map((t) => DropdownMenuItem(
-                            value: t,
-                            child: Text(_typeLabel(t)),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) setState(() => _type = v);
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<BroadcastType>(
+                        value: _type,
+                        decoration: const InputDecoration(
+                          labelText: 'Type',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: BroadcastType.values
+                            .map((t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(_typeLabel(t)),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _type = v);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<BroadcastTarget>(
+                        value: _target,
+                        decoration: const InputDecoration(
+                          labelText: 'Send To',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: BroadcastTarget.values
+                            .map((t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(_targetLabel(t)),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _target = v);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -70,6 +98,20 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                   ),
                   maxLines: 3,
                   minLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _requiresAck,
+                      onChanged: (v) =>
+                          setState(() => _requiresAck = v ?? true),
+                    ),
+                    const Expanded(
+                      child: Text('Require acknowledgement from recipients',
+                          style: TextStyle(fontSize: 13)),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 FilledButton.icon(
@@ -132,7 +174,8 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                         title: Text(b.message,
                             style: const TextStyle(fontSize: 14)),
                         subtitle: Text(
-                          '${_typeLabel(b.type)} · ${DateFormat.jm().format(b.sentAt)} · ${b.deliveryCount} delivered',
+                          '${_typeLabel(b.type)} · ${_targetLabel(b.target)} · ${DateFormat.jm().format(b.sentAt)}'
+                          '${b.requiresAck ? ' · ${b.ackCount} ack' : ''}',
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade600),
                         ),
@@ -163,11 +206,13 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
             FleetBroadcast(
               id: '',
               eventId: widget.eventId,
-              sentBy: 'RC', // TODO: use actual user
+              sentBy: 'RC',
               message: message,
               type: _type,
               sentAt: DateTime.now(),
               deliveryCount: 0,
+              target: _target,
+              requiresAck: _requiresAck,
             ),
           );
       _messageCtrl.clear();
@@ -190,13 +235,25 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
   static String _typeLabel(BroadcastType type) {
     return switch (type) {
       BroadcastType.courseSelection => 'Course Selection',
-      BroadcastType.postponement => 'Postponement',
-      BroadcastType.abandonment => 'Abandonment',
+      BroadcastType.postponement => 'Postponement (AP Flag)',
+      BroadcastType.abandonment => 'Abandonment (N Flag)',
       BroadcastType.courseChange => 'Course Change',
-      BroadcastType.generalRecall => 'General Recall',
-      BroadcastType.shortenedCourse => 'Shortened Course',
+      BroadcastType.generalRecall => 'General Recall (1st Sub)',
+      BroadcastType.shortenedCourse => 'Shortened Course (S Flag)',
       BroadcastType.cancellation => 'Cancellation',
       BroadcastType.general => 'General',
+      BroadcastType.vhfChannelChange => 'VHF Channel Change',
+      BroadcastType.shortenCourse => 'Shorten Course (S Flag)',
+      BroadcastType.abandonTooMuchWind => 'Abandon — Too Much Wind',
+      BroadcastType.abandonTooLittleWind => 'Abandon — Too Little Wind',
+    };
+  }
+
+  static String _targetLabel(BroadcastTarget target) {
+    return switch (target) {
+      BroadcastTarget.everyone => 'Everyone',
+      BroadcastTarget.skippersOnly => 'Skippers Only',
+      BroadcastTarget.onshore => 'Onshore',
     };
   }
 
@@ -210,6 +267,10 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
       BroadcastType.shortenedCourse => Colors.teal,
       BroadcastType.cancellation => Colors.red.shade800,
       BroadcastType.general => Colors.grey,
+      BroadcastType.vhfChannelChange => Colors.indigo,
+      BroadcastType.shortenCourse => Colors.teal,
+      BroadcastType.abandonTooMuchWind => Colors.red,
+      BroadcastType.abandonTooLittleWind => Colors.amber,
     };
   }
 
@@ -223,6 +284,10 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
       BroadcastType.shortenedCourse => Icons.content_cut,
       BroadcastType.cancellation => Icons.block,
       BroadcastType.general => Icons.campaign,
+      BroadcastType.vhfChannelChange => Icons.radio,
+      BroadcastType.shortenCourse => Icons.content_cut,
+      BroadcastType.abandonTooMuchWind => Icons.air,
+      BroadcastType.abandonTooLittleWind => Icons.cloud_off,
     };
   }
 }

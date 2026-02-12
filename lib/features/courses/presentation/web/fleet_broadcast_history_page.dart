@@ -174,6 +174,10 @@ class _BroadcastCard extends StatelessWidget {
       BroadcastType.shortenedCourse => Colors.teal,
       BroadcastType.cancellation => Colors.red.shade800,
       BroadcastType.general => Colors.grey,
+      BroadcastType.vhfChannelChange => Colors.indigo,
+      BroadcastType.shortenCourse => Colors.teal,
+      BroadcastType.abandonTooMuchWind => Colors.red,
+      BroadcastType.abandonTooLittleWind => Colors.amber,
     };
   }
 
@@ -187,6 +191,10 @@ class _BroadcastCard extends StatelessWidget {
       BroadcastType.shortenedCourse => Icons.content_cut,
       BroadcastType.cancellation => Icons.block,
       BroadcastType.general => Icons.campaign,
+      BroadcastType.vhfChannelChange => Icons.radio,
+      BroadcastType.shortenCourse => Icons.content_cut,
+      BroadcastType.abandonTooMuchWind => Icons.air,
+      BroadcastType.abandonTooLittleWind => Icons.cloud_off,
     };
   }
 }

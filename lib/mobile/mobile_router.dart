@@ -303,8 +303,12 @@ final GoRouter mobileRouter = GoRouter(
     ),
     // Shell routes for mode-specific bottom nav tabs
     GoRoute(
+      path: '/rc-home',
+      builder: (context, state) => const MobileShell(initialIndex: 0),
+    ),
+    GoRoute(
       path: '/rc-timing',
-      builder: (context, state) => const MobileShell(initialIndex: 2),
+      builder: (context, state) => const MobileShell(initialIndex: 1),
     ),
     // Skipper mode shell tabs
     GoRoute(

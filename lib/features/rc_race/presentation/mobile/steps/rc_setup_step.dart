@@ -1,10 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../courses/data/models/fleet_broadcast.dart';
 import '../../../../courses/domain/courses_repository.dart';
 import '../../../../courses/presentation/courses_providers.dart';
 import '../../../data/models/race_session.dart';
 import '../../rc_race_providers.dart';
+
+/// Common VHF channels used for yacht racing.
+const _vhfChannels = [
+  '09', '16', '68', '69', '71', '72', '73', '74', '77', '78', '80',
+];
 
 /// Step 1: Select course for the race session.
 class RcSetupStep extends ConsumerStatefulWidget {
@@ -18,6 +25,7 @@ class RcSetupStep extends ConsumerStatefulWidget {
 
 class _RcSetupStepState extends ConsumerState<RcSetupStep> {
   double _windDir = 0;
+  String _vhfChannel = '72';
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +68,47 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
               ],
             ),
           ),
+
+        // VHF Channel selector
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.indigo.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.indigo.shade100),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.radio, color: Colors.indigo, size: 22),
+              const SizedBox(width: 10),
+              const Text('VHF Channel',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const Spacer(),
+              DropdownButton<String>(
+                value: _vhfChannel,
+                underline: const SizedBox.shrink(),
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo),
+                items: _vhfChannels
+                    .map((ch) => DropdownMenuItem(
+                          value: ch,
+                          child: Text('Ch $ch'),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null && v != _vhfChannel) {
+                    setState(() => _vhfChannel = v);
+                    _broadcastVhfChange(v);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
 
         // Wind direction slider
         Container(
@@ -160,6 +209,35 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
         ),
       ],
     );
+  }
+
+  Future<void> _broadcastVhfChange(String channel) async {
+    // Save to event doc
+    await FirebaseFirestore.instance
+        .collection('race_events')
+        .doc(widget.session.id)
+        .update({'vhfChannel': channel});
+
+    // Send fleet broadcast
+    await ref.read(coursesRepositoryProvider).sendBroadcast(
+          FleetBroadcast(
+            id: '',
+            eventId: widget.session.id,
+            sentBy: 'RC',
+            message: 'VHF race channel changed to Ch $channel',
+            type: BroadcastType.vhfChannelChange,
+            sentAt: DateTime.now(),
+            deliveryCount: 0,
+            target: BroadcastTarget.everyone,
+            requiresAck: true,
+          ),
+        );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('VHF channel broadcast: Ch $channel')),
+      );
+    }
   }
 
   Future<void> _selectCourse(dynamic course) async {

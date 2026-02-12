@@ -8,6 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../boat_checkin/data/models/boat_checkin.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
+import '../../../courses/data/models/fleet_broadcast.dart';
+import '../../../courses/domain/courses_repository.dart';
+import '../../../courses/presentation/courses_providers.dart';
 import '../../data/models/timing_models.dart';
 import '../../domain/signal_controller.dart';
 import '../timing_providers.dart';
@@ -274,6 +277,51 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    // Shorten Course + Abandon row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: _started ? _shortenCourse : null,
+                              icon: const Icon(Icons.content_cut, size: 18),
+                              label: const Text('SHORTEN\nCOURSE',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.teal,
+                                side: const BorderSide(color: Colors.teal),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: _abandonRace,
+                              icon: const Icon(Icons.cancel, size: 18),
+                              label: const Text('ABANDON\nRACE',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade800,
+                                side: BorderSide(color: Colors.red.shade800),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ],
               ),
@@ -462,6 +510,168 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     Future.delayed(const Duration(seconds: 30), () {
       if (mounted) setState(() => _individualRecall = false);
     });
+  }
+
+  /// Rule 32 — Shorten Course (S Flag + 2 horns)
+  Future<void> _shortenCourse() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Shorten Course?'),
+        content: const Text(
+          'Rule 32: Display S Flag with two sound signals.\n'
+          'Boats shall finish between the nearest mark and the RC boat.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Shorten Course')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    _playHorn();
+    Future.delayed(const Duration(seconds: 2), _playHorn);
+    _haptic();
+
+    // Broadcast to fleet
+    await ref.read(coursesRepositoryProvider).sendBroadcast(
+          FleetBroadcast(
+            id: '',
+            eventId: widget.eventId,
+            sentBy: 'RC',
+            message: 'SHORTENED COURSE — S Flag displayed. Finish at the nearest mark.',
+            type: BroadcastType.shortenCourse,
+            sentAt: DateTime.now(),
+            deliveryCount: 0,
+            target: BroadcastTarget.everyone,
+            requiresAck: true,
+          ),
+        );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Shortened course broadcast sent'),
+          backgroundColor: Colors.teal,
+        ),
+      );
+    }
+  }
+
+  /// Rule 32.1 — Abandon Race (N Flag + 3 horns)
+  Future<void> _abandonRace() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Abandon Race — Select Reason'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'Too much wind'),
+            child: const ListTile(
+              leading: Icon(Icons.air, color: Colors.red),
+              title: Text('Too Much Wind'),
+              subtitle: Text('Unsafe conditions — wind exceeds limits'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'Too little wind'),
+            child: const ListTile(
+              leading: Icon(Icons.cloud_off, color: Colors.amber),
+              title: Text('Too Little Wind'),
+              subtitle: Text('Insufficient wind to complete the race'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'Shifting wind'),
+            child: const ListTile(
+              leading: Icon(Icons.explore, color: Colors.orange),
+              title: Text('Shifting Wind'),
+              subtitle: Text('Wind direction too unstable for fair racing'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'Safety concern'),
+            child: const ListTile(
+              leading: Icon(Icons.warning, color: Colors.red),
+              title: Text('Safety Concern'),
+              subtitle: Text('Other safety issue requiring abandonment'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'Other'),
+            child: const ListTile(
+              leading: Icon(Icons.more_horiz, color: Colors.grey),
+              title: Text('Other'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (reason == null) return;
+
+    // 3 horns for abandonment
+    _playHorn();
+    Future.delayed(const Duration(seconds: 2), _playHorn);
+    Future.delayed(const Duration(seconds: 4), _playHorn);
+    _haptic();
+
+    // Update race start
+    if (_currentStart != null) {
+      await ref.read(timingRepositoryProvider).updateRaceStart(
+            _currentStart!.copyWith(isPostponed: true),
+          );
+    }
+
+    // Determine broadcast type
+    final broadcastType = switch (reason) {
+      'Too much wind' => BroadcastType.abandonTooMuchWind,
+      'Too little wind' => BroadcastType.abandonTooLittleWind,
+      _ => BroadcastType.abandonment,
+    };
+
+    // Broadcast to fleet
+    await ref.read(coursesRepositoryProvider).sendBroadcast(
+          FleetBroadcast(
+            id: '',
+            eventId: widget.eventId,
+            sentBy: 'RC',
+            message: 'RACE ABANDONED — N Flag displayed. Reason: $reason. All boats return to harbor.',
+            type: broadcastType,
+            sentAt: DateTime.now(),
+            deliveryCount: 0,
+            target: BroadcastTarget.everyone,
+            requiresAck: true,
+          ),
+        );
+
+    _timer?.cancel();
+    setState(() {
+      _running = false;
+      _started = false;
+      _warningFlag = false;
+      _prepFlag = false;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Race abandoned: $reason'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _postpone() async {
