@@ -50,7 +50,7 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('MPYC COURSE SHEET',
+                  Text('MPYC Courses',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.5,
@@ -538,7 +538,7 @@ class _CompactCourseRow extends ConsumerWidget {
                 width: 38,
                 child: Text(
                   course.distanceNm > 0
-                      ? course.distanceNm.toString()
+                      ? course.distanceNm.toStringAsFixed(1)
                       : '—',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 11),
@@ -700,7 +700,7 @@ class _CourseDetailDialog extends ConsumerWidget {
                             _chip(Icons.explore,
                                 '${course.windGroup?.label ?? course.windDirectionBand}'),
                             _chip(Icons.straighten,
-                                '${course.distanceNm} nm'),
+                                '${course.distanceNm.toStringAsFixed(1)} nm'),
                             _chip(Icons.pin_drop,
                                 'Wind ${course.windDirMin}°–${course.windDirMax}°'),
                             _chip(Icons.flag,

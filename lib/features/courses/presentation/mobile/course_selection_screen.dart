@@ -116,7 +116,7 @@ class _CourseSelectionScreenState extends ConsumerState<CourseSelectionScreen> {
                               fontWeight: FontWeight.w500, fontSize: 14),
                         ),
                         subtitle: Text(
-                          '${course.windDirectionBand} · ${course.distanceNm} nm · ${course.marks.length} marks',
+                          '${course.windDirectionBand} · ${course.distanceNm.toStringAsFixed(1)} nm · ${course.marks.length} marks',
                           style: TextStyle(
                               fontSize: 12, color: Colors.grey.shade600),
                         ),

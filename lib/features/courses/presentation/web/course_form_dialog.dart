@@ -692,7 +692,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
               const SizedBox(width: 8),
               Text(
                 autoDistance > 0
-                    ? '${autoDistance.toStringAsFixed(2)} nm'
+                    ? '${autoDistance.toStringAsFixed(1)} nm'
                     : 'N/A',
                 style: const TextStyle(
                     fontSize: 18,

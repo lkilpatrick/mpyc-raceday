@@ -71,7 +71,7 @@ class CourseDisplayScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"}',
+                            '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm.toStringAsFixed(1)} nm" : "Variable"}',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade600,

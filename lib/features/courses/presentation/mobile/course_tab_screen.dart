@@ -312,7 +312,7 @@ class _ActiveCourseDetail extends ConsumerWidget {
                       style: const TextStyle(fontSize: 14)),
                   const SizedBox(height: 4),
                   Text(
-                    '${course.windDirectionBand} · ${course.distanceNm} nm · ${course.marks.length} marks',
+                    '${course.windDirectionBand} · ${course.distanceNm.toStringAsFixed(1)} nm · ${course.marks.length} marks',
                     style:
                         TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
@@ -382,7 +382,7 @@ class _CourseListItem extends StatelessWidget {
         title: Text(course.courseName,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         subtitle: Text(
-          '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"}',
+          '${course.windGroup?.label ?? course.windDirectionBand} · ${course.distanceNm > 0 ? "${course.distanceNm.toStringAsFixed(1)} nm" : "Variable"}',
           style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
         trailing: Container(

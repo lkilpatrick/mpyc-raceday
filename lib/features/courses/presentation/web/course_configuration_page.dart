@@ -290,7 +290,7 @@ class _CourseListTile extends StatelessWidget {
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        '${course.distanceNm > 0 ? "${course.distanceNm} nm" : "Variable"} · ${course.markSequenceDisplay}',
+        '${course.distanceNm > 0 ? "${course.distanceNm.toStringAsFixed(1)} nm" : "Variable"} · ${course.markSequenceDisplay}',
         style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
@@ -391,7 +391,7 @@ class _CourseDetailPanel extends StatelessWidget {
               children: [
                 _infoChip(Icons.explore, 'Wind: ${course.windGroup?.label ?? course.windDirectionBand}'),
                 _infoChip(Icons.straighten,
-                    '${course.distanceNm} nm'),
+                    '${course.distanceNm.toStringAsFixed(1)} nm'),
                 _infoChip(Icons.pin_drop,
                     'Wind ${course.windDirMin}°–${course.windDirMax}°'),
                 _infoChip(Icons.flag, 'Finish: ${course.finishLocation}'),
