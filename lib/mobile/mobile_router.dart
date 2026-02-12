@@ -33,7 +33,11 @@ import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_chat_scr
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
-import 'package:mpyc_raceday/features/app_mode/presentation/mobile/skipper_checkin_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_checkin_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_race_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_results_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_incident_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/racing_rules_reference_screen.dart';
 import 'package:mpyc_raceday/features/demo/presentation/demo_mode_screen.dart';
 import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_flow_screen.dart';
 import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_history_screen.dart';
@@ -255,8 +259,30 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) => const LeaderboardScreen(),
     ),
     GoRoute(
-      path: '/skipper-checkin',
-      builder: (context, state) => const SkipperCheckinScreen(),
+      path: '/skipper-checkin/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return SkipperCheckinScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/skipper-race/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return SkipperRaceScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/skipper-results',
+      builder: (context, state) => const SkipperResultsScreen(),
+    ),
+    GoRoute(
+      path: '/skipper-incident',
+      builder: (context, state) => const SkipperIncidentScreen(),
+    ),
+    GoRoute(
+      path: '/rules/reference',
+      builder: (context, state) => const RacingRulesReferenceScreen(),
     ),
     GoRoute(
       path: '/demo',
@@ -277,6 +303,19 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/rc-timing',
       builder: (context, state) => const MobileShell(initialIndex: 2),
+    ),
+    // Skipper mode shell tabs
+    GoRoute(
+      path: '/skipper-home',
+      builder: (context, state) => const MobileShell(initialIndex: 0),
+    ),
+    GoRoute(
+      path: '/skipper-results-tab',
+      builder: (context, state) => const MobileShell(initialIndex: 2),
+    ),
+    GoRoute(
+      path: '/rules-tab',
+      builder: (context, state) => const MobileShell(initialIndex: 3),
     ),
   ],
 );
