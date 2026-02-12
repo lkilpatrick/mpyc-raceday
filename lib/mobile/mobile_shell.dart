@@ -19,6 +19,7 @@ import 'package:mpyc_raceday/features/reporting/presentation/mobile/report_tab_s
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_home_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_results_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/racing_rules_reference_screen.dart';
+import 'package:mpyc_raceday/features/crew/presentation/mobile/crew_home_screen.dart';
 import 'package:mpyc_raceday/mobile/layouts/mobile_scaffold.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
@@ -76,6 +77,8 @@ class _MobileShellState extends ConsumerState<MobileShell> {
         '/skipper-home' => const SkipperHomeScreen(),
         '/skipper-results-tab' => const SkipperResultsScreen(),
         '/rules-tab' => const RacingRulesReferenceScreen(),
+        '/crew-home' => const CrewHomeScreen(),
+        '/crew-rules-tab' => const RacingRulesReferenceScreen(),
         _ => PlaceholderPage(title: route, subtitle: 'Coming soon'),
       };
 

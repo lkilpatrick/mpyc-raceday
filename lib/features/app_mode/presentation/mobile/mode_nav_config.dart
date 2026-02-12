@@ -29,10 +29,8 @@ List<ModeNavItem> navItemsForMode(AppMode mode) => switch (mode) {
           ModeNavItem(label: 'More', route: '/more', icon: Icons.menu),
         ],
       AppMode.crew => const [
-          ModeNavItem(label: 'Home', route: '/home', icon: Icons.group),
-          ModeNavItem(label: 'My Role', route: '/crew-dashboard', icon: Icons.assignment),
-          ModeNavItem(label: 'Safety', route: '/crew-safety', icon: Icons.health_and_safety),
-          ModeNavItem(label: 'Weather', route: '/weather', icon: Icons.cloud),
+          ModeNavItem(label: 'Home', route: '/crew-home', icon: Icons.group),
+          ModeNavItem(label: 'Rules', route: '/crew-rules-tab', icon: Icons.menu_book),
           ModeNavItem(label: 'More', route: '/more', icon: Icons.menu),
         ],
       AppMode.onshore => const [
