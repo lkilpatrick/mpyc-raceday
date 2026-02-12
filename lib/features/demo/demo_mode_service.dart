@@ -123,6 +123,89 @@ class DemoModeService {
     return eventId;
   }
 
+  /// Reset a demo race back to setup state (keeps event + boats, clears runtime data).
+  static Future<void> resetDemoRace(String eventId) async {
+    // Reset the event doc back to setup
+    await _fs.collection('race_events').doc(eventId).update({
+      'status': 'setup',
+      'courseId': '',
+      'courseName': FieldValue.delete(),
+      'courseNumber': FieldValue.delete(),
+      'raceStartId': FieldValue.delete(),
+      'startTime': FieldValue.delete(),
+      'startMethod': FieldValue.delete(),
+      'abandonedAt': FieldValue.delete(),
+      'abandonedReason': FieldValue.delete(),
+      'finalizedAt': FieldValue.delete(),
+      'clubspotReady': false,
+      'checkinsClosed': false,
+      'notes': 'Demo race reset at ${DateTime.now()}',
+    });
+
+    // Delete check-ins for this event
+    final checkins = await _fs
+        .collection('boat_checkins')
+        .where('eventId', isEqualTo: eventId)
+        .get();
+    for (final doc in checkins.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete race starts for this event
+    final starts = await _fs
+        .collection('race_starts')
+        .where('eventId', isEqualTo: eventId)
+        .get();
+    for (final doc in starts.docs) {
+      // Delete finish records for each race start
+      final finishes = await _fs
+          .collection('finish_records')
+          .where('raceStartId', isEqualTo: doc.id)
+          .get();
+      for (final f in finishes.docs) {
+        await f.reference.delete();
+      }
+      await doc.reference.delete();
+    }
+
+    // Delete fleet broadcasts for this event
+    final broadcasts = await _fs
+        .collection('fleet_broadcasts')
+        .where('eventId', isEqualTo: eventId)
+        .get();
+    for (final doc in broadcasts.docs) {
+      await doc.reference.delete();
+    }
+
+    // Re-create sample check-ins
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo';
+    final now = DateTime.now();
+    final checkinBatch = _fs.batch();
+    for (var i = 0; i < 6 && i < _sampleBoats.length; i++) {
+      final boat = _sampleBoats[i];
+      final boatId = '$_demoPrefix${boat.sailNumber}';
+      final checkinRef = _fs.collection('boat_checkins').doc();
+      checkinBatch.set(checkinRef, {
+        'eventId': eventId,
+        'boatId': boatId,
+        'sailNumber': boat.sailNumber,
+        'boatName': boat.boatName,
+        'skipperName': boat.ownerName,
+        'boatClass': boat.boatClass,
+        'checkedInAt': Timestamp.fromDate(
+            now.subtract(Duration(minutes: 30 - i * 5))),
+        'checkedInBy': uid,
+        'crewCount': 2 + (i % 3),
+        'crewNames': ['Crew ${i * 2 + 1}', 'Crew ${i * 2 + 2}'],
+        'safetyEquipmentVerified': true,
+        'phrfRating': boat.phrfRating,
+        'notes': '',
+        'isDemo': true,
+      });
+    }
+    await checkinBatch.commit();
+  }
+
   /// Clean up all demo data
   static Future<void> cleanupDemoData() async {
     // Delete demo events
@@ -130,7 +213,29 @@ class DemoModeService {
         .collection('race_events')
         .where('isDemo', isEqualTo: true)
         .get();
+
+    // Delete finish records and broadcasts for each demo event
     for (final doc in events.docs) {
+      final starts = await _fs
+          .collection('race_starts')
+          .where('eventId', isEqualTo: doc.id)
+          .get();
+      for (final s in starts.docs) {
+        final finishes = await _fs
+            .collection('finish_records')
+            .where('raceStartId', isEqualTo: s.id)
+            .get();
+        for (final f in finishes.docs) {
+          await f.reference.delete();
+        }
+      }
+      final broadcasts = await _fs
+          .collection('fleet_broadcasts')
+          .where('eventId', isEqualTo: doc.id)
+          .get();
+      for (final b in broadcasts.docs) {
+        await b.reference.delete();
+      }
       await doc.reference.delete();
     }
 

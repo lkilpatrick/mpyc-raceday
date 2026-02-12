@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../../boat_checkin/data/models/boat_checkin.dart';
+import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../data/models/timing_models.dart';
 import '../timing_providers.dart';
 
@@ -148,6 +150,13 @@ class _FinishRecordingScreenState
                   ),
                 ),
               ),
+
+            // Per-boat quick finish buttons
+            _BoatFinishGrid(
+              raceStartId: widget.raceStartId,
+              onFinishBoat: _finishBoat,
+              onSpecialScore: _recordSpecial,
+            ),
 
             // Special score buttons
             Padding(
@@ -339,6 +348,29 @@ class _FinishRecordingScreenState
     await ref.read(timingRepositoryProvider).recordFinish(record);
   }
 
+  Future<void> _finishBoat(BoatCheckin checkin) async {
+    HapticFeedback.heavyImpact();
+    final finishTime = DateTime.now();
+    final elapsed = _startTime != null
+        ? finishTime.difference(_startTime!).inSeconds.toDouble()
+        : 0.0;
+
+    final record = FinishRecord(
+      id: '',
+      raceStartId: widget.raceStartId,
+      boatCheckinId: checkin.id,
+      sailNumber: checkin.sailNumber,
+      boatName: checkin.boatName,
+      finishTimestamp: finishTime,
+      elapsedSeconds: elapsed,
+      letterScore: LetterScore.finished,
+      position: _nextPosition,
+    );
+
+    await ref.read(timingRepositoryProvider).recordFinish(record);
+    setState(() => _nextPosition++);
+  }
+
   Future<void> _undoLast(FinishRecord record) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -426,5 +458,198 @@ class _RaceClockState extends ConsumerState<_RaceClock> {
         );
       },
     );
+  }
+}
+
+/// Grid of checked-in boats for quick finish recording.
+/// Shows only boats that haven't finished yet.
+class _BoatFinishGrid extends ConsumerWidget {
+  const _BoatFinishGrid({
+    required this.raceStartId,
+    required this.onFinishBoat,
+    required this.onSpecialScore,
+  });
+
+  final String raceStartId;
+  final Future<void> Function(BoatCheckin) onFinishBoat;
+  final Future<void> Function(LetterScore) onSpecialScore;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final startAsync = ref.watch(raceStartByIdProvider(raceStartId));
+    final finishesAsync = ref.watch(finishRecordsProvider(raceStartId));
+
+    return startAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (start) {
+        if (start == null) return const SizedBox.shrink();
+        final eventId = start.eventId;
+        final checkinsAsync = ref.watch(eventCheckinsProvider(eventId));
+
+        return checkinsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (checkins) {
+            final finishedSails = finishesAsync.value
+                    ?.map((f) => f.sailNumber)
+                    .toSet() ??
+                {};
+            final remaining = checkins
+                .where((c) => !finishedSails.contains(c.sailNumber))
+                .toList();
+
+            if (remaining.isEmpty) return const SizedBox.shrink();
+
+            return Container(
+              constraints: const BoxConstraints(maxHeight: 140),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tap boat to finish (${remaining.length} remaining)',
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 11),
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: GridView.builder(
+                      scrollDirection: Axis.horizontal,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
+                        childAspectRatio: 0.5,
+                      ),
+                      itemCount: remaining.length,
+                      itemBuilder: (_, i) {
+                        final c = remaining[i];
+                        return Material(
+                          color: Colors.green.shade800,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => onFinishBoat(c),
+                            onLongPress: () =>
+                                _showSpecialMenu(context, c, ref),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    c.sailNumber,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (c.boatName.isNotEmpty)
+                                    Text(
+                                      c.boatName,
+                                      style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 9),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showSpecialMenu(
+      BuildContext context, BoatCheckin checkin, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '${checkin.sailNumber} — ${checkin.boatName}',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.flag, color: Colors.orange),
+              title: const Text('DNF — Did Not Finish'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _recordSpecialForBoat(ref, checkin, LetterScore.dnf);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block, color: Colors.grey),
+              title: const Text('DNS — Did Not Start'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _recordSpecialForBoat(ref, checkin, LetterScore.dns);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.red),
+              title: const Text('DSQ — Disqualified'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _recordSpecialForBoat(ref, checkin, LetterScore.dsq);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.warning, color: Colors.red.shade300),
+              title: const Text('OCS — On Course Side'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _recordSpecialForBoat(ref, checkin, LetterScore.ocs);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.undo, color: Colors.brown),
+              title: const Text('RET — Retired'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _recordSpecialForBoat(ref, checkin, LetterScore.ret);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _recordSpecialForBoat(
+      WidgetRef ref, BoatCheckin checkin, LetterScore score) async {
+    final record = FinishRecord(
+      id: '',
+      raceStartId: raceStartId,
+      boatCheckinId: checkin.id,
+      sailNumber: checkin.sailNumber,
+      boatName: checkin.boatName,
+      finishTimestamp: DateTime.now(),
+      elapsedSeconds: 0,
+      letterScore: score,
+      position: 0,
+    );
+    await ref.read(timingRepositoryProvider).recordFinish(record);
   }
 }

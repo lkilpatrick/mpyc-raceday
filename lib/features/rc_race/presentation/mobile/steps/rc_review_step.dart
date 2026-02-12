@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../boat_checkin/presentation/boat_checkin_providers.dart';
+import '../../../../demo/demo_mode_service.dart';
 import '../../../../timing/data/models/timing_models.dart';
 import '../../../../timing/presentation/timing_providers.dart';
 import '../../../data/models/race_session.dart';
@@ -348,11 +349,66 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
               label: const Text('Return to RC Home'),
             ),
           ),
+          if (session.isDemo) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _resetDemo,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reset Demo Race'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                ),
+              ),
+            ),
+          ],
         ],
 
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  Future<void> _resetDemo() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Demo Race?'),
+        content: const Text(
+          'This will clear all race data (check-ins, starts, finishes, broadcasts) '
+          'and reset the demo race back to the setup step with fresh sample boats.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      await DemoModeService.resetDemoRace(widget.session.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Demo race reset! Starting fresh.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reset failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _backToScoring() async {

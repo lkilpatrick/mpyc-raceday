@@ -347,13 +347,15 @@ class CoursesRepositoryImpl implements CoursesRepository {
 
   @override
   Stream<List<FleetBroadcast>> watchBroadcasts({String? eventId}) {
-    var query = _broadcastsCol.orderBy('sentAt', descending: true);
+    Query<Map<String, dynamic>> query;
     if (eventId != null) {
-      query = _broadcastsCol
-          .where('eventId', isEqualTo: eventId)
-          .orderBy('sentAt', descending: true);
+      // Avoid composite index requirement — sort client-side
+      query = _broadcastsCol.where('eventId', isEqualTo: eventId);
+    } else {
+      query = _broadcastsCol.orderBy('sentAt', descending: true);
     }
-    return query.snapshots().map((snap) => snap.docs.map((doc) {
+    return query.snapshots().map((snap) {
+      final list = snap.docs.map((doc) {
           final d = doc.data();
           return FleetBroadcast(
             id: doc.id,
@@ -373,7 +375,10 @@ class CoursesRepositoryImpl implements CoursesRepository {
             requiresAck: d['requiresAck'] as bool? ?? false,
             ackCount: d['ackCount'] as int? ?? 0,
           );
-        }).toList());
+        }).toList();
+      list.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+      return list;
+    });
   }
 
 }

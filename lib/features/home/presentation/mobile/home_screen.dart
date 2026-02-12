@@ -14,6 +14,7 @@ import '../../../auth/data/auth_providers.dart';
 import '../../../auth/data/models/member.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../maintenance/presentation/maintenance_providers.dart';
+import '../../../courses/data/models/fleet_broadcast.dart';
 import '../../../crew_assignment/presentation/crew_assignment_providers.dart';
 import '../../../crew_assignment/presentation/crew_assignment_formatters.dart';
 
@@ -53,6 +54,10 @@ class HomeScreen extends ConsumerWidget {
 
           // ── Today's Race ──
           const _TodaysRaceCard(),
+          const SizedBox(height: 8),
+
+          // ── Fleet Broadcasts ──
+          const _BroadcastHistoryCard(),
           const SizedBox(height: 8),
 
           // ── Race Control (RC Chair only) ──
@@ -929,5 +934,115 @@ class _RecentResultsCard extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Fleet Broadcast History Card (Skipper view)
+// ═══════════════════════════════════════════════════════
+
+class _BroadcastHistoryCard extends StatelessWidget {
+  const _BroadcastHistoryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('fleet_broadcasts')
+          .orderBy('sentAt', descending: true)
+          .limit(5)
+          .snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        final latest = docs.first.data() as Map<String, dynamic>;
+        final latestMsg = latest['message'] as String? ?? '';
+        final latestType = latest['type'] as String? ?? 'general';
+        final latestAt = (latest['sentAt'] as Timestamp?)?.toDate();
+
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Latest broadcast highlight
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: Colors.orange.shade50,
+                child: Row(
+                  children: [
+                    Icon(_broadcastIcon(latestType),
+                        color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Latest Broadcast',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey)),
+                          const SizedBox(height: 2),
+                          Text(latestMsg,
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                    if (latestAt != null)
+                      Text(DateFormat.jm().format(latestAt),
+                          style: const TextStyle(
+                              fontSize: 10, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              // Older messages
+              if (docs.length > 1)
+                ...docs.skip(1).map((doc) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  final msg = d['message'] as String? ?? '';
+                  final type = d['type'] as String? ?? 'general';
+                  final at = (d['sentAt'] as Timestamp?)?.toDate();
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(_broadcastIcon(type),
+                        size: 16, color: Colors.grey),
+                    title: Text(msg,
+                        style: const TextStyle(fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    trailing: at != null
+                        ? Text(DateFormat.jm().format(at),
+                            style: const TextStyle(
+                                fontSize: 10, color: Colors.grey))
+                        : null,
+                  );
+                }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  static IconData _broadcastIcon(String type) {
+    return switch (type) {
+      'courseSelection' => Icons.map,
+      'postponement' => Icons.schedule,
+      'abandonment' || 'abandonTooMuchWind' || 'abandonTooLittleWind' =>
+        Icons.cancel,
+      'courseChange' => Icons.swap_horiz,
+      'generalRecall' => Icons.replay,
+      'shortenedCourse' || 'shortenCourse' => Icons.content_cut,
+      'cancellation' => Icons.block,
+      'vhfChannelChange' => Icons.radio,
+      _ => Icons.campaign,
+    };
   }
 }

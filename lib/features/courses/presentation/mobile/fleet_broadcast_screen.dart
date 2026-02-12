@@ -50,6 +50,7 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                     Expanded(
                       child: DropdownButtonFormField<BroadcastType>(
                         value: _type,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Type',
                           border: OutlineInputBorder(),
@@ -58,7 +59,9 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                         items: BroadcastType.values
                             .map((t) => DropdownMenuItem(
                                   value: t,
-                                  child: Text(_typeLabel(t)),
+                                  child: Text(_typeShort(t),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13)),
                                 ))
                             .toList(),
                         onChanged: (v) {
@@ -230,6 +233,23 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  static String _typeShort(BroadcastType type) {
+    return switch (type) {
+      BroadcastType.courseSelection => 'Course',
+      BroadcastType.postponement => 'Postpone',
+      BroadcastType.abandonment => 'Abandon',
+      BroadcastType.courseChange => 'Course Chg',
+      BroadcastType.generalRecall => 'Gen. Recall',
+      BroadcastType.shortenedCourse => 'Shorten',
+      BroadcastType.cancellation => 'Cancel',
+      BroadcastType.general => 'General',
+      BroadcastType.vhfChannelChange => 'VHF Ch.',
+      BroadcastType.shortenCourse => 'Shorten',
+      BroadcastType.abandonTooMuchWind => 'Abn Wind+',
+      BroadcastType.abandonTooLittleWind => 'Abn Wind-',
+    };
   }
 
   static String _typeLabel(BroadcastType type) {

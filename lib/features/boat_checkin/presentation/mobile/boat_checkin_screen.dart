@@ -277,6 +277,13 @@ class _CheckedInTab extends ConsumerWidget {
                           visualDensity: VisualDensity.compact,
                         ),
                       ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(Icons.remove_circle_outline,
+                          color: Colors.red.shade300, size: 22),
+                      tooltip: 'Remove check-in',
+                      onPressed: () => _confirmRemove(context, ref, c),
+                    ),
                   ],
                 ),
               ),
@@ -285,6 +292,34 @@ class _CheckedInTab extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _confirmRemove(
+      BuildContext context, WidgetRef ref, BoatCheckin checkin) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove Check-In?'),
+        content: Text(
+            'Remove ${checkin.boatName} (${checkin.sailNumber}) from check-in?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref
+          .read(boatCheckinRepositoryProvider)
+          .removeCheckin(checkin.id);
+      ref.invalidate(eventCheckinsProvider(eventId));
+      ref.invalidate(boatsNotCheckedInProvider(eventId));
+    }
   }
 }
 

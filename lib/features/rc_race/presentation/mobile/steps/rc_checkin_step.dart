@@ -117,6 +117,14 @@ class RcCheckinStep extends ConsumerWidget {
                                             fontSize: 10,
                                             color: Colors.grey)),
                                   ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.remove_circle_outline,
+                                      color: Colors.red.shade300, size: 20),
+                                  tooltip: 'Remove',
+                                  onPressed: () => _removeCheckin(
+                                      context, ref, c.id),
+                                ),
                               ],
                             ),
                           ),
@@ -162,6 +170,32 @@ class RcCheckinStep extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _removeCheckin(
+      BuildContext context, WidgetRef ref, String checkinId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove Check-In?'),
+        content: const Text('This boat will be removed from the check-in list.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref
+          .read(boatCheckinRepositoryProvider)
+          .removeCheckin(checkinId);
+      ref.invalidate(eventCheckinsProvider(session.id));
+    }
   }
 
   void _openFullCheckin(BuildContext context) {
