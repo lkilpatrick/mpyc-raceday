@@ -145,14 +145,17 @@ class _ModeIndicatorBar extends StatelessWidget {
   }
 }
 
-class _RaceActiveBanner extends StatelessWidget {
+class _RaceActiveBanner extends ConsumerWidget {
   const _RaceActiveBanner();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
+    final modeAsync = ref.watch(appModeProvider);
+    final mode = modeAsync.value ?? currentAppMode();
+    final isSpectator = mode == AppMode.onshore || mode == AppMode.crew;
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -170,43 +173,57 @@ class _RaceActiveBanner extends StatelessWidget {
         final eventId = docs.first.id;
 
         return Material(
-          color: Colors.red,
+          color: isSpectator ? Colors.green : Colors.red,
           child: InkWell(
-            onTap: () => context.push('/timing/$eventId'),
+            onTap: isSpectator
+                ? () => context.go('/spectator')
+                : () => context.push('/timing/$eventId'),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
                   const Icon(Icons.circle, color: Colors.white, size: 10),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'RACE ACTIVE',
-                      style: TextStyle(
+                      isSpectator ? 'RACE IN PROGRESS' : 'RACE ACTIVE',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/timing/$eventId'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      visualDensity: VisualDensity.compact,
+                  if (isSpectator) ...[
+                    TextButton(
+                      onPressed: () => context.go('/spectator'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Watch Live'),
                     ),
-                    child: const Text('Timing'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/checkin/$eventId'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      visualDensity: VisualDensity.compact,
+                  ] else ...[
+                    TextButton(
+                      onPressed: () => context.push('/timing/$eventId'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Timing'),
                     ),
-                    child: const Text('Check-In'),
-                  ),
+                    TextButton(
+                      onPressed: () => context.push('/checkin/$eventId'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Check-In'),
+                    ),
+                  ],
                 ],
               ),
             ),
