@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../demo/demo_mode_service.dart';
+
 /// RC-specific home screen — focused on Race Control, Fleet Broadcast, and Live Map.
 class RcHomeScreen extends ConsumerStatefulWidget {
   const RcHomeScreen({super.key});
@@ -18,6 +20,7 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
   String? _eventId;
   String _eventName = '';
   String _status = '';
+  bool _isDemo = false;
 
   @override
   void initState() {
@@ -43,9 +46,49 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
           _eventId = snap.docs.first.id;
           _eventName = d['name'] as String? ?? 'Race Day';
           _status = d['status'] as String? ?? 'setup';
+          _isDemo = d['isDemo'] as bool? ?? false;
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _resetDemo() async {
+    if (_eventId == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Demo Race?'),
+        content: const Text(
+            'This will clear all check-ins, starts, finishes, and broadcasts for this demo race and reset it to setup.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await DemoModeService.resetDemoRace(_eventId!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Demo race reset to setup')),
+        );
+        _loadTodaysEvent(); // Refresh state
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reset failed: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -84,36 +127,56 @@ class _RcHomeScreenState extends ConsumerState<RcHomeScreen> {
           color: statusColor.withValues(alpha: 0.08),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                Icon(Icons.sailing, color: statusColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_eventName,
+                Row(
+                  children: [
+                    Icon(Icons.sailing, color: statusColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_eventName,
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text(DateFormat.yMMMd().format(DateTime.now()),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(statusLabel,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text(DateFormat.yMMMd().format(DateTime.now()),
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(12),
+                if (_isDemo) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 36,
+                    child: OutlinedButton.icon(
+                      onPressed: _resetDemo,
+                      icon: const Icon(Icons.refresh, size: 16, color: Colors.orange),
+                      label: const Text('Reset Demo Race',
+                          style: TextStyle(fontSize: 12, color: Colors.orange)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.orange),
+                      ),
+                    ),
                   ),
-                  child: Text(statusLabel,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold)),
-                ),
+                ],
               ],
             ),
           ),
