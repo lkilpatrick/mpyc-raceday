@@ -297,7 +297,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                 ),
                 items: marks
                     .map((m) => DropdownMenuItem(
-                          value: m.name,
+                          value: m.id,
                           child: Text(
                             '${m.name}${m.code != null && m.code != m.name ? " (${m.code})" : ""}'
                             '${m.latitude != null ? " \u2713" : " \u2717"}',
@@ -519,7 +519,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
           onChanged: (v) => setState(() {
             _finishType = v!;
             _finishMarkId ??=
-                marks.any((m) => m.name == 'X') ? 'X' : marks.firstOrNull?.name;
+                marks.where((m) => m.name == 'X').firstOrNull?.id ?? marks.firstOrNull?.id;
           }),
           title: const Text('Club Mark',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
@@ -543,7 +543,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
               ),
               items: marks
                   .map((m) => DropdownMenuItem(
-                        value: m.name,
+                        value: m.id,
                         child: Text(m.name),
                       ))
                   .toList(),
@@ -587,7 +587,8 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       seqParts.add('${leg.markName}$r');
     }
     if (_finishType == 'club_mark' && _finishMarkId != null) {
-      seqParts.add('FINISH($_finishMarkId)');
+      final finishName = marks.where((m) => m.id == _finishMarkId).firstOrNull?.name ?? _finishMarkId;
+      seqParts.add('FINISH($finishName)');
     } else {
       seqParts.add('FINISH');
     }
@@ -709,10 +710,13 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
 
   void _addLeg() {
     if (_selectedMarkToAdd == null) return;
+    final marks = ref.read(watchMarksProvider).value ?? [];
+    final mark = marks.where((m) => m.id == _selectedMarkToAdd).firstOrNull;
+    if (mark == null) return;
     setState(() {
       _legs.add(_LegEntry(
-        markId: _selectedMarkToAdd!,
-        markName: _selectedMarkToAdd!,
+        markId: mark.name,
+        markName: mark.name,
         rounding: MarkRounding.port,
       ));
     });
@@ -813,7 +817,9 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       windDirMax: _windMax,
       finishLocation: _finish,
       finishType: _finishType,
-      finishMarkId: _finishType == 'club_mark' ? _finishMarkId : null,
+      finishMarkId: _finishType == 'club_mark'
+          ? marks.where((m) => m.id == _finishMarkId).firstOrNull?.name ?? _finishMarkId
+          : null,
       canMultiply: _canMultiply,
       requiresInflatable: _requiresInflatable,
       inflatableType: _requiresInflatable ? _inflatableType : null,
