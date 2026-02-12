@@ -1,7 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../incidents/data/models/race_incident.dart';
+import '../../../incidents/presentation/incidents_providers.dart';
 import '../../data/racing_rules_service.dart';
 import '../racing_rules_providers.dart';
 
@@ -322,8 +327,18 @@ class _SituationAdvisorScreenState
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => _fileProtest(applicableRules),
+          icon: const Icon(Icons.gavel),
+          label: const Text('File Protest'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.red,
+            minimumSize: const Size(double.infinity, 48),
+          ),
+        ),
         const SizedBox(height: 8),
-        FilledButton(
+        OutlinedButton(
           onPressed: () {
             setState(() {
               _step = 0;
@@ -336,6 +351,198 @@ class _SituationAdvisorScreenState
         ),
       ],
     );
+  }
+
+  Future<void> _fileProtest(List<_RuleResult> rules) async {
+    // Get GPS position
+    Position? position;
+    try {
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.whileInUse ||
+          perm == LocationPermission.always) {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+      }
+    } catch (_) {}
+
+    // Get weather snapshot from Firestore
+    WeatherSnapshot? weatherSnap;
+    try {
+      final weatherDoc = await FirebaseFirestore.instance
+          .collection('weather')
+          .doc('mpyc_station')
+          .get();
+      if (weatherDoc.exists) {
+        final d = weatherDoc.data()!;
+        weatherSnap = WeatherSnapshot(
+          windSpeedKts: (d['speedKts'] as num?)?.toDouble(),
+          windSpeedMph: (d['speedMph'] as num?)?.toDouble(),
+          windDirDeg: (d['dirDeg'] as num?)?.toInt(),
+          windDirLabel: d['windDirLabel'] as String?,
+          gustKts: (d['gustKts'] as num?)?.toDouble(),
+          tempF: (d['tempF'] as num?)?.toDouble(),
+          humidity: (d['humidity'] as num?)?.toDouble(),
+          pressureInHg: (d['pressureInHg'] as num?)?.toDouble(),
+          source: d['source'] as String?,
+          stationName: d['station']?['name'] as String?,
+        );
+      }
+    } catch (_) {}
+
+    // Find today's race event
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+    String eventId = '';
+    String eventName = '';
+    String courseName = '';
+    try {
+      final eventSnap = await FirebaseFirestore.instance
+          .collection('race_events')
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isLessThan: Timestamp.fromDate(todayEnd))
+          .limit(1)
+          .get();
+      if (eventSnap.docs.isNotEmpty) {
+        final d = eventSnap.docs.first.data();
+        eventId = eventSnap.docs.first.id;
+        eventName = d['name'] as String? ?? '';
+        courseName = d['courseId'] as String? ?? '';
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    // Show protest details dialog
+    final descCtrl = TextEditingController();
+    final otherSailCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('File Protest'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Encounter: ${_encounterType ?? ""}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Rules: ${rules.map((r) => r.ruleNumber).join(", ")}',
+                style: const TextStyle(fontSize: 13),
+              ),
+              if (position != null)
+                Text(
+                  'GPS: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              if (weatherSnap != null)
+                Text(
+                  'Wind: ${weatherSnap.windSpeedKts?.toStringAsFixed(0) ?? "?"} kts ${weatherSnap.windDirLabel ?? "${weatherSnap.windDirDeg ?? "?"}°"}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: otherSailCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Other boat sail number',
+                  hintText: 'e.g. 1234',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Describe what happened',
+                  hintText: 'Brief description of the incident...',
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('File Protest'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final gpsNote = position != null
+        ? 'GPS: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}'
+        : '';
+    final fullDesc = [
+      descCtrl.text.trim(),
+      'Encounter type: $_encounterType',
+      'Details: $_subAnswer',
+      if (_additionalFactors.isNotEmpty)
+        'Factors: ${_additionalFactors.join(", ")}',
+      if (gpsNote.isNotEmpty) gpsNote,
+    ].join('\n');
+
+    final incident = RaceIncident(
+      id: '',
+      eventId: eventId,
+      eventName: eventName,
+      raceNumber: 0,
+      reportedAt: DateTime.now(),
+      reportedBy: uid,
+      incidentTime: DateTime.now(),
+      description: fullDesc,
+      locationOnCourse: CourseLocationOnIncident.openWater,
+      locationDetail: gpsNote,
+      courseName: courseName,
+      involvedBoats: [
+        if (otherSailCtrl.text.trim().isNotEmpty)
+          BoatInvolved(
+            boatId: '',
+            sailNumber: otherSailCtrl.text.trim(),
+            boatName: '',
+            skipperName: '',
+            role: BoatInvolvedRole.protested,
+          ),
+      ],
+      rulesAlleged: rules.map((r) => r.ruleNumber).toList(),
+      status: RaceIncidentStatus.protestFiled,
+      weatherSnapshot: weatherSnap,
+    );
+
+    try {
+      final repo = ref.read(incidentsRepositoryProvider);
+      await repo.createIncident(incident);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Protest filed successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error filing protest: $e')),
+        );
+      }
+    }
   }
 
   List<_RuleResult> _getApplicableRules() {

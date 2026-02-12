@@ -1,25 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_nav_config.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_timing_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_chat_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/home_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/more_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_tab_screen.dart';
+import 'package:mpyc_raceday/features/race_mode/presentation/mobile/race_mode_screen.dart';
+import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/situation_advisor_screen.dart';
 import 'package:mpyc_raceday/features/reporting/presentation/mobile/report_tab_screen.dart';
 import 'package:mpyc_raceday/mobile/layouts/mobile_scaffold.dart';
-import 'package:mpyc_raceday/mobile/navigation/mobile_bottom_nav.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/weather_dashboard_screen.dart';
 import 'package:mpyc_raceday/shared/widgets/placeholder_page.dart';
 
-class MobileShell extends StatefulWidget {
+class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key, required this.initialIndex});
 
   final int initialIndex;
 
   @override
-  State<MobileShell> createState() => _MobileShellState();
+  ConsumerState<MobileShell> createState() => _MobileShellState();
 }
 
-class _MobileShellState extends State<MobileShell> {
+class _MobileShellState extends ConsumerState<MobileShell> {
   late int _index;
 
   @override
@@ -38,38 +48,99 @@ class _MobileShellState extends State<MobileShell> {
     }
   }
 
-  void _onTap(int index) {
-    if (index == _index) {
-      return;
-    }
-    setState(() {
-      _index = index;
-    });
-    context.go(mobileNavItems[index].route);
+  void _onTap(int index, List<ModeNavItem> navItems) {
+    if (index == _index) return;
+    setState(() => _index = index);
+    // Navigate to the route for this mode's tab
+    final route = navItems[index].route;
+    context.go(route);
   }
+
+  Widget _screenForRoute(String route) => switch (route) {
+        '/home' => const HomeScreen(),
+        '/course' => const CourseTabScreen(),
+        '/weather' => const WeatherDashboardScreen(),
+        '/report' => const ReportTabScreen(),
+        '/more' => const MoreScreen(),
+        '/rc-timing' => const RcTimingScreen(),
+        '/race-mode' => const RaceModeScreen(),
+        '/rules/advisor' => const SituationAdvisorScreen(),
+        '/crew-dashboard' => const CrewDashboardScreen(),
+        '/crew-chat' => const CrewChatScreen(),
+        '/crew-safety' => const CrewSafetyScreen(),
+        '/spectator' => const SpectatorScreen(),
+        '/leaderboard' => const LeaderboardScreen(),
+        _ => PlaceholderPage(title: route, subtitle: 'Coming soon'),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final item = mobileNavItems[_index];
-    final body = switch (_index) {
-      0 => const HomeScreen(),
-      1 => const CourseTabScreen(),
-      2 => const WeatherDashboardScreen(),
-      3 => const ReportTabScreen(),
-      4 => const MoreScreen(),
-      _ => PlaceholderPage(title: item.label, subtitle: 'Mobile experience'),
-    };
+    final modeAsync = ref.watch(appModeProvider);
+    final mode = modeAsync.value ?? currentAppMode();
+    final navItems = navItemsForMode(mode);
+
+    // Clamp index to valid range
+    final safeIndex = _index.clamp(0, navItems.length - 1);
+    final item = navItems[safeIndex];
+    final body = _screenForRoute(item.route);
 
     return MobileScaffold(
       title: item.label,
       body: Column(
         children: [
+          // Mode indicator bar
+          _ModeIndicatorBar(mode: mode),
           // RACE ACTIVE banner
           const _RaceActiveBanner(),
           Expanded(child: body),
         ],
       ),
-      bottomNavigationBar: MobileBottomNav(currentIndex: _index, onTap: _onTap),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: safeIndex,
+        onTap: (i) => _onTap(i, navItems),
+        selectedItemColor: mode.color,
+        items: [
+          for (final nav in navItems)
+            BottomNavigationBarItem(icon: Icon(nav.icon), label: nav.label),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeIndicatorBar extends StatelessWidget {
+  const _ModeIndicatorBar({required this.mode});
+  final AppMode mode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: mode.color.withValues(alpha: 0.08),
+      child: InkWell(
+        onTap: () => context.push('/mode-switcher'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(
+            children: [
+              Icon(mode.icon, size: 14, color: mode.color),
+              const SizedBox(width: 6),
+              Text(
+                '${mode.label} Mode',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: mode.color,
+                ),
+              ),
+              const Spacer(),
+              Text('Switch',
+                  style: TextStyle(fontSize: 10, color: mode.color)),
+              Icon(Icons.chevron_right, size: 14, color: mode.color),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

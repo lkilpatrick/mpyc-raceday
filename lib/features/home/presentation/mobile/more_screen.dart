@@ -11,6 +11,20 @@ class MoreScreen extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       children: [
         _MoreItem(
+          icon: Icons.swap_horiz,
+          label: 'Switch Mode',
+          subtitle: 'Change between RC, Skipper, Crew, Onshore',
+          onTap: () => context.push('/mode-switcher'),
+          color: Colors.indigo,
+        ),
+        _MoreItem(
+          icon: Icons.how_to_reg,
+          label: 'Race Check-In',
+          subtitle: 'Remote check-in with GPS & souls on board',
+          onTap: () => context.push('/skipper-checkin'),
+        ),
+        const Divider(),
+        _MoreItem(
           icon: Icons.event,
           label: 'Schedule',
           subtitle: 'Race calendar & crew assignments',
@@ -27,6 +41,12 @@ class MoreScreen extends StatelessWidget {
           label: 'Racing Rules',
           subtitle: 'RRS reference & situation advisor',
           onTap: () => context.push('/rules'),
+        ),
+        _MoreItem(
+          icon: Icons.gps_fixed,
+          label: 'Race Mode',
+          subtitle: 'GPS track logging during races',
+          onTap: () => context.push('/race-mode'),
         ),
         _MoreItem(
           icon: Icons.air,

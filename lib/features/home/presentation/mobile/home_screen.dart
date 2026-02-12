@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_mode/data/app_mode.dart';
 import '../../../auth/data/auth_providers.dart';
 import '../../../auth/data/models/member.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
@@ -21,6 +22,9 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Load persisted app mode from Firestore on first build
+    loadAppMode(ref);
+
     final memberAsync = ref.watch(currentUserProvider);
     final member = memberAsync.value;
     final isRCChair = member?.isRCChair ?? false;
@@ -42,6 +46,10 @@ class HomeScreen extends ConsumerWidget {
             _YourBoatCard(member: member),
             const SizedBox(height: 8),
           ],
+
+          // ── Race Mode ──
+          const _RaceModeCard(),
+          const SizedBox(height: 8),
 
           // ── Today's Race ──
           const _TodaysRaceCard(),
@@ -634,6 +642,56 @@ class _QuickAction extends StatelessWidget {
             Text(label,
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Race Mode Card
+// ═══════════════════════════════════════════════════════
+
+class _RaceModeCard extends StatelessWidget {
+  const _RaceModeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.green.shade50,
+      child: InkWell(
+        onTap: () => context.push('/race-mode'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.gps_fixed, color: Colors.green.shade800, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Race Mode',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.green.shade900)),
+                    Text('Track your race with GPS',
+                        style: TextStyle(fontSize: 12, color: Colors.green.shade700)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.green.shade700),
+            ],
+          ),
         ),
       ),
     );

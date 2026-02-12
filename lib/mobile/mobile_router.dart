@@ -26,6 +26,14 @@ import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenanc
 import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenance_quick_report_screen.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/profile_screen.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/live_wind_screen.dart';
+import 'package:mpyc_raceday/features/race_mode/presentation/mobile/race_mode_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_switcher_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_chat_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
+import 'package:mpyc_raceday/features/app_mode/presentation/mobile/skipper_checkin_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -214,6 +222,43 @@ final GoRouter mobileRouter = GoRouter(
         final incidentId = state.pathParameters['incidentId']!;
         return IncidentDetailScreen(incidentId: incidentId);
       },
+    ),
+    GoRoute(
+      path: '/race-mode',
+      builder: (context, state) => const RaceModeScreen(),
+    ),
+    GoRoute(
+      path: '/mode-switcher',
+      builder: (context, state) => const ModeSwitcherScreen(),
+    ),
+    GoRoute(
+      path: '/crew-dashboard',
+      builder: (context, state) => const CrewDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/crew-chat',
+      builder: (context, state) => const CrewChatScreen(),
+    ),
+    GoRoute(
+      path: '/crew-safety',
+      builder: (context, state) => const CrewSafetyScreen(),
+    ),
+    GoRoute(
+      path: '/spectator',
+      builder: (context, state) => const SpectatorScreen(),
+    ),
+    GoRoute(
+      path: '/leaderboard',
+      builder: (context, state) => const LeaderboardScreen(),
+    ),
+    GoRoute(
+      path: '/skipper-checkin',
+      builder: (context, state) => const SkipperCheckinScreen(),
+    ),
+    // Shell routes for mode-specific bottom nav tabs
+    GoRoute(
+      path: '/rc-timing',
+      builder: (context, state) => const MobileShell(initialIndex: 2),
     ),
   ],
 );

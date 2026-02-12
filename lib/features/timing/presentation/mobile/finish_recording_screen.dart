@@ -49,6 +49,14 @@ class _FinishRecordingScreenState
       body: SafeArea(
         child: Column(
           children: [
+            // Back button
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
             // Top: race clock
             _RaceClock(
               raceStartId: widget.raceStartId,

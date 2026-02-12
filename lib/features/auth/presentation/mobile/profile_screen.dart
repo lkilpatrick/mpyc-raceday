@@ -135,7 +135,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final memberAsync = ref.watch(currentUserProvider);
 
-    return memberAsync.when(
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profile')),
+      body: memberAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (member) {
@@ -273,6 +275,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ],
         );
       },
+      ),
     );
   }
 }
