@@ -293,49 +293,110 @@ class _LiveRaceMap extends StatelessWidget {
           ));
         }
 
-        // Add course marks from Firestore
+        // Layer 2: live positions (real-time pings from active racers)
         return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('marks').snapshots(),
-          builder: (context, markSnap) {
-            final markDocs = markSnap.data?.docs ?? [];
-            for (final doc in markDocs) {
-              final md = doc.data() as Map<String, dynamic>;
-              final lat = (md['lat'] as num?)?.toDouble();
-              final lon = (md['lon'] as num?)?.toDouble();
-              final name = md['name'] as String? ?? doc.id;
+          stream: FirebaseFirestore.instance
+              .collection('live_positions')
+              .snapshots(),
+          builder: (context, liveSnap) {
+            final liveDocs = liveSnap.data?.docs ?? [];
+            for (final doc in liveDocs) {
+              final ld = doc.data() as Map<String, dynamic>;
+              final lat = (ld['lat'] as num?)?.toDouble();
+              final lon = (ld['lon'] as num?)?.toDouble();
+              final name = ld['sailNumber'] as String? ??
+                  ld['boatName'] as String? ??
+                  'Live';
+              final source = ld['source'] as String? ?? 'skipper';
+              final color = source == 'rc' ? Colors.red : Colors.blue;
               if (lat != null && lon != null) {
                 markers.add(Marker(
                   point: LatLng(lat, lon),
-                  width: 40,
-                  height: 40,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on,
-                          color: Colors.orange, size: 22),
-                      Text(name,
-                          style: const TextStyle(
-                              fontSize: 8, fontWeight: FontWeight.bold)),
-                    ],
+                  width: 70,
+                  height: 34,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                            color: color.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            spreadRadius: 1),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sailing,
+                            color: Colors.white, size: 12),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ));
               }
             }
 
-            return FlutterMap(
-              mapController: mapController,
-              options: MapOptions(
-                initialCenter: _mpycCenter,
-                initialZoom: 13.5,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                ),
-                if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
-                if (markers.isNotEmpty) MarkerLayer(markers: markers),
-              ],
+            // Layer 3: course marks
+            return StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('marks').snapshots(),
+              builder: (context, markSnap) {
+                final markDocs = markSnap.data?.docs ?? [];
+                for (final doc in markDocs) {
+                  final md = doc.data() as Map<String, dynamic>;
+                  final lat = (md['lat'] as num?)?.toDouble();
+                  final lon = (md['lon'] as num?)?.toDouble();
+                  final name = md['name'] as String? ?? doc.id;
+                  if (lat != null && lon != null) {
+                    markers.add(Marker(
+                      point: LatLng(lat, lon),
+                      width: 40,
+                      height: 40,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on,
+                              color: Colors.orange, size: 22),
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 8, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ));
+                  }
+                }
+
+                return FlutterMap(
+                  mapController: mapController,
+                  options: MapOptions(
+                    initialCenter: _mpycCenter,
+                    initialZoom: 13.5,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    ),
+                    if (polylines.isNotEmpty)
+                      PolylineLayer(polylines: polylines),
+                    if (markers.isNotEmpty) MarkerLayer(markers: markers),
+                  ],
+                );
+              },
             );
           },
         );

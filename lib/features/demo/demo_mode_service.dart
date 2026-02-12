@@ -22,7 +22,8 @@ class DemoModeService {
     _SampleBoat('PHRF B', '333', 'Wind Dancer', 'Chris Davis', 144),
   ];
 
-  /// Check if a demo race already exists for today
+  /// Check if a demo race already exists for today.
+  /// Avoids composite index by querying date range then filtering client-side.
   static Future<String?> getTodaysDemoEventId() async {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
@@ -33,11 +34,14 @@ class DemoModeService {
         .where('date',
             isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
         .where('date', isLessThan: Timestamp.fromDate(todayEnd))
-        .where('isDemo', isEqualTo: true)
-        .limit(1)
         .get();
 
-    return snap.docs.isNotEmpty ? snap.docs.first.id : null;
+    // Filter for demo events client-side to avoid composite index
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (data['isDemo'] == true) return doc.id;
+    }
+    return null;
   }
 
   /// Create a full demo race: event + boats + check-ins

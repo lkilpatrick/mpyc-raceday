@@ -166,6 +166,41 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
       _currentSpeedKnots = speedKnots;
       if (speedKnots > _maxSpeedKnots) _maxSpeedKnots = speedKnots;
     });
+
+    // Write live position to Firestore for spectator map (throttled)
+    _writeLivePosition(pos, speedKnots);
+  }
+
+  DateTime? _lastLiveWrite;
+
+  void _writeLivePosition(Position pos, double speedKnots) {
+    final now = DateTime.now();
+    // Throttle to once every 10 seconds
+    if (_lastLiveWrite != null &&
+        now.difference(_lastLiveWrite!).inSeconds < 10) return;
+    _lastLiveWrite = now;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty || _eventId.isEmpty) return;
+
+    final member = ref.read(currentUserProvider).value;
+
+    FirebaseFirestore.instance
+        .collection('live_positions')
+        .doc(uid)
+        .set({
+      'lat': pos.latitude,
+      'lon': pos.longitude,
+      'speedKnots': speedKnots,
+      'heading': pos.heading,
+      'accuracy': pos.accuracy,
+      'eventId': _eventId,
+      'memberId': uid,
+      'boatName': member?.boatName ?? '',
+      'sailNumber': member?.sailNumber ?? '',
+      'source': 'skipper',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> _finishRace() async {
@@ -199,6 +234,16 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
     _positionSub?.cancel();
     _elapsedTimer?.cancel();
     WakelockPlus.disable();
+
+    // Remove live position
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isNotEmpty) {
+      FirebaseFirestore.instance
+          .collection('live_positions')
+          .doc(uid)
+          .delete()
+          .catchError((_) {});
+    }
 
     setState(() {
       _state = _RaceState.finished;

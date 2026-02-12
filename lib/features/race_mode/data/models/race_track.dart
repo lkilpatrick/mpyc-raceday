@@ -53,6 +53,7 @@ class RaceTrack {
     this.distanceNm,
     this.avgSpeedKnots,
     this.maxSpeedKnots,
+    this.source = 'skipper',
   });
 
   final String id;
@@ -70,6 +71,8 @@ class RaceTrack {
   final double? distanceNm;
   final double? avgSpeedKnots;
   final double? maxSpeedKnots;
+  /// Source of GPS data: 'skipper', 'rc', 'spectator'
+  final String source;
 
   Map<String, dynamic> toMap() => {
         'memberId': memberId,
@@ -86,6 +89,7 @@ class RaceTrack {
         if (distanceNm != null) 'distanceNm': distanceNm,
         if (avgSpeedKnots != null) 'avgSpeedKnots': avgSpeedKnots,
         if (maxSpeedKnots != null) 'maxSpeedKnots': maxSpeedKnots,
+        'source': source,
         'pointCount': points.length,
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -110,6 +114,7 @@ class RaceTrack {
       distanceNm: (m['distanceNm'] as num?)?.toDouble(),
       avgSpeedKnots: (m['avgSpeedKnots'] as num?)?.toDouble(),
       maxSpeedKnots: (m['maxSpeedKnots'] as num?)?.toDouble(),
+      source: m['source'] as String? ?? 'skipper',
     );
   }
 }

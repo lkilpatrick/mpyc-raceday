@@ -51,8 +51,9 @@ service cloud.firestore {
     // ── Race Events ──
     match /race_events/{eventId} {
       allow read: if isAuthenticated();
-      allow create, delete: if hasAnyRole(['web_admin', 'rc_chair']);
-      allow update: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
+      allow update: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
+      allow delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Season Series ──
@@ -115,7 +116,7 @@ service cloud.firestore {
     // ── Boats (Fleet) ──
     match /boats/{boatId} {
       allow read: if isAuthenticated();
-      allow write: if isRCChair();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
     }
 
     // ── Boat Check-ins ──
@@ -239,6 +240,44 @@ service cloud.firestore {
     match /handicap_ratings/{docId} {
       allow read: if isAuthenticated();
       allow write: if isWebAdmin();
+    }
+
+    // ── Race Tracks (GPS data from skippers & RC) ──
+    match /race_tracks/{trackId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasAnyRole(['web_admin', 'rc_chair'])
+        || (isAuthenticated() && resource.data.memberId == request.auth.uid);
+    }
+
+    // ── Live Race Positions (real-time GPS pings) ──
+    match /live_positions/{posId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // ── Race State (current race status) ──
+    match /race_state/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Crew Assignments ──
+    match /crew_assignments/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
+    }
+
+    // ── Crew Sign-offs ──
+    match /crew_signoffs/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    // ── Notices ──
+    match /notices/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Default deny ──
