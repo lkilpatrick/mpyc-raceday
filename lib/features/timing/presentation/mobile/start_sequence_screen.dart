@@ -308,15 +308,15 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                         Expanded(
                           child: SizedBox(
                             height: 48,
-                            child: OutlinedButton.icon(
+                            child: FilledButton.icon(
                               onPressed: _started ? _shortenCourse : null,
                               icon: const Icon(Icons.content_cut, size: 18),
                               label: const Text('SHORTEN\nCOURSE',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.teal,
-                                side: const BorderSide(color: Colors.teal),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                disabledBackgroundColor: Colors.teal.withValues(alpha: 0.3),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -328,15 +328,14 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                         Expanded(
                           child: SizedBox(
                             height: 48,
-                            child: OutlinedButton.icon(
+                            child: FilledButton.icon(
                               onPressed: _abandonRace,
                               icon: const Icon(Icons.cancel, size: 18),
                               label: const Text('ABANDON\nRACE',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red.shade800,
-                                side: BorderSide(color: Colors.red.shade800),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.red,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -600,7 +599,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
             sentAt: DateTime.now(),
             deliveryCount: 0,
             target: BroadcastTarget.everyone,
-            requiresAck: true,
+            requiresAck: false,
           ),
         );
 
@@ -703,7 +702,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
             sentAt: DateTime.now(),
             deliveryCount: 0,
             target: BroadcastTarget.everyone,
-            requiresAck: true,
+            requiresAck: false,
           ),
         );
 
@@ -767,7 +766,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
             sentAt: DateTime.now(),
             deliveryCount: 0,
             target: BroadcastTarget.everyone,
-            requiresAck: true,
+            requiresAck: false,
           ),
         );
 

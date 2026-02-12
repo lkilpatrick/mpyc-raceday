@@ -278,7 +278,7 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
             sentAt: DateTime.now(),
             deliveryCount: 0,
             target: BroadcastTarget.everyone,
-            requiresAck: true,
+            requiresAck: false,
           ),
         );
 
@@ -346,7 +346,7 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
             sentAt: DateTime.now(),
             deliveryCount: 0,
             target: BroadcastTarget.everyone,
-            requiresAck: true,
+            requiresAck: false,
           ),
         );
 

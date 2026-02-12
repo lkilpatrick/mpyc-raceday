@@ -125,6 +125,7 @@ service cloud.firestore {
       allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
       allow update: if hasAnyRole(['web_admin', 'rc_chair'])
         || (isAuthenticated() && resource.data.checkedInBy == request.auth.uid);
+      allow delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Weather (live station data — written by Cloud Functions only) ──
@@ -149,6 +150,7 @@ service cloud.firestore {
     match /fleet_broadcasts/{broadcastId} {
       allow read: if isAuthenticated();
       allow create: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     match /fleetBroadcasts/{docId} {
@@ -233,7 +235,7 @@ service cloud.firestore {
     // ── Finish Records ──
     match /finish_records/{docId} {
       allow read: if isAuthenticated();
-      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow create, update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
     // ── Handicap Ratings ──
