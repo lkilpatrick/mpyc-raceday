@@ -26,6 +26,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
   int _nextPosition = 1;
   DateTime? _lastUndoDeadline;
   String? _lastFinishId;
+  bool _autoReviewTriggered = false;
 
   @override
   void initState() {
@@ -121,6 +122,15 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                   setState(() => _nextPosition = finishedCount + 1);
                 }
               });
+
+              // Auto-move to review when all boats have a finish record
+              final checkins = checkinsAsync.value ?? [];
+              if (checkins.isNotEmpty &&
+                  finishes.length >= checkins.length) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _autoMoveToReview();
+                });
+              }
 
               if (finishes.isEmpty) {
                 return const Center(
@@ -371,6 +381,26 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
       await ref
           .read(rcRaceRepositoryProvider)
           .abandonRace(widget.session.id, reason);
+    }
+  }
+
+  Future<void> _autoMoveToReview() async {
+    if (_autoReviewTriggered) return;
+    _autoReviewTriggered = true;
+    // Show a snackbar and auto-transition after a short delay
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All boats scored — moving to review...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      await ref
+          .read(rcRaceRepositoryProvider)
+          .moveToReview(widget.session.id);
     }
   }
 

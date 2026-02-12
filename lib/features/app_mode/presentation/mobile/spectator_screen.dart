@@ -1005,6 +1005,7 @@ class _LiveMapCard extends StatelessWidget {
                       TileLayer(
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.mpyc.raceday',
                       ),
                     ],
                   ),
@@ -1036,6 +1037,7 @@ class _LiveMapCard extends StatelessWidget {
                 TileLayer(
                   urlTemplate:
                       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.mpyc.raceday',
                 ),
                 if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],

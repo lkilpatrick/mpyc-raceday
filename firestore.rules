@@ -268,6 +268,20 @@ service cloud.firestore {
       allow write: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
     }
 
+    // ── Crew Profiles (keyed by UID) ──
+    match /crew_profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwnDocument(userId);
+      allow delete: if isWebAdmin();
+    }
+
+    // ── Skipper Profiles (keyed by UID) ──
+    match /skipper_profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwnDocument(userId);
+      allow delete: if isWebAdmin();
+    }
+
     // ── Crew Sign-offs ──
     match /crew_signoffs/{docId} {
       allow read: if isAuthenticated();

@@ -107,14 +107,20 @@ class RcRaceRepository {
   }
 
   /// Get all finalized sessions (for history view).
+  /// Avoids composite index by sorting client-side.
   Future<List<RaceSession>> getFinalizedSessions() async {
     final snap = await _events
         .where('status', whereIn: ['finalized', 'abandoned'])
-        .orderBy('date', descending: true)
-        .limit(50)
         .get();
-    return snap.docs
+    final sessions = snap.docs
         .map((d) => RaceSession.fromDoc(d.id, d.data()))
         .toList();
+    sessions.sort((a, b) {
+      final aDate = a.date;
+      final bDate = b.date;
+      if (aDate == null || bDate == null) return 0;
+      return bDate.compareTo(aDate);
+    });
+    return sessions.take(50).toList();
   }
 }

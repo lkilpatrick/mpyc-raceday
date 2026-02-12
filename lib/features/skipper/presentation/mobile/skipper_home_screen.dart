@@ -43,6 +43,10 @@ class SkipperHomeScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
               ],
 
+              // Skipper profile badge
+              const _SkipperProfileBadge(),
+              const SizedBox(height: 12),
+
               // Active race status card
               const _ActiveRaceCard(),
               const SizedBox(height: 12),
@@ -459,21 +463,134 @@ class _QuickAction extends StatelessWidget {
 // Recent Results Preview
 // ─────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────
+// Skipper Profile Badge
+// ─────────────────────────────────────────────────────────────────
+
+class _SkipperProfileBadge extends StatelessWidget {
+  const _SkipperProfileBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('skipper_profiles')
+          .doc(uid)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData || !snap.data!.exists) {
+          return Card(
+            color: Colors.teal.shade50,
+            child: InkWell(
+              onTap: () => context.push('/skipper-profile'),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.sailing, color: Colors.teal),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Set up your skipper profile',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal)),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.teal),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final d = snap.data!.data() as Map<String, dynamic>;
+        final name = d['displayName'] as String? ?? '';
+        final boat = d['boatLabel'] as String? ?? '';
+        final sail = d['sailNumber'] as String? ?? '';
+
+        return Card(
+          child: InkWell(
+            onTap: () => context.push('/skipper-profile'),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.sailing, color: Colors.teal, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
+                        if (boat.isNotEmpty)
+                          Text(boat,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600)),
+                      ],
+                    ),
+                  ),
+                  if (sail.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Sail $sail',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal)),
+                    ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right,
+                      size: 18, color: Colors.grey.shade400),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Recent Results Preview
+// ─────────────────────────────────────────────────────────────────
+
 class _RecentResultsPreview extends StatelessWidget {
   const _RecentResultsPreview();
 
   @override
   Widget build(BuildContext context) {
+    // Query without orderBy to avoid composite index; sort client-side
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
           .where('status', whereIn: ['finalized', 'review'])
-          .orderBy('date', descending: true)
-          .limit(1)
           .snapshots(),
       builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
-        if (docs.isEmpty) return const SizedBox.shrink();
+        final allDocs = snap.data?.docs ?? [];
+        if (allDocs.isEmpty) return const SizedBox.shrink();
+        // Sort by date descending client-side
+        allDocs.sort((a, b) {
+          final aDate = (a.data() as Map<String, dynamic>)['date'] as Timestamp?;
+          final bDate = (b.data() as Map<String, dynamic>)['date'] as Timestamp?;
+          if (aDate == null || bDate == null) return 0;
+          return bDate.compareTo(aDate);
+        });
+        final docs = [allDocs.first];
 
         final d = docs.first.data() as Map<String, dynamic>;
         final name = d['name'] as String? ?? 'Race';
@@ -515,11 +632,16 @@ class _RecentResultsPreview extends StatelessWidget {
                       stream: FirebaseFirestore.instance
                           .collection('finish_records')
                           .where('raceStartId', isEqualTo: raceStartId)
-                          .orderBy('position')
-                          .limit(3)
                           .snapshots(),
                       builder: (context, fSnap) {
-                        final fDocs = fSnap.data?.docs ?? [];
+                        var fDocs = fSnap.data?.docs ?? [];
+                        // Sort by position client-side, take top 3
+                        fDocs.sort((a, b) {
+                          final aPos = ((a.data() as Map<String, dynamic>)['position'] as num?) ?? 999;
+                          final bPos = ((b.data() as Map<String, dynamic>)['position'] as num?) ?? 999;
+                          return aPos.compareTo(bPos);
+                        });
+                        if (fDocs.length > 3) fDocs = fDocs.sublist(0, 3);
                         if (fDocs.isEmpty) {
                           return const Text('No finishes recorded',
                               style: TextStyle(

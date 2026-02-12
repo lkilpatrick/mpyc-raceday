@@ -172,17 +172,20 @@ class _RaceActiveBanner extends ConsumerWidget {
     final isSkipper = mode == AppMode.skipper;
     final isSpectator = mode == AppMode.onshore || mode == AppMode.crew;
 
+    // Query date range only, filter status client-side to avoid composite index
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
           .where('date',
               isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
           .where('date', isLessThan: Timestamp.fromDate(todayEnd))
-          .where('status', isEqualTo: 'running')
-          .limit(1)
           .snapshots(),
       builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+        final allDocs = snap.data?.docs ?? [];
+        final docs = allDocs.where((d) {
+          final data = d.data() as Map<String, dynamic>;
+          return data['status'] == 'running';
+        }).toList();
         if (docs.isEmpty) return const SizedBox.shrink();
 
         final eventId = docs.first.id;

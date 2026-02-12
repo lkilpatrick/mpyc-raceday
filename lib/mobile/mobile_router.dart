@@ -40,6 +40,7 @@ import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_incide
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/racing_rules_reference_screen.dart';
 import 'package:mpyc_raceday/features/crew/presentation/mobile/crew_profile_screen.dart';
 import 'package:mpyc_raceday/features/crew/presentation/mobile/crew_incident_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_profile_screen.dart';
 import 'package:mpyc_raceday/features/demo/presentation/demo_mode_screen.dart';
 import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_flow_screen.dart';
 import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_history_screen.dart';
@@ -335,6 +336,11 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/crew-rules-tab',
       builder: (context, state) => const MobileShell(initialIndex: 1),
+    ),
+    // Skipper push routes
+    GoRoute(
+      path: '/skipper-profile',
+      builder: (context, state) => const SkipperProfileScreen(),
     ),
     // Crew push routes
     GoRoute(
