@@ -11,9 +11,7 @@ class LeaderboardScreen extends StatelessWidget {
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('race_events')
             .where('date',
@@ -87,7 +85,6 @@ class LeaderboardScreen extends StatelessWidget {
             ],
           );
         },
-      ),
     );
   }
 
