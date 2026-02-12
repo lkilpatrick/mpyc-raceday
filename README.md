@@ -44,54 +44,63 @@ The mobile app adapts its entire interface based on your role. Switch modes anyt
 
 Everything the RC needs to run a race from the committee boat.
 
+- **Guided Race Flow (Stepper)** — A 6-step guided workflow: Setup → Check-In → Start → Running → Scoring → Review. Each step has a dedicated UI with status tracking and state machine transitions.
 - **Course Selection & Broadcast** — Choose from 57 courses filtered by live wind direction. One tap broadcasts the course to the entire fleet via SMS and push notification.
-- **Start Sequence & Horn Detection** — Automated 5-minute countdown with flag state tracking (Warning, Prep, Individual Recall). Listens for the horn to sync timing.
-- **Finish Line Recording** — Big, tactile "FINISH" button. Each tap locks in a boat's crossing time with sail number entry. Supports OCS, DNS, DNF, DSQ, and RET letter scores.
+- **Start Sequence & Horn Detection** — Automated countdown with flag state tracking. Microphone-based horn detection to sync timing automatically.
+- **Finish Line Recording** — Big, tactile "FINISH" button. Each tap locks in a boat's crossing time with sail number entry. Supports OCS, DNS, DNF, DSQ, and RET letter scores with undo.
+- **Live Race Map** — Real-time boat positions on a map during the race with boat count badge and abandon/scoring actions.
 - **Race Check-In Management** — See which boats have checked in (including remote GPS check-ins from skippers), souls on board counts, and boats still missing.
 - **Scoring & Results** — View corrected times (PHRF), publish results, and push scores to Clubspot.
+- **Race History** — Browse finalized and abandoned race sessions with review and export status.
 - **Fleet Broadcast** — Send course changes, postponements, or general recalls to the fleet instantly.
-- **Incident Management** — Review and manage on-water incidents and protests filed by skippers.
+- **Incident Management** — Review and manage on-water incidents and protests filed by skippers and crew.
 - **Live Weather** — Wind speed, direction, gusts, temperature, humidity, and barometric pressure from multiple stations.
 
 ### Skipper Mode
 
-Tactical tools for the person in charge of the boat.
+Streamlined race-day workflow for the person in charge of the boat.
 
-- **Remote Race Check-In** — Check in to the race via GPS from anywhere on the water. Sends your position and souls on board count to the Race Committee digitally.
-- **Race Mode (GPS Tracking)** — Hit "Start Race" and the app records your GPS track at high accuracy throughout the race. Hit "Finish" and the track is uploaded to your boat's profile, tagged with the event, course, and date — building a permanent record of every race.
-- **Synced Countdown Timer** — Countdown timer synced with the RC's start sequence so you always know exactly where you are in the start.
-- **Situation Advisor & Protest Filing** — Step-by-step dispute resolution walks you through the encounter type, details, and applicable Racing Rules of Sailing. When you're ready, tap "File Protest" — the app automatically captures your GPS position, current weather conditions, the event and course, timestamps everything, and creates the incident record. No paperwork.
-- **Virtual Protest Flag** — Digitally hoist a protest flag, notifying the RC and the protested boat immediately.
-- **Live Weather** — Real-time wind data to inform tactical decisions on the course.
-- **Course Information** — View today's active course with mark sequence, distances, and diagram.
+- **Persistent Weather Header** — Wind direction (° + compass), speed (kts), gust, temperature, and data freshness visible on every skipper screen. Taps through to full weather detail.
+- **Smart Home Screen** — Active race status card with contextual actions (Check In / View Race / View Results), quick-action buttons (Protest, Results, Rules), and recent results preview.
+- **Check-In with GPS Auto-Start** — Check in to the active race session. GPS tracking starts automatically upon check-in and writes your initial position to the live positions feed.
+- **Race Mode (RC-Synced Timer)** — Timer starts automatically when RC marks the race as running — no manual sync needed. Shows elapsed time from the official start timestamp, not device time. Stats: speed, max speed, distance (NM), track points.
+- **GPS Tracking** — High-accuracy position stream (5m distance filter) publishing to `live_positions` every 5 seconds during the race, 15 seconds pre-start. Wakelock keeps the screen on.
+- **Finish Zone Detection** — When within the configurable finish zone radius, the Finish Race button becomes prominent. Finish stops tracking and updates check-in status. Track upload to `race_tracks` with full metadata.
+- **DNF / Withdraw** — One-tap retire with confirmation. Marks DNF, stops tracking immediately.
+- **Auto-Stop on Abandon** — If RC abandons the race, tracking stops automatically.
+- **Incident / Protest Filing** — Type selector (Protest / Incident / Note), auto-captures GPS position, weather snapshot, current race event, and time. Location on course picker, other boat sail numbers, description. Sends to RC for review.
+- **Results Review** — Browse recent race results with expandable finish tables. Your boat highlighted with "(You)" label. Shows position, elapsed time, and letter score.
+- **Racing Rules Reference** — Quick reference: Part 2 basics, mark-room, starting, penalties, protests, and MPYC club notes.
 
 ### Crew Mode
 
-Communication and safety tools for everyone on the boat.
+Ultra-minimal, distraction-free interface for everyone on the boat who isn't the skipper.
 
-- **Crew Dashboard** — See your assigned role (Bow, Pit, Trimmer, etc.), your boat, and your skipper. The synced race timer and current leg keep everyone in sync with the boat's progress.
-- **Crew Chat** — A dedicated messaging channel for your boat's crew. Coordinate dock-out times, post-race plans, or debrief after racing. Messages are organized by boat (sail number).
-- **Safety & Emergency Info** — One-tap access to MOB (Man Overboard) quick-action procedure, Coast Guard and Harbor contacts, VHF channel reference, your emergency contact, and a pre-race safety equipment checklist.
-- **Post-Race Sign-Off** — Confirm you are safely off the vessel and done for the day. Gives the club a digital record that all crew are accounted for.
+- **Crew Profile** — Set your name, select your boat, and choose your position from 15 options: Tactician, Navigator, Main trimmer, Jib/Genoa trimmer, Spinnaker trimmer, Spinnaker hoist/douse, Pit, Mast, Bow, Helm (non-skipper), Rail/ballast, Floater, Grinder, Watch/lookout, or Spectator (on boat). Saved to `crew_profiles` and attached to incident reports.
+- **Persistent Weather Header** — Same compact weather bar as Skipper mode — wind arrow, speed, gust, direction, temp, freshness — visible on every crew screen.
+- **Huge Race Timer** — Dominant 80pt monospace timer bound to the official RC start time. Shows correct elapsed time even if the app is opened mid-race. States: "No active race", pre-start status (Setting up / Check-in open / Start pending), live count-up with green "RACING" badge, "Race Abandoned" (red), "Race Complete" (green).
+- **Incident / Protest Filing** — Same form as Skipper but tagged with crew role, position, and boat. Auto-captures GPS, weather, race event, and time. Submissions clearly marked as coming from crew.
+- **Racing Rules Reference** — Full rules quick reference accessible from the bottom nav.
+- **Locked-Down Navigation** — Only 3 tabs: Home, Rules, More. No chat, no map, no leaderboard, no check-in, no scoring, no checklists, no maintenance.
 
 ### Onshore / Spectator Mode
 
-Follow the racing from the dock, the clubhouse, or anywhere.
+Follow the racing from the dock, the clubhouse, or anywhere — no login required for read-only data.
 
-- **Live Leaderboard** — Real-time scoring updates as the RC records finishes. Shows elapsed time, corrected time (PHRF), and position — updating live as boats cross the line.
-- **Race Status** — See if racing is in Setup, Active, or Complete, which course is set, and how many boats are on the water.
-- **Notice Board** — Digital hub for club notices, daily schedules, social events, and announcements.
+- **Live Weather Card** — Wind speed/direction with compass arrow, gust, temperature, humidity, station name, and freshness indicator ("2m ago" / orange "Stale" badge). Taps through to full weather detail.
+- **Next Event Card** — Upcoming race from `race_events` with name, date ("Today" highlight), status badge mapped to all race session states (setup → finalized/abandoned), course info, and a live race elapsed clock when running.
+- **Live Leaderboard Card** — Streams `finish_records` ordered by position. Shows top 8 finishes with position, sail number, boat name, elapsed time, and trophy icons for podium. "LIVE" badge when race is active. Falls back to "No active race" / "Race In Progress" / "No results" empty states.
+- **Live Race Map Card** — Real-time boat positions from `live_positions` on a Flutter Map. Stale detection (>60s = grey marker + age label), speed display, RC vs boat color coding. Course marks from `marks` collection. Live boat count badge.
+- **Mode-Aware Race Banner** — When a race is active, a green "RACE IN PROGRESS" banner appears with a "Watch Live" button (instead of the RC's red Timing/Check-In banner).
 - **Weather Hub** — Full weather station feed from the club's location — wind, temperature, humidity, pressure.
-- **Race Replay** — Access recorded GPS tracks from the day's racing for armchair coaching, performance review, and social sharing.
 
 ### Shared Features (All Modes)
 
-- **Home Screen** — Current weather with wind arrow, your boat info with photo upload, today's race status, upcoming races, last 2 race results, and maintenance alerts.
+- **Mode Switcher** — Tap the mode indicator bar at the top of any screen to switch between RC, Skipper, Crew, and Onshore modes. Mode persists to Firestore.
 - **Racing Rules Reference** — Complete Racing Rules of Sailing database with search, quick reference chips, browse by Part/Section, bookmarks, recent lookups, and adjustable text size.
 - **Situation Advisor** — Step-by-step guide through crossing, overtaking, mark rounding, start line, tacking/gybing, and obstruction encounters with applicable rules and explanations.
-- **Checklists** — Pre-race checklists with progress tracking and completion history.
-- **Maintenance Reporting** — Report issues with photos, priority levels, and status tracking.
 - **Profile** — View your roles, member number, membership status, emergency contact, notification preferences, and Clubspot member portal link.
+- **Home Screen** (RC/Onshore) — Current weather with wind arrow, your boat info with photo upload, today's race status, upcoming races, last 2 race results, and maintenance alerts.
 
 ---
 
@@ -319,9 +328,15 @@ lib/
 │   ├── admin/                  # Web dashboard, member management, system settings
 │   ├── app_mode/               # Mobile mode system (RC, Skipper, Crew, Onshore)
 │   │   ├── data/               #   AppMode enum, provider, Firestore persistence
-│   │   └── presentation/       #   Mode switcher, RC timing, crew dashboard,
-│   │       └── mobile/         #   crew chat, crew safety, spectator, leaderboard,
-│   │                           #   skipper check-in screens
+│   │   └── presentation/       #   Mode switcher, RC timing, spectator (4 live cards),
+│   │       └── mobile/         #   leaderboard, mode nav config
+│   ├── skipper/                # Skipper mode: home, check-in, race, results, incidents
+│   │   └── presentation/       #   WeatherHeader widget, 5 screens
+│   ├── crew/                   # Crew mode: home (timer), profile, incidents
+│   │   └── presentation/       #   3 screens, ultra-minimal nav
+│   ├── rc_race/                # Guided RC race flow: 6-step stepper + history
+│   │   ├── data/               #   RaceSession model with status state machine
+│   │   └── presentation/       #   Setup, Check-in, Start, Running, Scoring, Review steps
 │   ├── auth/                   # Login, verification, roles, member model, profile
 │   ├── boat_checkin/           # Fleet management, event check-ins (RC + skipper)
 │   ├── checklists/             # Templates, active completion, history, compliance
@@ -330,7 +345,7 @@ lib/
 │   ├── home/                   # Home screen (weather, boat, races), more screen
 │   ├── incidents/              # Incident reporting, protest workflow, form generator
 │   ├── maintenance/            # Request management, scheduling, photo attachments
-│   ├── race_mode/              # GPS track recording, upload, boat profile tagging
+│   ├── race_mode/              # Legacy GPS track recording (used by skipper race screen)
 │   ├── racing_rules/           # RRS database, search, situation advisor, protest filing
 │   ├── reporting/              # Combined protest + maintenance mobile reporting
 │   ├── reports/                # Season reports and analytics (web)
@@ -418,11 +433,13 @@ Clubspot API ←→ Cloud Functions ←→ Firestore
 
 ## What's Next
 
-- **Live Spectator Map** — Real-time 2D map with boat icons moving on the course using GPS tracks
-- **Horn Detection** — Microphone-based automatic horn detection to sync race starts
+- **Background GPS Tracking** — Foreground service for continuous position publishing even when the app is backgrounded
+- **Offline Position Queue** — Queue GPS updates locally when offline and flush when reconnected
+- **Finish Line Geofence** — Line-segment finish detection (two coordinates) instead of radius-based zone
 - **US Sailing / PHRF Certificate Sync** — Pull handicap ratings and certifications automatically
 - **Race Replay Viewer** — Animated playback of GPS tracks on the course diagram
 - **Crew Weight Tracker** — Class compliance weight tracking for one-design fleets
+- **Photo Attachments on Incidents** — Allow photo upload with protest/incident submissions
 
 ---
 
