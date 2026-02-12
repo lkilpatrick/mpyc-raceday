@@ -12,7 +12,11 @@ import 'steps/rc_scoring_step.dart';
 import 'steps/rc_review_step.dart';
 
 /// Guided RC race flow — stepper that walks through the full race lifecycle.
-class RcRaceFlowScreen extends ConsumerWidget {
+///
+/// Uses ConsumerStatefulWidget to cache the session and avoid rebuilding the
+/// entire step widget tree on every Firestore field change. Only status
+/// transitions cause the step content to switch.
+class RcRaceFlowScreen extends ConsumerStatefulWidget {
   const RcRaceFlowScreen({super.key, required this.eventId});
 
   final String eventId;
@@ -27,12 +31,26 @@ class RcRaceFlowScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sessionAsync = ref.watch(sessionByIdProvider(eventId));
+  ConsumerState<RcRaceFlowScreen> createState() => _RcRaceFlowScreenState();
+}
+
+class _RcRaceFlowScreenState extends ConsumerState<RcRaceFlowScreen> {
+  RaceSession? _cachedSession;
+  RaceSessionStatus? _lastStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final sessionAsync = ref.watch(sessionByIdProvider(widget.eventId));
 
     return Scaffold(
       body: sessionAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () {
+          // While loading, show cached session if available to avoid flash
+          if (_cachedSession != null) {
+            return _buildBody(_cachedSession!);
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (session) {
           if (session == null) {
@@ -54,28 +72,37 @@ class RcRaceFlowScreen extends ConsumerWidget {
             );
           }
 
-          final currentStep = session.status.stepIndex;
-
-          return SafeArea(
-            child: Column(
-              children: [
-                // Status banner
-                _StatusBanner(session: session),
-
-                // Step indicator
-                _StepIndicator(
-                  currentStep: currentStep,
-                  status: session.status,
-                ),
-
-                // Step content
-                Expanded(
-                  child: _buildStepContent(session),
-                ),
-              ],
-            ),
-          );
+          _cachedSession = session;
+          _lastStatus = session.status;
+          return _buildBody(session);
         },
+      ),
+    );
+  }
+
+  Widget _buildBody(RaceSession session) {
+    final currentStep = session.status.stepIndex;
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // Status banner
+          _StatusBanner(session: session),
+
+          // Step indicator
+          _StepIndicator(
+            currentStep: currentStep,
+            status: session.status,
+          ),
+
+          // Step content — keyed by status so it only rebuilds on status change
+          Expanded(
+            child: KeyedSubtree(
+              key: ValueKey(session.status),
+              child: _buildStepContent(session),
+            ),
+          ),
+        ],
       ),
     );
   }

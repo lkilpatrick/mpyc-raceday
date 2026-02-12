@@ -98,6 +98,7 @@ class RaceSession {
     this.clubspotReady = false,
     this.notes,
     this.isDemo = false,
+    this.checkinsClosed = false,
   });
 
   final String id;
@@ -118,6 +119,7 @@ class RaceSession {
   final bool clubspotReady;
   final String? notes;
   final bool isDemo;
+  final bool checkinsClosed;
 
   factory RaceSession.fromDoc(String id, Map<String, dynamic> d) {
     return RaceSession(
@@ -139,6 +141,7 @@ class RaceSession {
       clubspotReady: d['clubspotReady'] as bool? ?? false,
       notes: d['notes'] as String?,
       isDemo: d['isDemo'] as bool? ?? false,
+      checkinsClosed: d['checkinsClosed'] as bool? ?? false,
     );
   }
 
@@ -161,6 +164,7 @@ class RaceSession {
     bool? clubspotReady,
     String? notes,
     bool? isDemo,
+    bool? checkinsClosed,
   }) {
     return RaceSession(
       id: id ?? this.id,
@@ -181,6 +185,7 @@ class RaceSession {
       clubspotReady: clubspotReady ?? this.clubspotReady,
       notes: notes ?? this.notes,
       isDemo: isDemo ?? this.isDemo,
+      checkinsClosed: checkinsClosed ?? this.checkinsClosed,
     );
   }
 }
