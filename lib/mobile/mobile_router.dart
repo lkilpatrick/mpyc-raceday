@@ -302,7 +302,7 @@ final GoRouter mobileRouter = GoRouter(
       path: '/rc-race-history',
       builder: (context, state) => const RcRaceHistoryScreen(),
     ),
-    // Shell routes for mode-specific bottom nav tabs
+    // ── RC mode shell tabs ──
     GoRoute(
       path: '/rc-home',
       builder: (context, state) => const MobileShell(initialIndex: 0),
@@ -311,7 +311,19 @@ final GoRouter mobileRouter = GoRouter(
       path: '/rc-timing',
       builder: (context, state) => const MobileShell(initialIndex: 1),
     ),
-    // Skipper mode shell tabs
+    GoRoute(
+      path: '/rc-scoring',
+      builder: (context, state) => const MobileShell(initialIndex: 2),
+    ),
+    GoRoute(
+      path: '/rc-weather',
+      builder: (context, state) => const MobileShell(initialIndex: 3),
+    ),
+    GoRoute(
+      path: '/rc-more',
+      builder: (context, state) => const MobileShell(initialIndex: 4),
+    ),
+    // ── Skipper mode shell tabs ──
     GoRoute(
       path: '/skipper-home',
       builder: (context, state) => const MobileShell(initialIndex: 0),
@@ -325,10 +337,14 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) => const MobileShell(initialIndex: 2),
     ),
     GoRoute(
-      path: '/rules-tab',
+      path: '/skipper-rules-tab',
       builder: (context, state) => const MobileShell(initialIndex: 3),
     ),
-    // Crew mode shell tabs
+    GoRoute(
+      path: '/skipper-more',
+      builder: (context, state) => const MobileShell(initialIndex: 4),
+    ),
+    // ── Crew mode shell tabs ──
     GoRoute(
       path: '/crew-home',
       builder: (context, state) => const MobileShell(initialIndex: 0),
@@ -336,6 +352,31 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/crew-rules-tab',
       builder: (context, state) => const MobileShell(initialIndex: 1),
+    ),
+    GoRoute(
+      path: '/crew-more',
+      builder: (context, state) => const MobileShell(initialIndex: 2),
+    ),
+    // ── Onshore mode shell tabs ──
+    GoRoute(
+      path: '/onshore-home',
+      builder: (context, state) => const MobileShell(initialIndex: 0),
+    ),
+    GoRoute(
+      path: '/onshore-live',
+      builder: (context, state) => const MobileShell(initialIndex: 1),
+    ),
+    GoRoute(
+      path: '/onshore-results',
+      builder: (context, state) => const MobileShell(initialIndex: 2),
+    ),
+    GoRoute(
+      path: '/onshore-weather',
+      builder: (context, state) => const MobileShell(initialIndex: 3),
+    ),
+    GoRoute(
+      path: '/onshore-more',
+      builder: (context, state) => const MobileShell(initialIndex: 4),
     ),
     // Skipper push routes
     GoRoute(

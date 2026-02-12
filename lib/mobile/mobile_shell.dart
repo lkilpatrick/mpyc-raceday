@@ -6,16 +6,12 @@ import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_nav_config.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_home_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/rc_timing_screen.dart';
-import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
-// crew_chat_screen removed — chat not needed in any mode
-import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_safety_screen.dart';
+// crew_dashboard and crew_safety not used as shell tabs anymore
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/home_screen.dart';
 import 'package:mpyc_raceday/features/home/presentation/mobile/more_screen.dart';
 import 'package:mpyc_raceday/features/courses/presentation/mobile/course_tab_screen.dart';
-import 'package:mpyc_raceday/features/race_mode/presentation/mobile/race_mode_screen.dart';
-import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/situation_advisor_screen.dart';
 import 'package:mpyc_raceday/features/reporting/presentation/mobile/report_tab_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_home_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_race_tab.dart';
@@ -60,26 +56,34 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   }
 
   Widget _screenForRoute(String route) => switch (route) {
-        '/home' => const HomeScreen(),
+        // ── RC mode tabs ──
         '/rc-home' => const RcHomeScreen(),
+        '/rc-timing' => const RcTimingScreen(),
+        '/rc-scoring' => const LeaderboardScreen(),
+        '/rc-weather' => const WeatherDashboardScreen(),
+        '/rc-more' => const MoreScreen(),
+        // ── Skipper mode tabs ──
+        '/skipper-home' => const SkipperHomeScreen(),
+        '/skipper-race-tab' => const SkipperRaceTab(),
+        '/skipper-results-tab' => const SkipperResultsScreen(embedded: true),
+        '/skipper-rules-tab' => const RacingRulesReferenceScreen(embedded: true),
+        '/skipper-more' => const MoreScreen(),
+        // ── Crew mode tabs ──
+        '/crew-home' => const CrewHomeScreen(),
+        '/crew-rules-tab' => const RacingRulesReferenceScreen(embedded: true),
+        '/crew-more' => const MoreScreen(),
+        // ── Onshore mode tabs ──
+        '/onshore-home' => const HomeScreen(),
+        '/onshore-live' => const SpectatorScreen(),
+        '/onshore-results' => const LeaderboardScreen(),
+        '/onshore-weather' => const WeatherDashboardScreen(),
+        '/onshore-more' => const MoreScreen(),
+        // ── Legacy / shared ──
+        '/home' => const HomeScreen(),
         '/course' => const CourseTabScreen(),
         '/weather' => const WeatherDashboardScreen(),
         '/report' => const ReportTabScreen(),
         '/more' => const MoreScreen(),
-        '/rc-timing' => const RcTimingScreen(),
-        '/race-mode' => const RaceModeScreen(embedded: true),
-        '/rules/advisor' => const SituationAdvisorScreen(),
-        '/crew-dashboard' => const CrewDashboardScreen(),
-        // crew-chat removed
-        '/crew-safety' => const CrewSafetyScreen(),
-        '/spectator' => const SpectatorScreen(),
-        '/leaderboard' => const LeaderboardScreen(),
-        '/skipper-home' => const SkipperHomeScreen(),
-        '/skipper-race-tab' => const SkipperRaceTab(),
-        '/skipper-results-tab' => const SkipperResultsScreen(embedded: true),
-        '/rules-tab' => const RacingRulesReferenceScreen(embedded: true),
-        '/crew-home' => const CrewHomeScreen(),
-        '/crew-rules-tab' => const RacingRulesReferenceScreen(embedded: true),
         _ => PlaceholderPage(title: route, subtitle: 'Coming soon'),
       };
 
@@ -194,7 +198,7 @@ class _RaceActiveBanner extends ConsumerWidget {
           color: isSpectator ? Colors.green : Colors.red,
           child: InkWell(
             onTap: isSpectator
-                ? () => context.go('/spectator')
+                ? () => context.go('/onshore-live')
                 : () => context.push('/timing/$eventId'),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -214,7 +218,7 @@ class _RaceActiveBanner extends ConsumerWidget {
                   ),
                   if (isSpectator) ...[
                     TextButton(
-                      onPressed: () => context.go('/spectator'),
+                      onPressed: () => context.go('/onshore-live'),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 8),

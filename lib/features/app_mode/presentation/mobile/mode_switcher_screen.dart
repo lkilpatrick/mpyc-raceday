@@ -39,7 +39,13 @@ class ModeSwitcherScreen extends ConsumerWidget {
               child: InkWell(
                 onTap: () {
                   setAppMode(ref, mode);
-                  context.go('/home');
+                  final homeRoute = switch (mode) {
+                    AppMode.raceCommittee => '/rc-home',
+                    AppMode.skipper => '/skipper-home',
+                    AppMode.crew => '/crew-home',
+                    AppMode.onshore => '/onshore-home',
+                  };
+                  context.go(homeRoute);
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
