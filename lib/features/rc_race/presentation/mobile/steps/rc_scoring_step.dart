@@ -185,33 +185,48 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
         // Bottom actions
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmAbandon(),
-                    icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
-                    label: const Text('Abandon',
-                        style: TextStyle(color: Colors.red, fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _confirmAbandon(),
+                        icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
+                        label: const Text('Abandon',
+                            style: TextStyle(color: Colors.red, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton.icon(
-                    onPressed: () => _moveToReview(),
-                    icon: const Icon(Icons.rate_review, size: 18),
-                    label: const Text('Review Results',
-                        style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: () => _moveToReview(),
+                        icon: const Icon(Icons.rate_review, size: 18),
+                        label: const Text('Review Results',
+                            style: TextStyle(fontSize: 14)),
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 40,
+                child: TextButton.icon(
+                  onPressed: _backToRunning,
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text('Back to Racing',
+                      style: TextStyle(fontSize: 12)),
                 ),
               ),
             ],
@@ -357,6 +372,12 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
           .read(rcRaceRepositoryProvider)
           .abandonRace(widget.session.id, reason);
     }
+  }
+
+  Future<void> _backToRunning() async {
+    await ref
+        .read(rcRaceRepositoryProvider)
+        .updateStatus(widget.session.id, RaceSessionStatus.running);
   }
 
   Future<void> _moveToReview() async {

@@ -6,16 +6,21 @@ class MobileScaffold extends StatelessWidget {
     required this.title,
     required this.body,
     this.bottomNavigationBar,
+    this.appBarColor,
   });
 
   final String title;
   final Widget body;
   final Widget? bottomNavigationBar;
+  final Color? appBarColor;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: appBarColor,
+      ),
       body: SafeArea(child: body),
       bottomNavigationBar: bottomNavigationBar,
     );

@@ -99,6 +99,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
     return MobileScaffold(
       title: item.label,
+      appBarColor: mode.color,
       body: Column(
         children: [
           // Mode indicator bar

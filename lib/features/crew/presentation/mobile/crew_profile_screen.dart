@@ -210,7 +210,7 @@ class _CrewProfileScreenState extends ConsumerState<CrewProfileScreen> {
   }
 }
 
-/// Boat selector — picks from today's checked-in boats or all members with boats.
+/// Boat selector — picks from the fleet (boats collection).
 class _BoatSelector extends StatelessWidget {
   const _BoatSelector({
     required this.selectedId,
@@ -226,22 +226,24 @@ class _BoatSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('members')
-          .where('boatName', isNull: false)
-          .orderBy('boatName')
-          .limit(50)
+          .collection('boats')
+          .where('isActive', isEqualTo: true)
+          .orderBy('sailNumber')
           .snapshots(),
       builder: (context, snap) {
         final docs = snap.data?.docs ?? [];
         final boats = <(String, String)>[];
         for (final doc in docs) {
           final d = doc.data() as Map<String, dynamic>;
-          final name = d['boatName'] as String?;
-          final sail = d['sailNumber'] as String?;
-          if (name != null && name.isNotEmpty) {
-            final label = sail != null && sail.isNotEmpty
-                ? '$name (Sail $sail)'
-                : name;
+          final name = d['boatName'] as String? ?? '';
+          final sail = d['sailNumber'] as String? ?? '';
+          final boatClass = d['boatClass'] as String? ?? '';
+          if (name.isNotEmpty || sail.isNotEmpty) {
+            final label = [
+              if (name.isNotEmpty) name,
+              if (sail.isNotEmpty) '(Sail $sail)',
+              if (boatClass.isNotEmpty) '— $boatClass',
+            ].join(' ');
             boats.add((doc.id, label));
           }
         }
@@ -250,7 +252,7 @@ class _BoatSelector extends StatelessWidget {
           return TextField(
             readOnly: true,
             decoration: InputDecoration(
-              hintText: selectedLabel ?? 'No boats available',
+              hintText: selectedLabel ?? 'No boats in fleet',
               prefixIcon: const Icon(Icons.sailing),
               border: const OutlineInputBorder(),
             ),
@@ -262,14 +264,19 @@ class _BoatSelector extends StatelessWidget {
                   boats.any((b) => b.$1 == selectedId)
               ? selectedId
               : null,
+          isExpanded: true,
           decoration: const InputDecoration(
             prefixIcon: Icon(Icons.sailing),
             border: OutlineInputBorder(),
-            hintText: 'Select a boat',
+            hintText: 'Select a boat from fleet',
           ),
           items: boats
-              .map((b) =>
-                  DropdownMenuItem(value: b.$1, child: Text(b.$2)))
+              .map((b) => DropdownMenuItem(
+                    value: b.$1,
+                    child: Text(b.$2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13)),
+                  ))
               .toList(),
           onChanged: (id) {
             if (id != null) {

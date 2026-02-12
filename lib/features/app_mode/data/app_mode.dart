@@ -39,10 +39,10 @@ extension AppModeX on AppMode {
       };
 
   Color get color => switch (this) {
-        AppMode.raceCommittee => Colors.indigo,
+        AppMode.raceCommittee => const Color(0xFF1B3A5C), // navy
         AppMode.skipper => Colors.teal,
         AppMode.crew => Colors.orange,
-        AppMode.onshore => Colors.blue,
+        AppMode.onshore => Colors.lightBlue,
       };
 
   String get firestoreValue => name;
