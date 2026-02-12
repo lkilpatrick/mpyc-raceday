@@ -95,9 +95,12 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
   Stream<List<BoatCheckin>> watchCheckins(String eventId) {
     return _checkinsCol
         .where('eventId', isEqualTo: eventId)
-        .orderBy('checkedInAt', descending: false)
         .snapshots()
-        .map((snap) => snap.docs.map(_checkinFromDoc).toList());
+        .map((snap) {
+      final list = snap.docs.map(_checkinFromDoc).toList();
+      list.sort((a, b) => a.checkedInAt.compareTo(b.checkedInAt));
+      return list;
+    });
   }
 
   @override

@@ -392,6 +392,10 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
   late final TextEditingController _phrfCtrl;
   bool _safetyVerified = false;
 
+  List<Boat> _fleet = [];
+  Boat? _selectedFleetBoat;
+  bool _isNewBoat = false;
+
   @override
   void initState() {
     super.initState();
@@ -402,6 +406,42 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
     _crewCountCtrl = TextEditingController(text: '1');
     _phrfCtrl = TextEditingController(
         text: widget.boat?.phrfRating?.toString() ?? '');
+
+    if (widget.boat != null) {
+      _selectedFleetBoat = widget.boat;
+    }
+    _loadFleet();
+  }
+
+  Future<void> _loadFleet() async {
+    final fleet = widget.ref.read(fleetProvider).value ?? [];
+    if (mounted) {
+      setState(() => _fleet = fleet);
+    }
+  }
+
+  void _selectFleetBoat(Boat? boat) {
+    if (boat == null) {
+      setState(() {
+        _isNewBoat = true;
+        _selectedFleetBoat = null;
+        _sailCtrl.text = '';
+        _nameCtrl.text = '';
+        _skipperCtrl.text = '';
+        _classCtrl.text = '';
+        _phrfCtrl.text = '';
+      });
+    } else {
+      setState(() {
+        _isNewBoat = false;
+        _selectedFleetBoat = boat;
+        _sailCtrl.text = boat.sailNumber;
+        _nameCtrl.text = boat.boatName;
+        _skipperCtrl.text = boat.ownerName;
+        _classCtrl.text = boat.boatClass;
+        _phrfCtrl.text = boat.phrfRating?.toString() ?? '';
+      });
+    }
   }
 
   @override
@@ -433,9 +473,52 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          Text(widget.boat != null ? 'Check In Boat' : 'Add New Boat',
+          Text('Check In Boat',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
+
+          // Fleet dropdown — select from existing boats or add new
+          if (widget.boat == null) ...[
+            DropdownButtonFormField<String>(
+              value: _selectedFleetBoat?.id,
+              decoration: const InputDecoration(
+                labelText: 'Select from Fleet',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.sailing),
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: '__new__',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_circle, size: 18, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Add New Boat',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green)),
+                    ],
+                  ),
+                ),
+                ..._fleet.map((b) => DropdownMenuItem<String>(
+                      value: b.id,
+                      child: Text(
+                        '${b.sailNumber} — ${b.boatName}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+              ],
+              onChanged: (val) {
+                if (val == '__new__') {
+                  _selectFleetBoat(null);
+                } else if (val != null) {
+                  final boat = _fleet.firstWhere((b) => b.id == val);
+                  _selectFleetBoat(boat);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
 
           TextFormField(
             controller: _sailCtrl,
@@ -541,10 +624,12 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final boatId = _selectedFleetBoat?.id ?? '';
+
     final checkin = BoatCheckin(
       id: '',
       eventId: widget.eventId,
-      boatId: widget.boat?.id ?? '',
+      boatId: boatId,
       sailNumber: _sailCtrl.text.trim(),
       boatName: _nameCtrl.text.trim(),
       skipperName: _skipperCtrl.text.trim(),
@@ -561,7 +646,7 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
         .checkInBoat(checkin);
 
     // If new boat (not from fleet), also save to fleet
-    if (widget.boat == null) {
+    if (_isNewBoat || (widget.boat == null && _selectedFleetBoat == null)) {
       await widget.ref.read(boatCheckinRepositoryProvider).saveBoat(Boat(
             id: '',
             sailNumber: _sailCtrl.text.trim(),

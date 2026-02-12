@@ -106,9 +106,12 @@ class TimingRepositoryImpl implements TimingRepository {
   Stream<List<RaceStart>> watchRaceStarts(String eventId) {
     return _startsCol
         .where('eventId', isEqualTo: eventId)
-        .orderBy('raceNumber')
         .snapshots()
-        .map((snap) => snap.docs.map(_startFromDoc).toList());
+        .map((snap) {
+      final list = snap.docs.map(_startFromDoc).toList();
+      list.sort((a, b) => a.raceNumber.compareTo(b.raceNumber));
+      return list;
+    });
   }
 
   @override
@@ -136,9 +139,12 @@ class TimingRepositoryImpl implements TimingRepository {
   Stream<List<FinishRecord>> watchFinishRecords(String raceStartId) {
     return _finishesCol
         .where('raceStartId', isEqualTo: raceStartId)
-        .orderBy('position')
         .snapshots()
-        .map((snap) => snap.docs.map(_finishFromDoc).toList());
+        .map((snap) {
+      final list = snap.docs.map(_finishFromDoc).toList();
+      list.sort((a, b) => a.position.compareTo(b.position));
+      return list;
+    });
   }
 
   @override

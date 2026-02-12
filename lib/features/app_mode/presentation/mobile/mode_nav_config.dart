@@ -16,8 +16,8 @@ class ModeNavItem {
 List<ModeNavItem> navItemsForMode(AppMode mode) => switch (mode) {
       AppMode.raceCommittee => const [
           ModeNavItem(label: 'RC Home', route: '/home', icon: Icons.flag),
-          ModeNavItem(label: 'Course', route: '/course', icon: Icons.map),
-          ModeNavItem(label: 'Timing', route: '/rc-timing', icon: Icons.timer),
+          ModeNavItem(label: 'Race', route: '/rc-timing', icon: Icons.sailing),
+          ModeNavItem(label: 'Scoring', route: '/leaderboard', icon: Icons.leaderboard),
           ModeNavItem(label: 'Weather', route: '/weather', icon: Icons.cloud),
           ModeNavItem(label: 'More', route: '/more', icon: Icons.menu),
         ],

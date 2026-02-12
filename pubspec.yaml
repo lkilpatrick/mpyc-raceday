@@ -65,6 +65,7 @@ dependencies:
   latlong2: ^0.9.1
   noise_meter: any
   permission_handler: any
+  audioplayers: any
 
 dev_dependencies:
   flutter_test:
@@ -120,6 +121,7 @@ flutter:
     - assets/racing_rules.json
     - assets/courses_seed.json
     - assets/images/
+    - assets/racecalendar/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

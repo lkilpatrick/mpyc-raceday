@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../boat_checkin/data/models/boat_checkin.dart';
+import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../data/models/timing_models.dart';
 import '../../domain/signal_controller.dart';
 import '../timing_providers.dart';
@@ -32,10 +36,24 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   bool _prepFlag = false;
   bool _individualRecall = false;
 
+  // Horn sound player
+  final AudioPlayer _hornPlayer = AudioPlayer();
+
   @override
   void dispose() {
     _timer?.cancel();
+    _hornPlayer.dispose();
     super.dispose();
+  }
+
+  /// Play the horn sound effect.
+  Future<void> _playHorn() async {
+    try {
+      await _hornPlayer.stop();
+      await _hornPlayer.play(AssetSource('racecalendar/horn.mp3'));
+    } catch (_) {
+      // Non-fatal — haptic fallback
+    }
   }
 
   @override
@@ -182,6 +200,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                       ),
                     ),
                   if (_running || _started) ...[
+                    // Top row: General Recall + Postpone
                     Row(
                       children: [
                         Expanded(
@@ -201,30 +220,6 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 56,
-                            child: FilledButton(
-                              onPressed: _individualRecallSignal,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.yellow.shade700,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'INDIVIDUAL\nRECALL',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
                                 ),
                               ),
                             ),
@@ -255,6 +250,30 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    // Full-width Individual Recall button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 64,
+                      child: FilledButton.icon(
+                        onPressed: _individualRecallSignal,
+                        icon: const Icon(Icons.flag, color: Colors.black),
+                        label: const Text(
+                          'INDIVIDUAL RECALL',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.yellow.shade700,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -277,7 +296,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
       className: _className,
     ));
 
-    // Fire warning signal
+    // Fire warning signal — Rule 26: one horn at 5:00
     final warningTime = await signal.fireWarningSignal();
     _currentStart = _currentStart!.copyWith(warningSignalTime: warningTime);
     await repo.updateRaceStart(_currentStart!);
@@ -288,6 +307,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
       _countdownSeconds = 300;
     });
 
+    _playHorn(); // Warning signal horn
     _haptic();
     _timer = Timer.periodic(const Duration(seconds: 1), _tick);
   }
@@ -328,12 +348,14 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     _currentStart = _currentStart!.copyWith(prepSignalTime: time);
     await ref.read(timingRepositoryProvider).updateRaceStart(_currentStart!);
     setState(() => _prepFlag = true);
+    _playHorn(); // Rule 26: one horn at 4:00 (prep)
     _haptic();
   }
 
   Future<void> _removePrepSignal() async {
     await ref.read(signalControllerProvider).removePreparatorySignal();
     setState(() => _prepFlag = false);
+    _playHorn(); // Rule 26: one long horn at 1:00 (prep removed)
     _haptic();
   }
 
@@ -348,6 +370,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
       _warningFlag = false;
       _prepFlag = false;
     });
+    _playHorn(); // Rule 26: one horn at 0:00 (start)
     _haptic();
     // Timer continues counting up (negative countdown)
   }
@@ -391,10 +414,50 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   }
 
   Future<void> _individualRecallSignal() async {
+    // Show boat selection dialog
+    final checkinsAsync = ref.read(eventCheckinsProvider(widget.eventId));
+    final checkins = checkinsAsync.value ?? [];
+
+    final selected = await showDialog<List<BoatCheckin>>(
+      context: context,
+      builder: (dialogContext) => _RecallBoatPickerDialog(
+        checkins: checkins,
+      ),
+    );
+    if (selected == null || selected.isEmpty) return;
+
     final signal = ref.read(signalControllerProvider);
     await signal.fireIndividualRecallSignal();
     setState(() => _individualRecall = true);
+    _playHorn();
     _haptic();
+
+    // Send recall notification to selected boats via Firestore
+    final batch = FirebaseFirestore.instance.batch();
+    for (final boat in selected) {
+      final notifRef = FirebaseFirestore.instance.collection('fleet_notifications').doc();
+      batch.set(notifRef, {
+        'eventId': widget.eventId,
+        'type': 'individual_recall',
+        'sailNumber': boat.sailNumber,
+        'boatName': boat.boatName,
+        'memberId': boat.boatId,
+        'message': 'INDIVIDUAL RECALL: ${boat.sailNumber} — You were over the line at the start. Return and restart.',
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    }
+    await batch.commit();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Recall sent to ${selected.length} boat(s): ${selected.map((b) => b.sailNumber).join(", ")}'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+
     // Auto-clear X flag after a delay
     Future.delayed(const Duration(seconds: 30), () {
       if (mounted) setState(() => _individualRecall = false);
@@ -438,6 +501,88 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
 
   void _haptic() {
     HapticFeedback.heavyImpact();
+  }
+}
+
+/// Multi-select dialog for picking boats to recall.
+class _RecallBoatPickerDialog extends StatefulWidget {
+  const _RecallBoatPickerDialog({required this.checkins});
+
+  final List<BoatCheckin> checkins;
+
+  @override
+  State<_RecallBoatPickerDialog> createState() =>
+      _RecallBoatPickerDialogState();
+}
+
+class _RecallBoatPickerDialogState extends State<_RecallBoatPickerDialog> {
+  final Set<String> _selectedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Boats to Recall'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: widget.checkins.isEmpty
+            ? const Center(child: Text('No boats checked in'))
+            : ListView.builder(
+                itemCount: widget.checkins.length,
+                itemBuilder: (_, i) {
+                  final c = widget.checkins[i];
+                  final isSelected = _selectedIds.contains(c.id);
+                  return CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (v) {
+                      setState(() {
+                        if (v == true) {
+                          _selectedIds.add(c.id);
+                        } else {
+                          _selectedIds.remove(c.id);
+                        }
+                      });
+                    },
+                    title: Text('${c.sailNumber} — ${c.boatName}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(c.skipperName),
+                    secondary: CircleAvatar(
+                      backgroundColor:
+                          isSelected ? Colors.orange : Colors.grey.shade300,
+                      child: Text(
+                        c.sailNumber.length > 3
+                            ? c.sailNumber.substring(c.sailNumber.length - 3)
+                            : c.sailNumber,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _selectedIds.isEmpty
+              ? null
+              : () {
+                  final selected = widget.checkins
+                      .where((c) => _selectedIds.contains(c.id))
+                      .toList();
+                  Navigator.pop(context, selected);
+                },
+          style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+          child: Text('Recall ${_selectedIds.length} Boat(s)'),
+        ),
+      ],
+    );
   }
 }
 
