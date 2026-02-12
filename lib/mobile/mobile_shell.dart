@@ -57,9 +57,6 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   void _onTap(int index, List<ModeNavItem> navItems) {
     if (index == _index) return;
     setState(() => _index = index);
-    // Navigate to the route for this mode's tab
-    final route = navItems[index].route;
-    context.go(route);
   }
 
   Widget _screenForRoute(String route) => switch (route) {
