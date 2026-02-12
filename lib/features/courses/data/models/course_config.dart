@@ -62,6 +62,8 @@ class CourseConfig {
     required this.windDirMin,
     required this.windDirMax,
     required this.finishLocation,
+    this.finishType = 'committee_boat',
+    this.finishMarkId,
     this.canMultiply = false,
     this.requiresInflatable = false,
     this.inflatableType,
@@ -80,6 +82,8 @@ class CourseConfig {
   final int windDirMin;
   final int windDirMax;
   final String finishLocation;
+  final String finishType; // 'committee_boat' or 'club_mark'
+  final String? finishMarkId; // required if finishType == 'club_mark'
   final bool canMultiply;
   final bool requiresInflatable;
   final String? inflatableType;
@@ -90,22 +94,36 @@ class CourseConfig {
 
   WindGroup? get windGroup => WindGroup.byId(windDirectionBand);
 
+  /// Sequence marks only (no START/FINISH pseudo-marks).
+  List<CourseMark> get sequenceMarks =>
+      marks.where((m) => !m.isStart && !m.isFinish).toList();
+
   String get markSequenceDisplay {
-    final parts = <String>[];
-    for (final m in marks) {
-      if (m.isStart) {
-        parts.add('START');
-      } else if (m.isFinish) {
-        if (finishLocation == 'X') {
-          parts.add('FINISH(X)');
-        } else {
-          parts.add('FINISH');
-        }
-      } else {
-        final r = m.rounding == MarkRounding.port ? 'p' : 's';
-        parts.add('${m.markName}$r');
-      }
+    final parts = <String>['START'];
+    for (final m in sequenceMarks) {
+      final r = m.rounding == MarkRounding.port ? 'p' : 's';
+      parts.add('${m.markName}$r');
     }
-    return parts.join(' → ');
+    if (finishType == 'club_mark' && finishMarkId != null) {
+      parts.add('FINISH($finishMarkId)');
+    } else {
+      parts.add('FINISH');
+    }
+    return parts.join(' \u2192 ');
+  }
+
+  /// Generate legacy description string: "START - Xp - 1s - FINISH"
+  String get legacyDescription {
+    final parts = <String>['START'];
+    for (final m in sequenceMarks) {
+      final r = m.rounding == MarkRounding.port ? 'p' : 's';
+      parts.add('${m.markId}$r');
+    }
+    if (finishType == 'club_mark' && finishMarkId != null) {
+      parts.add('FINISH_$finishMarkId');
+    } else {
+      parts.add('FINISH');
+    }
+    return parts.join(' - ');
   }
 }
