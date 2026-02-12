@@ -9,7 +9,8 @@ import '../widgets/weather_header.dart';
 /// Skipper Results screen — view race results, your boat's finish,
 /// and browse past races.
 class SkipperResultsScreen extends ConsumerWidget {
-  const SkipperResultsScreen({super.key});
+  const SkipperResultsScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,65 +18,77 @@ class SkipperResultsScreen extends ConsumerWidget {
     final member = memberAsync.value;
     final mySail = member?.sailNumber ?? '';
 
+    Widget body = _ResultsBody(mySail: mySail);
+
+    if (embedded) return body;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Race Results')),
-      body: Column(
-        children: [
-          const WeatherHeader(),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('race_events')
-                  .where('status',
-                      whereIn: ['finalized', 'review', 'scoring', 'running'])
-                  .orderBy('date', descending: true)
-                  .limit(10)
-                  .snapshots(),
-              builder: (context, snap) {
-                final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.leaderboard,
-                            size: 48, color: Colors.grey.shade300),
-                        const SizedBox(height: 8),
-                        const Text('No race results yet',
-                            style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  );
-                }
+      body: body,
+    );
+  }
+}
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: docs.length,
-                  itemBuilder: (context, i) {
-                    final doc = docs[i];
-                    final d = doc.data() as Map<String, dynamic>;
-                    final name = d['name'] as String? ?? 'Race';
-                    final date =
-                        (d['date'] as Timestamp?)?.toDate();
-                    final status = d['status'] as String? ?? '';
-                    final raceStartId =
-                        d['raceStartId'] as String?;
+class _ResultsBody extends StatelessWidget {
+  const _ResultsBody({required this.mySail});
+  final String mySail;
 
-                    return _RaceResultCard(
-                      eventId: doc.id,
-                      name: name,
-                      date: date,
-                      status: status,
-                      raceStartId: raceStartId,
-                      mySailNumber: mySail,
-                    );
-                  },
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const WeatherHeader(),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('race_events')
+                .where('status',
+                    whereIn: ['finalized', 'review', 'scoring', 'running'])
+                .orderBy('date', descending: true)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snap) {
+              final docs = snap.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.leaderboard,
+                          size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: 8),
+                      const Text('No race results yet',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                 );
-              },
-            ),
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: docs.length,
+                itemBuilder: (context, i) {
+                  final doc = docs[i];
+                  final d = doc.data() as Map<String, dynamic>;
+                  final name = d['name'] as String? ?? 'Race';
+                  final date = (d['date'] as Timestamp?)?.toDate();
+                  final status = d['status'] as String? ?? '';
+                  final raceStartId = d['raceStartId'] as String?;
+
+                  return _RaceResultCard(
+                    eventId: doc.id,
+                    name: name,
+                    date: date,
+                    status: status,
+                    raceStartId: raceStartId,
+                    mySailNumber: mySail,
+                  );
+                },
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

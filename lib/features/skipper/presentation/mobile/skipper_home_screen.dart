@@ -55,7 +55,7 @@ class SkipperHomeScreen extends ConsumerWidget {
                       icon: Icons.gavel,
                       label: 'Protest',
                       color: Colors.red,
-                      onTap: () => context.push('/rules/advisor'),
+                      onTap: () => context.push('/skipper-incident'),
                     ),
                   ),
                   const SizedBox(width: 8),

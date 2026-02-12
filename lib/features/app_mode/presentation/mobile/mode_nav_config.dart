@@ -23,7 +23,7 @@ List<ModeNavItem> navItemsForMode(AppMode mode) => switch (mode) {
         ],
       AppMode.skipper => const [
           ModeNavItem(label: 'Home', route: '/skipper-home', icon: Icons.sailing),
-          ModeNavItem(label: 'Race', route: '/race-mode', icon: Icons.gps_fixed),
+          ModeNavItem(label: 'Race', route: '/skipper-race-tab', icon: Icons.gps_fixed),
           ModeNavItem(label: 'Results', route: '/skipper-results-tab', icon: Icons.leaderboard),
           ModeNavItem(label: 'Rules', route: '/rules-tab', icon: Icons.gavel),
           ModeNavItem(label: 'More', route: '/more', icon: Icons.menu),

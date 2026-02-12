@@ -312,6 +312,10 @@ final GoRouter mobileRouter = GoRouter(
       builder: (context, state) => const MobileShell(initialIndex: 0),
     ),
     GoRoute(
+      path: '/skipper-race-tab',
+      builder: (context, state) => const MobileShell(initialIndex: 1),
+    ),
+    GoRoute(
       path: '/skipper-results-tab',
       builder: (context, state) => const MobileShell(initialIndex: 2),
     ),

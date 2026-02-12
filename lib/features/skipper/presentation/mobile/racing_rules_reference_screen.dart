@@ -5,18 +5,23 @@ import '../widgets/weather_header.dart';
 /// Static racing rules quick reference for skippers.
 /// Part 2 basics, penalties, protest process, MPYC notes.
 class RacingRulesReferenceScreen extends StatelessWidget {
-  const RacingRulesReferenceScreen({super.key});
+  const RacingRulesReferenceScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
+    final content = const Column(
+      children: [
+        WeatherHeader(),
+        Expanded(child: _RulesContent()),
+      ],
+    );
+
+    if (embedded) return content;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Racing Rules Reference')),
-      body: const Column(
-        children: [
-          WeatherHeader(),
-          Expanded(child: _RulesContent()),
-        ],
-      ),
+      body: content,
     );
   }
 }

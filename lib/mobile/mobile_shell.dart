@@ -17,6 +17,7 @@ import 'package:mpyc_raceday/features/race_mode/presentation/mobile/race_mode_sc
 import 'package:mpyc_raceday/features/racing_rules/presentation/mobile/situation_advisor_screen.dart';
 import 'package:mpyc_raceday/features/reporting/presentation/mobile/report_tab_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_home_screen.dart';
+import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_race_tab.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/skipper_results_screen.dart';
 import 'package:mpyc_raceday/features/skipper/presentation/mobile/racing_rules_reference_screen.dart';
 import 'package:mpyc_raceday/features/crew/presentation/mobile/crew_home_screen.dart';
@@ -75,10 +76,11 @@ class _MobileShellState extends ConsumerState<MobileShell> {
         '/spectator' => const SpectatorScreen(),
         '/leaderboard' => const LeaderboardScreen(),
         '/skipper-home' => const SkipperHomeScreen(),
-        '/skipper-results-tab' => const SkipperResultsScreen(),
-        '/rules-tab' => const RacingRulesReferenceScreen(),
+        '/skipper-race-tab' => const SkipperRaceTab(),
+        '/skipper-results-tab' => const SkipperResultsScreen(embedded: true),
+        '/rules-tab' => const RacingRulesReferenceScreen(embedded: true),
         '/crew-home' => const CrewHomeScreen(),
-        '/crew-rules-tab' => const RacingRulesReferenceScreen(),
+        '/crew-rules-tab' => const RacingRulesReferenceScreen(embedded: true),
         _ => PlaceholderPage(title: route, subtitle: 'Coming soon'),
       };
 
@@ -164,6 +166,7 @@ class _RaceActiveBanner extends ConsumerWidget {
     final todayEnd = todayStart.add(const Duration(days: 1));
     final modeAsync = ref.watch(appModeProvider);
     final mode = modeAsync.value ?? currentAppMode();
+    final isSkipper = mode == AppMode.skipper;
     final isSpectator = mode == AppMode.onshore || mode == AppMode.crew;
 
     return StreamBuilder<QuerySnapshot>(
@@ -172,7 +175,7 @@ class _RaceActiveBanner extends ConsumerWidget {
           .where('date',
               isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
           .where('date', isLessThan: Timestamp.fromDate(todayEnd))
-          .where('status', isEqualTo: 'racing')
+          .where('status', isEqualTo: 'running')
           .limit(1)
           .snapshots(),
       builder: (context, snap) {
@@ -180,6 +183,9 @@ class _RaceActiveBanner extends ConsumerWidget {
         if (docs.isEmpty) return const SizedBox.shrink();
 
         final eventId = docs.first.id;
+
+        // Don't show banner on skipper home — it has its own race card
+        if (isSkipper) return const SizedBox.shrink();
 
         return Material(
           color: isSpectator ? Colors.green : Colors.red,
