@@ -29,6 +29,10 @@ class _IncidentManagementPageState
   String _searchQuery = '';
   String? _selectedIncidentId;
 
+  // Sorting state
+  int _sortColumnIndex = 0;
+  bool _sortAscending = false; // default: newest first
+
   @override
   Widget build(BuildContext context) {
     final incidentsAsync = ref.watch(allIncidentsProvider);
@@ -116,23 +120,37 @@ class _IncidentManagementPageState
                           .toList();
                     }
                     if (_searchQuery.isNotEmpty) {
+                      final q = _searchQuery;
                       filtered = filtered
                           .where((i) =>
-                              i.description
-                                  .toLowerCase()
-                                  .contains(_searchQuery) ||
+                              i.description.toLowerCase().contains(q) ||
+                              i.eventName.toLowerCase().contains(q) ||
+                              i.reportedBy.toLowerCase().contains(q) ||
+                              i.courseName.toLowerCase().contains(q) ||
+                              i.locationDetail.toLowerCase().contains(q) ||
+                              i.rulesAlleged.any((r) => r.toLowerCase().contains(q)) ||
                               i.involvedBoats.any((b) =>
-                                  b.sailNumber
-                                      .toLowerCase()
-                                      .contains(_searchQuery) ||
-                                  b.boatName
-                                      .toLowerCase()
-                                      .contains(_searchQuery)))
+                                  b.sailNumber.toLowerCase().contains(q) ||
+                                  b.boatName.toLowerCase().contains(q) ||
+                                  b.skipperName.toLowerCase().contains(q)))
                           .toList();
                     }
 
+                    // Apply sorting
+                    filtered = _applySorting(filtered);
+
                     if (filtered.isEmpty) {
-                      return const Center(child: Text('No incidents found'));
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
+                            const SizedBox(height: 8),
+                            const Text('No incidents found',
+                                style: TextStyle(color: Colors.grey, fontSize: 16)),
+                          ],
+                        ),
+                      );
                     }
 
                     return SingleChildScrollView(
@@ -140,15 +158,51 @@ class _IncidentManagementPageState
                       child: SingleChildScrollView(
                         child: DataTable(
                           showCheckboxColumn: false,
-                          columns: const [
-                            DataColumn(label: Text('ID')),
-                            DataColumn(label: Text('Event')),
-                            DataColumn(label: Text('Race')),
-                            DataColumn(label: Text('Time')),
-                            DataColumn(label: Text('Boats')),
-                            DataColumn(label: Text('Rules')),
-                            DataColumn(label: Text('Status')),
-                            DataColumn(label: Text('Reporter')),
+                          sortColumnIndex: _sortColumnIndex,
+                          sortAscending: _sortAscending,
+                          headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                          columns: [
+                            DataColumn(
+                              label: const Text('Date',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Event',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Description',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Race',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              numeric: true,
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Boats',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Rules',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Status',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
+                            DataColumn(
+                              label: const Text('Reporter',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              onSort: (i, asc) => _onSort(i, asc),
+                            ),
                           ],
                           rows: filtered.map((inc) {
                             final boats = inc.involvedBoats
@@ -159,6 +213,9 @@ class _IncidentManagementPageState
                                 .join(', ');
                             final (statusLabel, statusColor) =
                                 _statusInfo(inc.status);
+                            final descPreview = inc.description.length > 50
+                                ? '${inc.description.substring(0, 50)}…'
+                                : inc.description;
 
                             return DataRow(
                               selected:
@@ -167,31 +224,47 @@ class _IncidentManagementPageState
                                   () => _selectedIncidentId = inc.id),
                               cells: [
                                 DataCell(Text(
-                                    inc.id.length > 6
-                                        ? inc.id.substring(0, 6)
-                                        : inc.id,
-                                    style: const TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 12))),
-                                DataCell(Text(
-                                    inc.eventId.length > 8
-                                        ? inc.eventId.substring(0, 8)
-                                        : inc.eventId,
+                                    DateFormat('MMM d, yyyy\nh:mm a')
+                                        .format(inc.reportedAt),
                                     style: const TextStyle(fontSize: 12))),
-                                DataCell(Text('${inc.raceNumber}')),
-                                DataCell(Text(DateFormat.Hm()
-                                    .format(inc.incidentTime))),
+                                DataCell(Text(
+                                    inc.eventName.isNotEmpty
+                                        ? inc.eventName
+                                        : inc.eventId.length > 8
+                                            ? inc.eventId.substring(0, 8)
+                                            : inc.eventId,
+                                    style: const TextStyle(fontSize: 12))),
                                 DataCell(SizedBox(
-                                  width: 150,
-                                  child: Text(boats,
-                                      overflow: TextOverflow.ellipsis),
+                                  width: 200,
+                                  child: Tooltip(
+                                    message: inc.description,
+                                    child: Text(descPreview,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                        style: const TextStyle(fontSize: 12)),
+                                  ),
+                                )),
+                                DataCell(Text('${inc.raceNumber}',
+                                    style: const TextStyle(fontSize: 12))),
+                                DataCell(SizedBox(
+                                  width: 140,
+                                  child: Tooltip(
+                                    message: inc.involvedBoats
+                                        .map((b) => '${b.sailNumber} ${b.boatName}')
+                                        .join(', '),
+                                    child: Text(boats,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12)),
+                                  ),
                                 )),
                                 DataCell(SizedBox(
                                   width: 100,
-                                  child: Text(rules,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          const TextStyle(fontSize: 11)),
+                                  child: Tooltip(
+                                    message: inc.rulesAlleged.join('\n'),
+                                    child: Text(rules,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11)),
+                                  ),
                                 )),
                                 DataCell(Container(
                                   padding: const EdgeInsets.symmetric(
@@ -287,6 +360,45 @@ class _IncidentManagementPageState
       context: context,
       builder: (dialogContext) => _ReportIncidentDialog(ref: ref),
     );
+  }
+
+  void _onSort(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+    });
+  }
+
+  List<RaceIncident> _applySorting(List<RaceIncident> list) {
+    final sorted = [...list];
+    final asc = _sortAscending;
+    sorted.sort((a, b) {
+      int cmp;
+      switch (_sortColumnIndex) {
+        case 0: // Date
+          cmp = a.reportedAt.compareTo(b.reportedAt);
+        case 1: // Event
+          cmp = a.eventName.toLowerCase().compareTo(b.eventName.toLowerCase());
+        case 2: // Description
+          cmp = a.description.toLowerCase().compareTo(b.description.toLowerCase());
+        case 3: // Race
+          cmp = a.raceNumber.compareTo(b.raceNumber);
+        case 4: // Boats
+          final aBoats = a.involvedBoats.map((b) => b.sailNumber).join();
+          final bBoats = b.involvedBoats.map((b) => b.sailNumber).join();
+          cmp = aBoats.compareTo(bBoats);
+        case 5: // Rules
+          cmp = a.rulesAlleged.join().compareTo(b.rulesAlleged.join());
+        case 6: // Status
+          cmp = a.status.name.compareTo(b.status.name);
+        case 7: // Reporter
+          cmp = a.reportedBy.toLowerCase().compareTo(b.reportedBy.toLowerCase());
+        default:
+          cmp = 0;
+      }
+      return asc ? cmp : -cmp;
+    });
+    return sorted;
   }
 
   (String, Color) _statusInfo(RaceIncidentStatus status) => switch (status) {

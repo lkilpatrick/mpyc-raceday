@@ -79,6 +79,16 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
             Text('Incident Detail',
                 style: Theme.of(context).textTheme.titleMedium),
             const Spacer(),
+            OutlinedButton.icon(
+              onPressed: () => _showEditDialog(incident),
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Edit'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: widget.onClose,
@@ -86,6 +96,20 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
           ],
         ),
         const Divider(),
+
+        // Reported date
+        Row(
+          children: [
+            Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
+            const SizedBox(width: 6),
+            Text('Reported: ${DateFormat('MMM d, yyyy h:mm a').format(incident.reportedAt)}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+            const Spacer(),
+            Text('by ${incident.reportedBy}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          ],
+        ),
+        const SizedBox(height: 8),
 
         // Status workflow
         Text('Status', style: Theme.of(context).textTheme.titleSmall),
@@ -489,6 +513,184 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
     _resolutionCtrl.clear();
     ref.invalidate(incidentDetailProvider(incident.id));
     ref.invalidate(allIncidentsProvider);
+  }
+
+  void _showEditDialog(RaceIncident incident) {
+    final descCtrl = TextEditingController(text: incident.description);
+    final reporterCtrl = TextEditingController(text: incident.reportedBy);
+    int raceNumber = incident.raceNumber;
+    String locationChoice = _locationLabel(incident.locationOnCourse);
+    final locationDetailCtrl = TextEditingController(text: incident.locationDetail);
+    final rulesCtrl = TextEditingController(text: incident.rulesAlleged.join('\n'));
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Edit Incident'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: reporterCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Reporter',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: raceNumber,
+                          decoration: const InputDecoration(
+                            labelText: 'Race #',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: List.generate(10, (i) => i + 1)
+                              .map((n) => DropdownMenuItem(value: n, child: Text('$n')))
+                              .toList(),
+                          onChanged: (v) => setDialogState(() => raceNumber = v ?? raceNumber),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: locationChoice,
+                          decoration: const InputDecoration(
+                            labelText: 'Location',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Start Line', child: Text('Start Line')),
+                            DropdownMenuItem(value: 'Windward Mark', child: Text('Windward Mark')),
+                            DropdownMenuItem(value: 'Leeward Mark', child: Text('Leeward Mark')),
+                            DropdownMenuItem(value: 'Gate', child: Text('Gate')),
+                            DropdownMenuItem(value: 'Reaching Mark', child: Text('Reaching Mark')),
+                            DropdownMenuItem(value: 'Open Water', child: Text('Open Water')),
+                          ],
+                          onChanged: (v) => setDialogState(() => locationChoice = v ?? locationChoice),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: locationDetailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Location Detail',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: descCtrl,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: rulesCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Rules Alleged (one per line)',
+                      border: OutlineInputBorder(),
+                      hintText: 'Rule 10 – On Opposite Tacks\nRule 11 – On the Same Tack, Overlapped',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Boats display (read-only summary — full edit would be complex)
+                  if (incident.involvedBoats.isNotEmpty) ...[
+                    Text('Boats Involved',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    ...incident.involvedBoats.map((b) => Text(
+                          '${b.sailNumber} ${b.boatName} (${b.role.name})',
+                          style: const TextStyle(fontSize: 12),
+                        )),
+                    const SizedBox(height: 4),
+                    Text('To change boats, delete and re-create the incident.',
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final locationEnum = _mapLocationToEnum(locationChoice);
+                final rulesList = rulesCtrl.text
+                    .split('\n')
+                    .map((r) => r.trim())
+                    .where((r) => r.isNotEmpty)
+                    .toList();
+
+                final updated = RaceIncident(
+                  id: incident.id,
+                  eventId: incident.eventId,
+                  eventName: incident.eventName,
+                  raceNumber: raceNumber,
+                  reportedAt: incident.reportedAt,
+                  reportedBy: reporterCtrl.text.trim(),
+                  incidentTime: incident.incidentTime,
+                  description: descCtrl.text.trim(),
+                  locationOnCourse: locationEnum,
+                  locationDetail: locationDetailCtrl.text.trim(),
+                  courseName: incident.courseName,
+                  involvedBoats: incident.involvedBoats,
+                  rulesAlleged: rulesList,
+                  status: incident.status,
+                  hearing: incident.hearing,
+                  resolution: incident.resolution,
+                  penaltyApplied: incident.penaltyApplied,
+                  witnesses: incident.witnesses,
+                  attachments: incident.attachments,
+                  comments: incident.comments,
+                  weatherSnapshot: incident.weatherSnapshot,
+                );
+                await ref.read(incidentsRepositoryProvider).updateIncident(updated);
+                ref.invalidate(incidentDetailProvider(incident.id));
+                ref.invalidate(allIncidentsProvider);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _locationLabel(CourseLocationOnIncident loc) => switch (loc) {
+        CourseLocationOnIncident.startLine => 'Start Line',
+        CourseLocationOnIncident.windwardMark => 'Windward Mark',
+        CourseLocationOnIncident.leewardMark => 'Leeward Mark',
+        CourseLocationOnIncident.gate => 'Gate',
+        CourseLocationOnIncident.reachingMark => 'Reaching Mark',
+        CourseLocationOnIncident.openWater => 'Open Water',
+      };
+
+  static CourseLocationOnIncident _mapLocationToEnum(String loc) {
+    final lower = loc.toLowerCase();
+    if (lower.contains('start')) return CourseLocationOnIncident.startLine;
+    if (lower.contains('windward')) return CourseLocationOnIncident.windwardMark;
+    if (lower.contains('leeward')) return CourseLocationOnIncident.leewardMark;
+    if (lower.contains('gate')) return CourseLocationOnIncident.gate;
+    if (lower.contains('reaching')) return CourseLocationOnIncident.reachingMark;
+    return CourseLocationOnIncident.openWater;
   }
 
   void _generateProtestForm(RaceIncident incident) {

@@ -674,11 +674,13 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     }
   }
 
+  /// AP Flag — Postpone (2 horns)
   Future<void> _postpone() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Postpone Race?'),
+        content: const Text('AP Flag will be displayed with two sound signals.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -694,10 +696,29 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     final signal = ref.read(signalControllerProvider);
     await signal.firePostponeSignal();
 
+    // 2 horns for postponement
+    _playHorn();
+    Future.delayed(const Duration(seconds: 2), _playHorn);
+
     if (_currentStart != null) {
       _currentStart = _currentStart!.copyWith(isPostponed: true);
       await ref.read(timingRepositoryProvider).updateRaceStart(_currentStart!);
     }
+
+    // Broadcast to fleet
+    await ref.read(coursesRepositoryProvider).sendBroadcast(
+          FleetBroadcast(
+            id: '',
+            eventId: widget.eventId,
+            sentBy: 'RC',
+            message: 'RACE POSTPONED — AP Flag displayed. Stand by for further instructions.',
+            type: BroadcastType.postponement,
+            sentAt: DateTime.now(),
+            deliveryCount: 0,
+            target: BroadcastTarget.everyone,
+            requiresAck: true,
+          ),
+        );
 
     _timer?.cancel();
     setState(() {
