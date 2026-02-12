@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../../weather/data/models/live_weather.dart';
@@ -9,9 +10,11 @@ import '../../../weather/presentation/live_weather_providers.dart';
 import '../../data/models/course_config.dart';
 import '../../data/models/mark.dart';
 import '../../data/models/mark_distance.dart';
+import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
 import '../widgets/course_map_widget.dart';
+import 'course_form_dialog.dart';
 
 /// Course sheet page — compact 2-column layout matching the MPYC printed
 /// course sheet, with live wind recommendation and detail modals.
@@ -69,6 +72,24 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
                         fontSize: 11, color: Colors.grey.shade500)),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(width: 16),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/course-config'),
+                icon: const Icon(Icons.settings, size: 16),
+                label: const Text('Manage'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => _addCourse(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('New Course'),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),
@@ -158,6 +179,15 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
         ),
       ],
     );
+  }
+
+  Future<void> _addCourse(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<CourseConfig>(
+      context: context,
+      builder: (_) => const CourseFormDialog(),
+    );
+    if (result == null) return;
+    await ref.read(coursesRepositoryProvider).saveCourse(result);
   }
 
   Widget _legendDot(Color color, String label) {
@@ -569,7 +599,7 @@ class _CompactCourseRow extends ConsumerWidget {
 // Course Detail Dialog — map + diagram + full info
 // ═══════════════════════════════════════════════════════════════════
 
-class _CourseDetailDialog extends StatelessWidget {
+class _CourseDetailDialog extends ConsumerWidget {
   const _CourseDetailDialog({
     required this.course,
     required this.marks,
@@ -582,8 +612,43 @@ class _CourseDetailDialog extends StatelessWidget {
   final List<MarkDistance> distances;
   final double windDir;
 
+  Future<void> _editCourse(BuildContext context, WidgetRef ref) async {
+    Navigator.pop(context); // close detail dialog first
+    final result = await showDialog<CourseConfig>(
+      context: context,
+      builder: (_) => CourseFormDialog(course: course),
+    );
+    if (result == null) return;
+    await ref.read(coursesRepositoryProvider).saveCourse(result);
+  }
+
+  Future<void> _deleteCourse(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Course'),
+        content:
+            Text('Delete "${course.courseName}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(coursesRepositoryProvider).deleteCourse(course.id);
+    if (context.mounted) Navigator.pop(context);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final groupColor = _parseHex(course.windGroup?.color);
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
@@ -650,6 +715,27 @@ class _CourseDetailDialog extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // Edit button
+                  OutlinedButton.icon(
+                    onPressed: () => _editCourse(context, ref),
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Delete button
+                  OutlinedButton.icon(
+                    onPressed: () => _deleteCourse(context, ref),
+                    icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                    label: const Text('Delete',
+                        style: TextStyle(color: Colors.red)),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),

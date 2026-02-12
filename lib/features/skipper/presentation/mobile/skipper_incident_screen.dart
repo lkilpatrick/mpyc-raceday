@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../shared/services/audit_service.dart';
 import '../../../incidents/data/models/race_incident.dart';
 import '../../../incidents/presentation/incidents_providers.dart';
 import '../widgets/weather_header.dart';
@@ -365,6 +366,22 @@ class _SkipperIncidentScreenState
 
       final repo = ref.read(incidentsRepositoryProvider);
       final createdId = await repo.createIncident(incident);
+
+      // Audit log — mobile incident report
+      AuditService().log(
+        action: 'skipper_incident_report',
+        entityType: 'incident',
+        entityId: createdId,
+        category: 'incident',
+        source: 'mobile',
+        details: {
+          'type': _type,
+          'eventId': _eventId,
+          'description': _descCtrl.text.trim().length > 100
+              ? '${_descCtrl.text.trim().substring(0, 100)}...'
+              : _descCtrl.text.trim(),
+        },
+      );
 
       if (mounted) {
         setState(() {

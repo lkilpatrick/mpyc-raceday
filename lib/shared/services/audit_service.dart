@@ -15,6 +15,7 @@ class AuditService {
   /// Log an action. [category] is used for filtering in the UI
   /// (e.g. 'checklist', 'incident', 'course', 'member', 'maintenance',
   /// 'settings', 'sync', 'checkin', 'crew', 'timing').
+  /// [source] indicates origin: 'web', 'mobile', or 'system'.
   Future<void> log({
     required String action,
     required String entityType,
@@ -22,6 +23,7 @@ class AuditService {
     required String category,
     Map<String, dynamic> details = const {},
     String? userId,
+    String source = 'web',
   }) async {
     try {
       final uid =
@@ -42,6 +44,7 @@ class AuditService {
         'entityType': entityType,
         'entityId': entityId,
         'details': details,
+        'source': source,
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (_) {

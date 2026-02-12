@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../shared/services/audit_service.dart';
 import '../../../auth/data/auth_providers.dart';
 import '../../../boat_checkin/data/models/boat.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
@@ -500,7 +501,8 @@ class _SkipperCheckinScreenState extends ConsumerState<SkipperCheckinScreen> {
       }
 
       // 4. Create check-in record
-      await FirebaseFirestore.instance.collection('boat_checkins').add({
+      final checkinRef =
+          await FirebaseFirestore.instance.collection('boat_checkins').add({
         'eventId': widget.eventId,
         'memberId': uid,
         'sailNumber': sail,
@@ -511,6 +513,21 @@ class _SkipperCheckinScreenState extends ConsumerState<SkipperCheckinScreen> {
         'status': 'checked_in',
         'checkedInAt': FieldValue.serverTimestamp(),
       });
+
+      // 4b. Audit log — mobile check-in
+      AuditService().log(
+        action: 'skipper_checkin',
+        entityType: 'boat_checkin',
+        entityId: checkinRef.id,
+        category: 'checkin',
+        source: 'mobile',
+        details: {
+          'eventId': widget.eventId,
+          'sailNumber': sail,
+          'boatName': boatName,
+          'skipperName': member?.displayName ?? '',
+        },
+      );
 
       // 5. Write initial live position
       try {
