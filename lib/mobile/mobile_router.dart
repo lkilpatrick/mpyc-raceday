@@ -35,6 +35,8 @@ import 'package:mpyc_raceday/features/app_mode/presentation/mobile/spectator_scr
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/leaderboard_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/skipper_checkin_screen.dart';
 import 'package:mpyc_raceday/features/demo/presentation/demo_mode_screen.dart';
+import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_flow_screen.dart';
+import 'package:mpyc_raceday/features/rc_race/presentation/mobile/rc_race_history_screen.dart';
 import 'package:mpyc_raceday/mobile/mobile_shell.dart';
 
 final GoRouter mobileRouter = GoRouter(
@@ -259,6 +261,17 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/demo',
       builder: (context, state) => const DemoModeScreen(),
+    ),
+    GoRoute(
+      path: '/rc-race/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        return RcRaceFlowScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/rc-race-history',
+      builder: (context, state) => const RcRaceHistoryScreen(),
     ),
     // Shell routes for mode-specific bottom nav tabs
     GoRoute(

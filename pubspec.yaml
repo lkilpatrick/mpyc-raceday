@@ -63,6 +63,8 @@ dependencies:
   geolocator: any
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
+  noise_meter: any
+  permission_handler: any
 
 dev_dependencies:
   flutter_test:

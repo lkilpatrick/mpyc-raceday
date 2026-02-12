@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../demo/demo_mode_service.dart';
+import '../../../rc_race/data/models/race_session.dart';
 
 /// RC Timing hub — shows today's event, start sequence, finish recording,
 /// check-in management, and scoring all in one place.
@@ -145,6 +146,50 @@ class _RcTimingScreenState extends ConsumerState<RcTimingScreen> {
         ),
         const SizedBox(height: 12),
 
+        // Primary: Run Race Flow
+        Card(
+          color: Colors.indigo.shade50,
+          child: InkWell(
+            onTap: () => context.push('/rc-race/$_eventId'),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.flag, color: Colors.indigo, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Run Race',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.indigo.shade800)),
+                        const Text(
+                          'Guided flow: Course → Check-In → Start → Score → Review',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios,
+                      color: Colors.indigo, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // Quick actions grid
         _RcActionCard(
           icon: Icons.map,
@@ -200,6 +245,14 @@ class _RcTimingScreenState extends ConsumerState<RcTimingScreen> {
           subtitle: 'View and manage race incidents',
           color: Colors.amber,
           onTap: () => context.push('/incidents/$_eventId'),
+        ),
+        const SizedBox(height: 8),
+        _RcActionCard(
+          icon: Icons.history,
+          label: 'Race History',
+          subtitle: 'View past race results and export status',
+          color: Colors.indigo,
+          onTap: () => context.push('/rc-race-history'),
         ),
       ],
     );
