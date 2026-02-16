@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,15 +55,6 @@ class _ActiveChecklistScreenState
           for (final item in template.items) {
             categories.putIfAbsent(item.category, () => []).add(item);
           }
-
-          // Check if all critical items are done
-          final criticalItems = template.items.where((i) => i.isCritical);
-          final allCriticalDone = criticalItems.every((ci) {
-            final completed = completion.items
-                .where((i) => i.itemId == ci.id)
-                .firstOrNull;
-            return completed?.checked ?? false;
-          });
 
           return Column(
             children: [
@@ -132,7 +122,7 @@ class _ActiveChecklistScreenState
       ),
       bottomNavigationBar: completionAsync.when(
         loading: () => null,
-        error: (_, __) => null,
+        error: (error, stackTrace) => null,
         data: (completion) {
           if (completion.status != ChecklistCompletionStatus.inProgress) {
             return null;
@@ -210,12 +200,13 @@ class _ActiveChecklistScreenState
                 completionId: widget.completionId,
                 signOffUserId: signOffId,
               );
+              if (!mounted) return;
               if (dialogContext.mounted) {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Checklist signed off!')),
-                );
               }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Checklist signed off!')),
+              );
             },
             child: const Text('Sign Off'),
           ),
@@ -378,7 +369,7 @@ class _ChecklistItemTileState extends ConsumerState<_ChecklistItemTile> {
                     height: 80,
                     width: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (context, error, stackTrace) =>
                         const Icon(Icons.broken_image),
                   ),
                 ),

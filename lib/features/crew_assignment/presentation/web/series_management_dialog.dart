@@ -141,6 +141,7 @@ class _SeriesManagementDialogState
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int?>(
+                                // ignore: deprecated_member_use
                                 value: _weekday,
                                 decoration: const InputDecoration(
                                   labelText: 'Recurring day',

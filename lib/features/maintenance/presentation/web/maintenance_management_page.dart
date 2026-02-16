@@ -252,6 +252,7 @@ class _MaintenanceManagementPageState
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
                   value: boat,
                   decoration: const InputDecoration(labelText: 'Boat'),
                   items: ["Duncan's Watch", 'Signal Boat', 'Mark Boat', 'Safety Boat']
@@ -261,6 +262,7 @@ class _MaintenanceManagementPageState
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<MaintenancePriority>(
+                  // ignore: deprecated_member_use
                   value: priority,
                   decoration: const InputDecoration(labelText: 'Priority'),
                   items: MaintenancePriority.values
@@ -274,6 +276,7 @@ class _MaintenanceManagementPageState
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<MaintenanceCategory>(
+                  // ignore: deprecated_member_use
                   value: category,
                   decoration: const InputDecoration(labelText: 'Category'),
                   items: MaintenanceCategory.values

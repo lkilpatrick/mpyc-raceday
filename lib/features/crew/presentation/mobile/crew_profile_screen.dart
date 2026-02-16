@@ -124,6 +124,7 @@ class _CrewProfileScreenState extends ConsumerState<CrewProfileScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
             value: _selectedPosition,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.assignment_ind),
@@ -260,6 +261,7 @@ class _BoatSelector extends StatelessWidget {
         }
 
         return DropdownButtonFormField<String>(
+          // ignore: deprecated_member_use
           value: selectedId != null &&
                   boats.any((b) => b.$1 == selectedId)
               ? selectedId

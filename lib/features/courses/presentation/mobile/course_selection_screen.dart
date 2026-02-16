@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/course_config.dart';
-import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 
 class CourseSelectionScreen extends ConsumerStatefulWidget {

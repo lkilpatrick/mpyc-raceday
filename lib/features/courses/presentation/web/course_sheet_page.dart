@@ -10,7 +10,6 @@ import '../../../weather/presentation/live_weather_providers.dart';
 import '../../data/models/course_config.dart';
 import '../../data/models/mark.dart';
 import '../../data/models/mark_distance.dart';
-import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
 import '../widgets/course_map_widget.dart';
@@ -71,7 +70,7 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
                     style: TextStyle(
                         fontSize: 11, color: Colors.grey.shade500)),
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, s) => const SizedBox.shrink(),
               ),
               const SizedBox(width: 16),
               OutlinedButton.icon(
@@ -118,7 +117,7 @@ class _CourseSheetPageState extends ConsumerState<CourseSheetPage> {
           child: allCourses.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
-            data: (_) {
+            data: (courses) {
               if (coursesGrouped.isEmpty) {
                 return const Center(child: Text('No courses configured.'));
               }
@@ -302,7 +301,7 @@ class _WindDirectionBar extends StatelessWidget {
                   width: 10,
                   height: 10,
                   child: CircularProgressIndicator(strokeWidth: 1.5)),
-              error: (_, __) => const Text('offline',
+              error: (error, stackTrace) => const Text('offline',
                   style: TextStyle(fontSize: 9, color: Colors.orange)),
             ),
           const SizedBox(width: 8),
@@ -698,7 +697,7 @@ class _CourseDetailDialog extends ConsumerWidget {
                           runSpacing: 4,
                           children: [
                             _chip(Icons.explore,
-                                '${course.windGroup?.label ?? course.windDirectionBand}'),
+                                course.windGroup?.label ?? course.windDirectionBand),
                             _chip(Icons.straighten,
                                 '${course.distanceNm.toStringAsFixed(1)} nm'),
                             _chip(Icons.pin_drop,

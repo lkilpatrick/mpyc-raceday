@@ -188,7 +188,7 @@ class _IncidentDetailScreenState extends ConsumerState<IncidentDetailScreen> {
                     width: 100,
                     height: 100,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       width: 100,
                       height: 100,
                       color: Colors.grey.shade200,

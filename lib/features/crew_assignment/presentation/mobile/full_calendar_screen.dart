@@ -26,6 +26,7 @@ class _FullCalendarScreenState extends ConsumerState<FullCalendarScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
                   value: _series,
                   items: const [
                     DropdownMenuItem(value: 'All', child: Text('All series')),

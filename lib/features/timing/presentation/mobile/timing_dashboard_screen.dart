@@ -96,7 +96,7 @@ class _TimingDashboardScreenState
                         ref.watch(finishRecordsProvider(activeStart.id));
                     return finishesAsync.when(
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (error, stackTrace) => const SizedBox.shrink(),
                       data: (finishes) {
                         final finished = finishes
                             .where(

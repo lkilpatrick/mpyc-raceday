@@ -39,7 +39,7 @@ class WebScaffold extends StatelessWidget {
             Image.asset(
               'assets/images/burgee.png',
               height: 36,
-              errorBuilder: (_, __, ___) => const Icon(Icons.sailing, color: AppColors.primary),
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sailing, color: AppColors.primary),
             ),
             const SizedBox(width: 12),
             const Text(

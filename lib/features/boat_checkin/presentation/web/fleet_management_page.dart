@@ -288,6 +288,7 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage> {
                     Expanded(
                       flex: 2,
                       child: DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
                         value: classCtrl.text.isNotEmpty ? classCtrl.text : null,
                         decoration: const InputDecoration(
                           labelText: 'Class / Fleet',

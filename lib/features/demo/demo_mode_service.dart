@@ -75,7 +75,7 @@ class DemoModeService {
     final boatIds = <String>[];
 
     for (final boat in _sampleBoats) {
-      final boatId = '${_demoPrefix}${boat.sailNumber}';
+      final boatId = '$_demoPrefix${boat.sailNumber}';
       boatIds.add(boatId);
       batch.set(
         _fs.collection('boats').doc(boatId),

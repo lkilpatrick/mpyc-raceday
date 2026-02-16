@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../courses/data/models/course_config.dart';
 import '../../../../courses/data/models/fleet_broadcast.dart';
-import '../../../../courses/domain/courses_repository.dart';
 import '../../../../courses/presentation/courses_providers.dart';
 import '../../../data/models/race_session.dart';
 import '../../rc_race_providers.dart';
@@ -324,8 +323,11 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
         .doc(widget.session.id)
         .update({
       'fleetCourses': fleetCoursesMap,
+      // ignore: use_null_aware_elements
       if (firstCourseId != null) 'courseId': firstCourseId,
+      // ignore: use_null_aware_elements
       if (firstCourseName != null) 'courseName': firstCourseName,
+      // ignore: use_null_aware_elements
       if (firstCourseNumber != null) 'courseNumber': firstCourseNumber,
     });
   }
@@ -438,6 +440,7 @@ class _FleetCourseCard extends StatelessWidget {
 
             // Course dropdown
             DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: selectedCourseId.isNotEmpty &&
                       courses.any((c) => c.id == selectedCourseId)
                   ? selectedCourseId

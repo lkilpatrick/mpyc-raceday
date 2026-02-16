@@ -91,7 +91,7 @@ class _MaintenanceDetailPanelState
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: request.photos.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      separatorBuilder: (_, index) => const SizedBox(width: 8),
                       itemBuilder: (_, i) => GestureDetector(
                         onTap: () => _showLightbox(context, request.photos, i),
                         child: ClipRRect(
@@ -115,6 +115,7 @@ class _MaintenanceDetailPanelState
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<MaintenanceStatus>(
+                  // ignore: deprecated_member_use
                   value: request.status,
                   items: MaintenanceStatus.values.map((s) {
                     final label = _statusLabel(s);

@@ -210,7 +210,6 @@ class _TemplateEditorState extends ConsumerState<_TemplateEditor> {
   late TextEditingController _nameController;
   late List<ChecklistItem> _items;
   late ChecklistType _type;
-  String _changeNotes = '';
 
   @override
   void initState() {
@@ -358,10 +357,6 @@ class _TemplateEditorState extends ConsumerState<_TemplateEditor> {
               ),
             ),
             const Divider(height: 16),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Change notes'),
-              onChanged: (v) => _changeNotes = v,
-            ),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _save,

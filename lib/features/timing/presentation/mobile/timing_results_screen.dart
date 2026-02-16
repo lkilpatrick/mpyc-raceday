@@ -183,9 +183,13 @@ class _TimingResultsScreenState extends ConsumerState<TimingResultsScreen> {
     // Sort by corrected time (finished boats first, then letter scores)
     rows.sort((a, b) {
       if (a.letterScore == LetterScore.finished &&
-          b.letterScore != LetterScore.finished) return -1;
+          b.letterScore != LetterScore.finished) {
+        return -1;
+      }
       if (a.letterScore != LetterScore.finished &&
-          b.letterScore == LetterScore.finished) return 1;
+          b.letterScore == LetterScore.finished) {
+        return 1;
+      }
       if (a.letterScore == LetterScore.finished &&
           b.letterScore == LetterScore.finished) {
         final aCorrected = a.correctedSeconds ?? a.elapsedSeconds;

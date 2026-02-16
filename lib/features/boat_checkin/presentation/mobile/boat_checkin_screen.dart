@@ -37,7 +37,6 @@ class _BoatCheckinScreenState extends ConsumerState<BoatCheckinScreen>
 
   @override
   Widget build(BuildContext context) {
-    final checkinsAsync = ref.watch(eventCheckinsProvider(widget.eventId));
     final closedAsync = ref.watch(checkinsClosedProvider(widget.eventId));
     final count = ref.watch(checkinCountProvider(widget.eventId));
     final isClosed = closedAsync.value ?? false;
@@ -515,6 +514,7 @@ class _CheckinFormSheetState extends State<_CheckinFormSheet> {
           // Fleet dropdown — select from existing boats or add new
           if (widget.boat == null) ...[
             DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _selectedFleetBoat?.id,
               decoration: const InputDecoration(
                 labelText: 'Select from Fleet',

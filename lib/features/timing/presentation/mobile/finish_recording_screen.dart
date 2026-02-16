@@ -44,7 +44,6 @@ class _FinishRecordingScreenState
   Widget build(BuildContext context) {
     final finishesAsync =
         ref.watch(finishRecordsProvider(widget.raceStartId));
-    final startsAsync = ref.watch(raceStartsProvider(''));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
@@ -163,17 +162,17 @@ class _FinishRecordingScreenState
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
               child: Row(
                 children: [
-                  _SpecialButton('DNF', Colors.orange, LetterScore.dnf),
+                  _specialButton('DNF', Colors.orange, LetterScore.dnf),
                   const SizedBox(width: 6),
-                  _SpecialButton('DNS', Colors.grey, LetterScore.dns),
+                  _specialButton('DNS', Colors.grey, LetterScore.dns),
                   const SizedBox(width: 6),
-                  _SpecialButton('DSQ', Colors.red, LetterScore.dsq),
+                  _specialButton('DSQ', Colors.red, LetterScore.dsq),
                   const SizedBox(width: 6),
-                  _SpecialButton('OCS', Colors.red.shade300, LetterScore.ocs),
+                  _specialButton('OCS', Colors.red.shade300, LetterScore.ocs),
                   const SizedBox(width: 6),
-                  _SpecialButton('RAF', Colors.purple, LetterScore.raf),
+                  _specialButton('RAF', Colors.purple, LetterScore.raf),
                   const SizedBox(width: 6),
-                  _SpecialButton('RET', Colors.brown, LetterScore.ret),
+                  _specialButton('RET', Colors.brown, LetterScore.ret),
                 ],
               ),
             ),
@@ -249,7 +248,7 @@ class _FinishRecordingScreenState
     );
   }
 
-  Widget _SpecialButton(String label, Color color, LetterScore score) {
+  Widget _specialButton(String label, Color color, LetterScore score) {
     return Expanded(
       child: SizedBox(
         height: 40,
@@ -481,7 +480,7 @@ class _BoatFinishGrid extends ConsumerWidget {
 
     return startAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (e, s) => const SizedBox.shrink(),
       data: (start) {
         if (start == null) return const SizedBox.shrink();
         final eventId = start.eventId;
@@ -489,7 +488,7 @@ class _BoatFinishGrid extends ConsumerWidget {
 
         return checkinsAsync.when(
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (e, s) => const SizedBox.shrink(),
           data: (checkins) {
             final finishedSails = finishesAsync.value
                     ?.map((f) => f.sailNumber)

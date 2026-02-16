@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/fleet_broadcast.dart';
-import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 
 class FleetBroadcastScreen extends ConsumerStatefulWidget {
@@ -49,6 +48,7 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<BroadcastType>(
+                        // ignore: deprecated_member_use
                         value: _type,
                         isExpanded: true,
                         decoration: const InputDecoration(
@@ -72,7 +72,7 @@ class _FleetBroadcastScreenState extends ConsumerState<FleetBroadcastScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButtonFormField<BroadcastTarget>(
-                        value: _target,
+                        initialValue: _target,
                         decoration: const InputDecoration(
                           labelText: 'Send To',
                           border: OutlineInputBorder(),

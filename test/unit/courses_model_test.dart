@@ -76,7 +76,7 @@ void main() {
 
   group('BroadcastType', () {
     test('has all expected values', () {
-      expect(BroadcastType.values, hasLength(8));
+      expect(BroadcastType.values, hasLength(12));
       expect(BroadcastType.values, contains(BroadcastType.courseSelection));
       expect(BroadcastType.values, contains(BroadcastType.postponement));
       expect(BroadcastType.values, contains(BroadcastType.abandonment));
@@ -85,6 +85,10 @@ void main() {
       expect(BroadcastType.values, contains(BroadcastType.shortenedCourse));
       expect(BroadcastType.values, contains(BroadcastType.cancellation));
       expect(BroadcastType.values, contains(BroadcastType.general));
+      expect(BroadcastType.values, contains(BroadcastType.vhfChannelChange));
+      expect(BroadcastType.values, contains(BroadcastType.shortenCourse));
+      expect(BroadcastType.values, contains(BroadcastType.abandonTooMuchWind));
+      expect(BroadcastType.values, contains(BroadcastType.abandonTooLittleWind));
     });
   });
 
@@ -240,8 +244,8 @@ void main() {
         finishLocation: 'committee_boat',
       );
 
-      // Uses arrow separator and p/s suffixes
-      expect(course.markSequenceDisplay, 'Xp \u2192 4s');
+      // Uses arrow separator and p/s suffixes, plus START/FINISH
+      expect(course.markSequenceDisplay, 'START \u2192 Xp \u2192 4s \u2192 FINISH');
     });
 
     test('shows START and FINISH labels for start/finish marks', () {
@@ -296,7 +300,7 @@ void main() {
         finishLocation: 'committee_boat',
       );
 
-      expect(course.markSequenceDisplay, '');
+      expect(course.markSequenceDisplay, 'START \u2192 FINISH');
     });
   });
 

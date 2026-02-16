@@ -24,68 +24,6 @@ class CoursesRepositoryImpl implements CoursesRepository {
   CollectionReference<Map<String, dynamic>> get _broadcastsCol =>
       _fs.collection('fleet_broadcasts');
 
-  // ── Mark name mapping (code → display name) ──
-  static const _markNameMap = {
-    'X': 'X', 'C': 'C', 'P': 'P', 'M': 'M', 'LV': 'LV',
-    '1': '1', '3': '3', '4': '4',
-    'W': 'W', 'R': 'R', 'L': 'L',
-    'A': 'A', 'B': 'B',
-  };
-
-  static String _resolveMarkName(String code) =>
-      _markNameMap[code] ?? code;
-
-  /// Parse sequence array ["START","Xp","4s","FINISH"] into List<CourseMark>
-  static List<CourseMark> _parseSequence(List<String> sequence) {
-    final marks = <CourseMark>[];
-    int order = 1;
-    for (final entry in sequence) {
-      if (entry == 'START') {
-        marks.add(CourseMark(
-          markId: '1',
-          markName: '1',
-          order: order++,
-          rounding: MarkRounding.port,
-          isStart: true,
-        ));
-        continue;
-      }
-      if (entry == 'FINISH') {
-        marks.add(CourseMark(
-          markId: '1',
-          markName: '1',
-          order: order++,
-          rounding: MarkRounding.port,
-          isFinish: true,
-        ));
-        continue;
-      }
-      if (entry == 'FINISH_X') {
-        marks.add(CourseMark(
-          markId: 'X',
-          markName: 'X',
-          order: order++,
-          rounding: MarkRounding.starboard,
-          isFinish: true,
-        ));
-        continue;
-      }
-      // Parse "Xp", "4s", "LVp", "Mp", etc.
-      final match = RegExp(r'^(.+?)(p|s)$').firstMatch(entry);
-      if (match == null) continue;
-      final code = match.group(1)!;
-      final rounding =
-          match.group(2) == 's' ? MarkRounding.starboard : MarkRounding.port;
-      marks.add(CourseMark(
-        markId: code,
-        markName: _resolveMarkName(code),
-        order: order++,
-        rounding: rounding,
-      ));
-    }
-    return marks;
-  }
-
   // ── Firestore mapping ──
 
   CourseConfig _courseFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -145,7 +83,6 @@ class CoursesRepositoryImpl implements CoursesRepository {
         'finishLocation': c.finishLocation,
         'finishType': c.finishType,
         'finishMarkId': c.finishMarkId,
-        'legacyDescription': c.legacyDescription,
         'canMultiply': c.canMultiply,
         'requiresInflatable': c.requiresInflatable,
         'inflatableType': c.inflatableType,

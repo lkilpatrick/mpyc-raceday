@@ -102,6 +102,7 @@ class RcRaceRepository {
       'status': RaceSessionStatus.finalized.firestoreValue,
       'finalizedAt': FieldValue.serverTimestamp(),
       'clubspotReady': true,
+      // ignore: use_null_aware_elements
       if (notes != null) 'notes': notes,
     });
   }
@@ -116,10 +117,7 @@ class RcRaceRepository {
         .map((d) => RaceSession.fromDoc(d.id, d.data()))
         .toList();
     sessions.sort((a, b) {
-      final aDate = a.date;
-      final bDate = b.date;
-      if (aDate == null || bDate == null) return 0;
-      return bDate.compareTo(aDate);
+      return b.date.compareTo(a.date);
     });
     return sessions.take(50).toList();
   }

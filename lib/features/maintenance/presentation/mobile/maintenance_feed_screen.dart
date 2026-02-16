@@ -158,7 +158,7 @@ class _RequestCard extends StatelessWidget {
                     width: 56,
                     height: 56,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.build, size: 40),
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.build, size: 40),
                   ),
                 )
               else

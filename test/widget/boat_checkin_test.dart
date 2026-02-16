@@ -149,7 +149,7 @@ void main() {
 
   group('Form validation', () {
     test('sail number required', () {
-      final validator = (String? v) =>
+      String? validator(String? v) =>
           v == null || v.isEmpty ? 'Required' : null;
       expect(validator(''), 'Required');
       expect(validator(null), 'Required');
@@ -157,14 +157,14 @@ void main() {
     });
 
     test('boat name required', () {
-      final validator = (String? v) =>
+      String? validator(String? v) =>
           v == null || v.isEmpty ? 'Required' : null;
       expect(validator(''), 'Required');
       expect(validator('Wind Dancer'), isNull);
     });
 
     test('skipper required', () {
-      final validator = (String? v) =>
+      String? validator(String? v) =>
           v == null || v.isEmpty ? 'Required' : null;
       expect(validator(''), 'Required');
       expect(validator('John Doe'), isNull);

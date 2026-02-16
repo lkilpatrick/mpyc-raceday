@@ -670,7 +670,7 @@ class _RecentResultsPreview extends StatelessWidget {
                                                 ? Colors.amber.shade800
                                                 : Colors.black87)),
                                   ),
-                                  Text('$sail',
+                                  Text(sail,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13)),

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/course_config.dart';
-import '../../data/models/mark.dart';
-import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_diagram.dart';
 import '../widgets/course_map_widget.dart';
@@ -148,7 +146,7 @@ class _CourseConfigurationPageState
                           : ListView.separated(
                               padding: const EdgeInsets.all(8),
                               itemCount: filtered.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, index) =>
                                   const Divider(height: 1),
                               itemBuilder: (_, i) {
                                 final course = filtered[i];

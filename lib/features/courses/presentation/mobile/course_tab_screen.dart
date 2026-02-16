@@ -79,7 +79,7 @@ class _CourseTabScreenState extends ConsumerState<CourseTabScreen> {
                           width: 12,
                           height: 12,
                           child: CircularProgressIndicator(strokeWidth: 1.5)),
-                      error: (_, __) => const Text('(offline)',
+                      error: (error, stackTrace) => const Text('(offline)',
                           style: TextStyle(fontSize: 11, color: Colors.orange)),
                     ),
                   ],
@@ -243,7 +243,7 @@ class _ActiveCourseDetail extends ConsumerWidget {
           child: Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()))),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (error, stackTrace) => const SizedBox.shrink(),
       data: (courses) {
         final course = courses.cast<CourseConfig?>().firstWhere(
               (c) => c!.id == courseId,

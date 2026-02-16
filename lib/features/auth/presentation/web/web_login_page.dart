@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
-import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 
 class WebLoginPage extends ConsumerStatefulWidget {
   const WebLoginPage({super.key});
@@ -48,6 +47,7 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
       // Check if user has web dashboard access (web_admin, club_board, or rc_chair)
       if (!member.canAccessWebDashboard) {
         await repo.signOut();
+        if (!mounted) return;
         context.go('/no-access');
         return;
       }

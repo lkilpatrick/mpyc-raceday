@@ -221,6 +221,8 @@ class _FleetBoatSelector extends StatelessWidget {
         }
 
         return DropdownButtonFormField<String>(
+          // ignore: deprecated_member_use
+          // ignore: deprecated_member_use
           value: selectedId != null && boats.any((b) => b.$1 == selectedId)
               ? selectedId
               : null,

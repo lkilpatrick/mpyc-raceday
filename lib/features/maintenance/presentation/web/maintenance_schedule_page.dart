@@ -220,6 +220,7 @@ class _MaintenanceSchedulePageState
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
                   value: boat,
                   decoration: const InputDecoration(labelText: 'Boat'),
                   items: _boats

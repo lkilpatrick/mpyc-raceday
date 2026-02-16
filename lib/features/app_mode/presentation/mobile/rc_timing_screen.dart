@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../demo/demo_mode_service.dart';
-import '../../../rc_race/data/models/race_session.dart';
 
 /// RC Timing hub — shows today's event, start sequence, finish recording,
 /// check-in management, and scoring all in one place.

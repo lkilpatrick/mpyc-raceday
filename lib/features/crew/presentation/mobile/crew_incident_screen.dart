@@ -196,7 +196,7 @@ class _CrewIncidentScreenState extends ConsumerState<CrewIncidentScreen> {
                 children: [
                   const Icon(Icons.person, size: 18, color: Colors.orange),
                   const SizedBox(width: 6),
-                  Text('$_crewName',
+                  Text(_crewName,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 13)),
                   if (_crewPosition.isNotEmpty) ...[

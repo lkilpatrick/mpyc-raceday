@@ -25,7 +25,7 @@ class WeatherHeader extends ConsumerWidget {
           ],
         ),
       ),
-      error: (_, __) => _shell(
+      error: (e, s) => _shell(
         color: Colors.orange.shade800,
         child: const Row(
           children: [

@@ -78,7 +78,7 @@ class _NauticalChartWidgetState extends State<NauticalChartWidget> {
                     width: constraints.maxWidth,
                     height: widget.height,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       color: Colors.blue.shade50,
                       child: const Center(
                         child: Text('Chart image not available'),

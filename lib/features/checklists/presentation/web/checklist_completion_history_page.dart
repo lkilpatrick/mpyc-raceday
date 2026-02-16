@@ -38,7 +38,7 @@ class _ChecklistCompletionHistoryPageState
                 const DropdownMenuItem(value: 'All', child: Text('All Checklists')),
                 ...templatesAsync.when(
                       loading: () => <DropdownMenuItem<String>>[],
-                      error: (_, __) => <DropdownMenuItem<String>>[],
+                      error: (error, stackTrace) => <DropdownMenuItem<String>>[],
                       data: (templates) => templates.map(
                         (t) => DropdownMenuItem(value: t.id, child: Text(t.name)),
                       ),
@@ -109,9 +109,7 @@ class _ChecklistCompletionHistoryPageState
                   final template = templates
                       .where((t) => t.id == c.checklistId)
                       .firstOrNull;
-                  final duration = c.completedAt != null
-                      ? c.completedAt!.difference(c.startedAt)
-                      : null;
+                  final duration = c.completedAt?.difference(c.startedAt);
                   final statusLabel = switch (c.status) {
                     ChecklistCompletionStatus.inProgress => 'In Progress',
                     ChecklistCompletionStatus.completedPendingSignoff =>

@@ -14,6 +14,7 @@ void main() {
       return ClubspotService(
         client: client,
         apiKey: 'test-api-key',
+        testRetryDelay: const Duration(milliseconds: 1),
       );
     }
 

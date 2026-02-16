@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 /// Report tab: quick access to file a protest or report a maintenance issue.
-class ReportTabScreen extends StatelessWidget {
+class ReportTabScreen extends StatefulWidget {
   const ReportTabScreen({super.key});
 
+  @override
+  State<ReportTabScreen> createState() => _ReportTabScreenState();
+}
+
+class _ReportTabScreenState extends State<ReportTabScreen> {
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -17,7 +22,7 @@ class ReportTabScreen extends StatelessWidget {
           color: Colors.red,
           title: 'File a Protest',
           subtitle: 'Report a racing incident or rule violation',
-          onTap: () => _openProtest(context),
+          onTap: () => _openProtest(),
         ),
         const SizedBox(height: 8),
 
@@ -49,29 +54,30 @@ class ReportTabScreen extends StatelessWidget {
     );
   }
 
-  void _openProtest(BuildContext context) {
+  Future<void> _openProtest() async {
     // Find today's event to attach the protest to
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
 
-    FirebaseFirestore.instance
+    final snap = await FirebaseFirestore.instance
         .collection('race_events')
         .where('date',
             isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
         .where('date', isLessThan: Timestamp.fromDate(todayEnd))
         .limit(1)
-        .get()
-        .then((snap) {
-      if (snap.docs.isNotEmpty) {
-        context.push('/incidents/report/${snap.docs.first.id}');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('No race event today to file a protest against')),
-        );
-      }
-    });
+        .get();
+
+    if (!mounted) return;
+
+    if (snap.docs.isNotEmpty) {
+      context.push('/incidents/report/${snap.docs.first.id}');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No race event today to file a protest against')),
+      );
+    }
   }
 }
 

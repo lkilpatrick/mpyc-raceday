@@ -315,7 +315,7 @@ void main() {
         finishLocation: 'mark_x',
       );
 
-      expect(course.markSequenceDisplay, 'Wp – Ls – Xp (Finish)');
+      expect(course.markSequenceDisplay, 'START \u2192 Wp \u2192 Ls \u2192 FINISH');
     });
 
     test('empty marks produces empty display', () {
@@ -331,7 +331,7 @@ void main() {
         finishLocation: 'committee_boat',
       );
 
-      expect(course.markSequenceDisplay, '');
+      expect(course.markSequenceDisplay, 'START \u2192 FINISH');
     });
   });
 }

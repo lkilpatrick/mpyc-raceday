@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/mark.dart';
-import '../../domain/courses_repository.dart';
 import '../courses_providers.dart';
 import '../widgets/course_map_widget.dart';
 
@@ -572,6 +571,7 @@ class _MarkFormDialogState extends State<_MarkFormDialog> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
                     value: _type,
                     decoration: const InputDecoration(
                       labelText: 'Type',

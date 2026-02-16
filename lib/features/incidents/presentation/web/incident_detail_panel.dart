@@ -244,7 +244,7 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
                   child: Image.network(
                     incident.attachments[i],
                     width: 80, height: 80, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       width: 80, height: 80,
                       color: Colors.grey.shade200,
                       child: const Icon(Icons.broken_image, size: 20),
@@ -405,6 +405,8 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
                         lastDate: DateTime.now().add(const Duration(days: 90)),
                       );
                       if (date == null) return;
+                      // ignore: use_build_context_synchronously
+                      if (!ctx.mounted) return;
                       final time = await showTimePicker(
                         context: ctx,
                         initialTime: TimeOfDay.fromDateTime(
@@ -547,6 +549,7 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
+                          // ignore: deprecated_member_use
                           value: raceNumber,
                           decoration: const InputDecoration(
                             labelText: 'Race #',
@@ -561,6 +564,7 @@ class _IncidentDetailPanelState extends ConsumerState<IncidentDetailPanel> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          // ignore: deprecated_member_use
                           value: locationChoice,
                           decoration: const InputDecoration(
                             labelText: 'Location',

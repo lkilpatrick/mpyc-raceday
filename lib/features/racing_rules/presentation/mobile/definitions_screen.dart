@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/racing_rules_service.dart';
 import '../racing_rules_providers.dart';
 
 class DefinitionsScreen extends ConsumerStatefulWidget {

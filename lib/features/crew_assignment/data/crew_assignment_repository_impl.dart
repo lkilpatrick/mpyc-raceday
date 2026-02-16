@@ -164,6 +164,7 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
       endDate = DateTime.now();
     }
 
+    // ignore: deprecated_member_use
     final colorValue = d['color'] as int? ?? Colors.blue.value;
 
     return SeriesDefinition(
@@ -179,7 +180,7 @@ class CrewAssignmentRepositoryImpl implements CrewAssignmentRepository {
   Map<String, dynamic> _seriesToMap(SeriesDefinition series) {
     return {
       'name': series.name,
-      'color': series.color.value,
+      'color': series.color.toARGB32(),
       'startDate': Timestamp.fromDate(series.startDate),
       'endDate': Timestamp.fromDate(series.endDate),
       'recurringWeekday': series.recurringWeekday,

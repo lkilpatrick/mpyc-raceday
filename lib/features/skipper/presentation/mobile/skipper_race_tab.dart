@@ -395,7 +395,7 @@ class _LiveTimerState extends State<_LiveTimer> {
     final m = _elapsed.inMinutes.remainder(60);
     final s = _elapsed.inSeconds.remainder(60);
     final timeStr = h > 0
-        ? '${h}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
+        ? '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
         : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 
     return Text(

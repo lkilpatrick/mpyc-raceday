@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/weather_models.dart';
-import '../../data/services/weather_polling_service.dart';
 import '../weather_providers.dart';
 
 class WeatherAnalyticsPanel extends ConsumerStatefulWidget {

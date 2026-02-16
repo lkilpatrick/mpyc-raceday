@@ -534,6 +534,7 @@ class _ReportIncidentDialogState extends State<_ReportIncidentDialog> {
                     Expanded(
                       flex: 3,
                       child: DropdownButtonFormField<RaceEvent>(
+                        // ignore: deprecated_member_use
                         value: _selectedEvent,
                         decoration: const InputDecoration(
                           labelText: 'Race Event',
@@ -556,6 +557,7 @@ class _ReportIncidentDialogState extends State<_ReportIncidentDialog> {
                     Expanded(
                       flex: 1,
                       child: DropdownButtonFormField<int>(
+                        // ignore: deprecated_member_use
                         value: _raceNumber,
                         decoration: const InputDecoration(
                           labelText: 'Race #',
@@ -582,6 +584,7 @@ class _ReportIncidentDialogState extends State<_ReportIncidentDialog> {
                     Expanded(
                       flex: 2,
                       child: DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
                         value: _isOtherCourse
                             ? '__other__'
                             : _selectedCourse?.id,
@@ -622,6 +625,7 @@ class _ReportIncidentDialogState extends State<_ReportIncidentDialog> {
                     Expanded(
                       flex: 2,
                       child: DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
                         value: _locationChoice,
                         decoration: const InputDecoration(
                           labelText: 'Location on Course',

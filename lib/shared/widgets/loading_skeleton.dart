@@ -16,7 +16,7 @@ class ListLoadingSkeleton extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
         padding: const EdgeInsets.all(12),
-        itemBuilder: (_, __) => const _SkeletonCard(),
+        itemBuilder: (context, index) => const _SkeletonCard(),
       ),
     );
   }

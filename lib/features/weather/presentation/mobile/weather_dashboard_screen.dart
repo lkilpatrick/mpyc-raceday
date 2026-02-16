@@ -77,7 +77,7 @@ class WeatherDashboardScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         forecastAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) =>
+          error: (error, stackTrace) =>
               const Card(child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Text('Forecast unavailable'),

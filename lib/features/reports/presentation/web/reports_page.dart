@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -259,23 +258,23 @@ class _SeasonSummaryTab extends StatelessWidget {
         // Fleet size per event for chart
         final fleetByEvent = <String, int>{};
         for (final c in checkins) {
-          final d = c.data() as Map<String, dynamic>;
-          final eid = d['eventId'] as String? ?? '';
+          final d = c.data();
+          final eid = d['eventId'] ?? '';
           fleetByEvent[eid] = (fleetByEvent[eid] ?? 0) + 1;
         }
 
         // Incident status breakdown
         final incidentByStatus = <String, int>{};
         for (final i in incidents) {
-          final d = i.data() as Map<String, dynamic>;
-          final s = d['status'] as String? ?? 'reported';
+          final d = i.data();
+          final s = d['status'] ?? 'reported';
           incidentByStatus[s] = (incidentByStatus[s] ?? 0) + 1;
         }
 
         // Checklist completion status
         int checklistComplete = 0, checklistPending = 0;
         for (final c in checklists) {
-          final d = c.data() as Map<String, dynamic>;
+          final d = c.data();
           if (d['status'] == 'completed') {
             checklistComplete++;
           } else {
@@ -286,8 +285,8 @@ class _SeasonSummaryTab extends StatelessWidget {
         // Maintenance open vs resolved
         int maintOpen = 0, maintResolved = 0;
         for (final m in maintenance) {
-          final d = m.data() as Map<String, dynamic>;
-          final s = d['status'] as String? ?? '';
+          final d = m.data();
+          final s = d['status'] ?? '';
           if (s == 'resolved' || s == 'closed') {
             maintResolved++;
           } else {
@@ -813,19 +812,19 @@ class _ConditionsAnalysisTab extends StatelessWidget {
         // Build fleet size per event
         final fleetByEvent = <String, int>{};
         for (final c in checkins) {
-          final d = c.data() as Map<String, dynamic>;
-          final eid = d['eventId'] as String? ?? '';
+          final d = c.data();
+          final eid = d['eventId'] ?? '';
           fleetByEvent[eid] = (fleetByEvent[eid] ?? 0) + 1;
         }
 
         // Build event data with weather snapshots
         final eventRows = <_ConditionRow>[];
         for (final e in events) {
-          final d = e.data() as Map<String, dynamic>;
+          final d = e.data();
           final ws = d['weatherSnapshot'] as Map<String, dynamic>?;
           final wind = (ws?['windSpeedKts'] as num?)?.toDouble();
           final fleet = fleetByEvent[e.id] ?? 0;
-          final name = d['name'] as String? ?? '';
+          final name = d['name'] ?? '';
           final date = (d['date'] as Timestamp?)?.toDate();
           eventRows.add(_ConditionRow(
             name: name,
@@ -1050,8 +1049,12 @@ class _IncidentSummaryTab extends StatelessWidget {
           statusCounts[status] = (statusCounts[status] ?? 0) + 1;
           if (status == 'protestFiled' ||
               status == 'hearingScheduled' ||
-              status == 'hearingComplete') protests++;
-          if (status == 'resolved') resolved++;
+              status == 'hearingComplete') {
+            protests++;
+          }
+          if (status == 'resolved') {
+            resolved++;
+          }
 
           final rules = List<String>.from(d['rulesAlleged'] ?? []);
           for (final r in rules) {

@@ -178,7 +178,7 @@ class _WebShellState extends ConsumerState<WebShell> {
     }
   }
 
-  Future<void> _handleSignOut(BuildContext context) async {
+  Future<void> _handleSignOut() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -197,10 +197,14 @@ class _WebShellState extends ConsumerState<WebShell> {
         ],
       ),
     );
-    if (confirmed == true && mounted) {
-      await ref.read(authRepositoryProvider).signOut();
-      if (mounted) context.go('/web-login');
-    }
+    
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    await ref.read(authRepositoryProvider).signOut();
+    
+    if (!mounted) return;
+    context.go('/web-login');
   }
 
   @override
@@ -247,13 +251,13 @@ class _WebShellState extends ConsumerState<WebShell> {
       onToggleSidebar: _toggleSidebar,
       userName: userName,
       userInitials: userInitials,
-      onSignOut: () => _handleSignOut(context),
+      onSignOut: _handleSignOut,
       sidebar: WebSidebar(
         activeRoute: activeItem.route,
         isCollapsed: _isCollapsed,
         onSelected: (item) => context.go(item.route),
         userRoles: userRoles,
-        onSignOut: () => _handleSignOut(context),
+        onSignOut: _handleSignOut,
       ),
       body: _buildBody(),
     );

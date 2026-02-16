@@ -2,9 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mpyc_raceday/features/auth/data/models/member.dart';
 import 'package:mpyc_raceday/shared/services/audit_service.dart';
-import 'package:mpyc_raceday/shared/services/clubspot_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MemberManagementPage extends StatefulWidget {
@@ -15,7 +13,6 @@ class MemberManagementPage extends StatefulWidget {
 }
 
 class _MemberManagementPageState extends State<MemberManagementPage> {
-  final _service = ClubspotService();
   final _searchController = TextEditingController();
   final Set<String> _selectedIds = <String>{};
   String _search = '';

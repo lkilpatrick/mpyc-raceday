@@ -1,4 +1,4 @@
-/// Stub implementations for non-web platforms.
+// Stub implementations for non-web platforms.
 
 void openHtmlInNewTab(String htmlContent, String title) {
   // No-op on non-web platforms

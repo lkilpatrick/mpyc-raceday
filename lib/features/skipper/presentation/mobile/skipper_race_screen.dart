@@ -68,7 +68,9 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
       perm = await Geolocator.requestPermission();
     }
     if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever) return;
+        perm == LocationPermission.deniedForever) {
+      return;
+    }
 
     WakelockPlus.enable();
     setState(() => _trackingActive = true);
@@ -124,7 +126,9 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
     final now = DateTime.now();
     final interval = _raceStartTime != null ? 5 : 15;
     if (_lastLiveWrite != null &&
-        now.difference(_lastLiveWrite!).inSeconds < interval) return;
+        now.difference(_lastLiveWrite!).inSeconds < interval) {
+      return;
+    }
     _lastLiveWrite = now;
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -453,11 +457,11 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                     Row(
                       children: [
                         _StatTile('Speed',
-                            '${_currentSpeedKnots.toStringAsFixed(1)}', 'kts',
+                            _currentSpeedKnots.toStringAsFixed(1), 'kts',
                             dark: isRacing),
                         const SizedBox(width: 6),
                         _StatTile('Max',
-                            '${_maxSpeedKnots.toStringAsFixed(1)}', 'kts',
+                            _maxSpeedKnots.toStringAsFixed(1), 'kts',
                             dark: isRacing),
                         const SizedBox(width: 6),
                         _StatTile('Dist',

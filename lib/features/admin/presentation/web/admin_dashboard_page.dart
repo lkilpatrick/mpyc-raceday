@@ -206,7 +206,7 @@ class _WeatherCard extends StatelessWidget {
               child: Center(
                   child: CircularProgressIndicator(color: Colors.white70)),
             ),
-            error: (_, __) => const SizedBox(
+            error: (error, stackTrace) => const SizedBox(
               height: 180,
               child: Center(
                   child: Text('Weather unavailable',
@@ -586,7 +586,7 @@ class _NextRaceCard extends StatelessWidget {
             height: 140,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (_, __) => const SizedBox(
+          error: (error, stackTrace) => const SizedBox(
             height: 140,
             child: Center(child: Text('Unable to load events')),
           ),
@@ -648,7 +648,7 @@ class _NextRaceCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     if (next.startTime != null)
                       _infoPill(Icons.access_time,
-                          '${next.startTime!.format(context)}'),
+                          next.startTime!.format(context)),
                   ],
                 ),
                 const SizedBox(height: 12),

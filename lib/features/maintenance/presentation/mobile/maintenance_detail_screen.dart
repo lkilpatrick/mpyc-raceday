@@ -106,7 +106,7 @@ class _MaintenanceDetailScreenState
                       child: Image.network(
                         request.photos[i],
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        errorBuilder: (context, error, stackTrace) =>
                             const Center(child: Icon(Icons.broken_image)),
                       ),
                     ),

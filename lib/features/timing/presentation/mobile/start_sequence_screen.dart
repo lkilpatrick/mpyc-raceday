@@ -9,10 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../boat_checkin/data/models/boat_checkin.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../courses/data/models/fleet_broadcast.dart';
-import '../../../courses/domain/courses_repository.dart';
 import '../../../courses/presentation/courses_providers.dart';
 import '../../data/models/timing_models.dart';
-import '../../domain/signal_controller.dart';
 import '../timing_providers.dart';
 
 class StartSequenceScreen extends ConsumerStatefulWidget {
@@ -30,8 +28,8 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   int _countdownSeconds = 300; // 5 minutes
   bool _running = false;
   bool _started = false;
-  String _className = 'Fleet';
-  int _raceNumber = 1;
+  final String _className = 'Fleet';
+  final int _raceNumber = 1;
   RaceStart? _currentStart;
 
   // Flag states
@@ -287,7 +285,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
                           onPressed: _advanceToNextSignal,
                           icon: const Icon(Icons.skip_next, size: 22),
                           label: Text(
-                            'ADVANCE TO ${_nextSignalLabel}',
+                            'ADVANCE TO $_nextSignalLabel',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,

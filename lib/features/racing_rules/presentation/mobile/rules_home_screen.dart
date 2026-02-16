@@ -156,11 +156,11 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: _quickRefRules.map((num) {
-                    final rule = db.findRule(num);
+                  children: _quickRefRules.map((ruleNum) {
+                    final rule = db.findRule(ruleNum);
                     return ActionChip(
-                      label: Text('$num${rule != null ? " ${rule.title}" : ""}'),
-                      onPressed: () => _openRule(num),
+                      label: Text('$ruleNum${rule != null ? " ${rule.title}" : ""}'),
+                      onPressed: () => _openRule(ruleNum),
                     );
                   }).toList(),
                 ),
@@ -173,13 +173,13 @@ class _RulesHomeScreenState extends ConsumerState<RulesHomeScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  ...recentAsync.value!.take(8).map((num) {
-                    final rule = db.findRule(num);
+                  ...recentAsync.value!.take(8).map((ruleNum) {
+                    final rule = db.findRule(ruleNum);
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(child: Text(num)),
-                      title: Text(rule?.title ?? 'Rule $num'),
-                      onTap: () => _openRule(num),
+                      leading: CircleAvatar(child: Text(ruleNum)),
+                      title: Text(rule?.title ?? 'Rule $ruleNum'),
+                      onTap: () => _openRule(ruleNum),
                     );
                   }),
                   const SizedBox(height: 16),

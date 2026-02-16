@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -205,8 +204,9 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
   }
 
   bool _matchesFilter(RaceEvent event) {
-    if (_seriesFilter != 'All' && event.seriesName != _seriesFilter)
+    if (_seriesFilter != 'All' && event.seriesName != _seriesFilter) {
       return false;
+    }
     if (_statusFilter != null && event.status != _statusFilter) return false;
     if (_range != null &&
         (event.date.isBefore(_range!.start) ||
@@ -292,6 +292,7 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
                   value: selectedSeries,
                   decoration: const InputDecoration(labelText: 'Series'),
                   items: const [

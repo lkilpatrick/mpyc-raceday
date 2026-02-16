@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../data/models/boat.dart';
 import '../../data/models/boat_checkin.dart';
 import '../boat_checkin_providers.dart';
 

@@ -51,7 +51,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
               const SizedBox(height: 12),
               Stepper(
                 currentStep: _step,
-                controlsBuilder: (_, __) => const SizedBox.shrink(),
+                controlsBuilder: (context, details) => const SizedBox.shrink(),
                 steps: [
                   Step(
                     title: const Text('Upload'),
@@ -134,6 +134,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
         return SizedBox(
           width: 260,
           child: DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
             value: _mapping[target],
             decoration: InputDecoration(labelText: target),
             items: _headers

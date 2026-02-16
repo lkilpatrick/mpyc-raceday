@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -177,7 +175,9 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
     final now = DateTime.now();
     // Throttle to once every 10 seconds
     if (_lastLiveWrite != null &&
-        now.difference(_lastLiveWrite!).inSeconds < 10) return;
+        now.difference(_lastLiveWrite!).inSeconds < 10) {
+      return;
+    }
     _lastLiveWrite = now;
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -415,14 +415,14 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
               children: [
                 _StatTile(
                   label: 'Speed',
-                  value: '${_currentSpeedKnots.toStringAsFixed(1)}',
+                  value: _currentSpeedKnots.toStringAsFixed(1),
                   unit: 'kts',
                   isRacing: isRacing,
                 ),
                 const SizedBox(width: 8),
                 _StatTile(
                   label: 'Max',
-                  value: '${_maxSpeedKnots.toStringAsFixed(1)}',
+                  value: _maxSpeedKnots.toStringAsFixed(1),
                   unit: 'kts',
                   isRacing: isRacing,
                 ),
@@ -436,7 +436,7 @@ class _RaceModeScreenState extends ConsumerState<RaceModeScreen> {
                 const SizedBox(width: 8),
                 _StatTile(
                   label: 'Points',
-                  value: '${_trackPoints.length}',
+                  value: _trackPoints.length.toString(),
                   unit: '',
                   isRacing: isRacing,
                 ),

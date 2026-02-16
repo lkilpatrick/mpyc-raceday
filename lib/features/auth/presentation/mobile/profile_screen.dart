@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';

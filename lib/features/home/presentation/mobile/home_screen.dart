@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,9 +13,6 @@ import '../../../auth/data/auth_providers.dart';
 import '../../../auth/data/models/member.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../maintenance/presentation/maintenance_providers.dart';
-import '../../../courses/data/models/fleet_broadcast.dart';
-import '../../../crew_assignment/presentation/crew_assignment_providers.dart';
-import '../../../crew_assignment/presentation/crew_assignment_formatters.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -424,7 +420,7 @@ class _YourBoatCardState extends State<_YourBoatCard> {
                           fit: StackFit.expand,
                           children: [
                             Image.network(_boatPhotoUrl!, fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
+                                errorBuilder: (context, error, stackTrace) =>
                                     _photoPlaceholder()),
                             Positioned(
                               right: 8, bottom: 8,
@@ -743,9 +739,7 @@ class _UpcomingRacesCard extends StatelessWidget {
                   final name = d['name'] as String? ?? '';
                   final ts = d['date'] as Timestamp?;
                   final series = d['series'] as String? ?? '';
-                  final dateStr = ts != null
-                      ? DateFormat('EEE, MMM d').format(ts.toDate())
-                      : '';
+                  // unused: dateStr
                   final daysAway = ts != null
                       ? ts.toDate().difference(DateTime.now()).inDays
                       : 0;

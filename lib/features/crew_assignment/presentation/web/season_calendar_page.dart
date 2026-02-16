@@ -621,7 +621,7 @@ class _UpcomingEventsCard extends StatelessWidget {
                           style: TextStyle(color: Colors.grey)))
                   : ListView.separated(
                       itemCount: upcoming.take(15).length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, index) =>
                           const Divider(height: 1),
                       itemBuilder: (_, i) {
                         final e = upcoming[i];
@@ -794,6 +794,7 @@ class _EventFormDialogState extends State<_EventFormDialog> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<EventStatus>(
+                    // ignore: deprecated_member_use
                     value: _status,
                     decoration: const InputDecoration(
                       labelText: 'Status',

@@ -15,6 +15,7 @@ class ClubspotService {
     FirebaseFirestore? firestore,
     AppLogger? logger,
     String? apiKey,
+    this.testRetryDelay,
   }) : _client = client ?? http.Client(),
        _firestoreOverride = firestore,
        _logger = logger ?? const AppLogger(),
@@ -27,6 +28,7 @@ class ClubspotService {
   FirebaseFirestore get _firestore => _firestoreOverride ?? FirebaseFirestore.instance;
   final AppLogger _logger;
   final String? _apiKey;
+  final Duration? testRetryDelay;
 
   static String? _resolveApiKey() {
     if (kIsWeb) {
@@ -346,7 +348,7 @@ class ClubspotService {
         if (response.statusCode == 429) {
           final retryAfterHeader = response.headers['retry-after'];
           final retryAfterSeconds = int.tryParse(retryAfterHeader ?? '');
-          final delay = Duration(seconds: retryAfterSeconds ?? (attempt * 2));
+          final delay = testRetryDelay ?? Duration(seconds: retryAfterSeconds ?? (attempt * 2));
           _logger.warn(
             'Clubspot rate-limited. Retrying in ${delay.inSeconds}s.',
           );
@@ -360,7 +362,7 @@ class ClubspotService {
         }
         if (response.statusCode >= 500) {
           if (attempt < 4) {
-            await Future<void>.delayed(Duration(seconds: attempt * 2));
+            await Future<void>.delayed(testRetryDelay ?? Duration(seconds: attempt * 2));
             continue;
           }
           throw ClubspotApiException(
@@ -383,7 +385,7 @@ class ClubspotService {
             'Network failure while contacting Clubspot: $error',
           );
         }
-        await Future<void>.delayed(Duration(seconds: attempt * 2));
+        await Future<void>.delayed(testRetryDelay ?? Duration(seconds: attempt * 2));
       }
     }
 

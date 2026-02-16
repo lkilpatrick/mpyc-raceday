@@ -36,7 +36,6 @@ class RcRaceFlowScreen extends ConsumerStatefulWidget {
 
 class _RcRaceFlowScreenState extends ConsumerState<RcRaceFlowScreen> {
   RaceSession? _cachedSession;
-  RaceSessionStatus? _lastStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +72,6 @@ class _RcRaceFlowScreenState extends ConsumerState<RcRaceFlowScreen> {
           }
 
           _cachedSession = session;
-          _lastStatus = session.status;
           return _buildBody(session);
         },
       ),

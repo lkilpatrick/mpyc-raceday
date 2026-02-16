@@ -75,7 +75,7 @@ class _WeatherCard extends ConsumerWidget {
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       ),
-      error: (_, __) => _emptyWeather(),
+      error: (error, stackTrace) => _emptyWeather(),
       data: (weather) {
         if (weather == null) return _emptyWeather();
         return _weatherContent(context, weather);

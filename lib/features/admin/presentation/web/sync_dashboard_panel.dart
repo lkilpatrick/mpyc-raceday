@@ -107,7 +107,7 @@ class _SyncDashboardPanelState extends State<SyncDashboardPanel> {
             Expanded(
               child: ListView.separated(
                 itemCount: docs.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final row = docs[index].data();
                   final errors = (row['errors'] as List?) ?? const [];

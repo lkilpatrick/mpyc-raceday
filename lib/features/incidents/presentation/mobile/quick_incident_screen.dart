@@ -347,12 +347,11 @@ class _BoatSelection {
     required this.sailNumber,
     required this.boatName,
     required this.skipperName,
-    this.role = BoatInvolvedRole.protesting,
   });
 
   final String boatId;
   final String sailNumber;
   final String boatName;
   final String skipperName;
-  BoatInvolvedRole role;
+  BoatInvolvedRole role = BoatInvolvedRole.protesting;
 }

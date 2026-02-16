@@ -273,6 +273,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
           'boatName': name,
           'ownerName': owner,
           'boatClass': cls,
+          // ignore: use_null_aware_elements
           if (phrf != null) 'phrfRating': phrf,
           'isActive': true,
         });

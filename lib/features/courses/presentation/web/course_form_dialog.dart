@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/course_config.dart';
@@ -229,6 +228,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
                 value: _band,
                 decoration: const InputDecoration(
                   labelText: 'Wind Band',
@@ -243,6 +243,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
                 value: _finish,
                 decoration: const InputDecoration(
                   labelText: 'Finish Location',
@@ -287,6 +288,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
                 value: _selectedMarkToAdd,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -523,11 +525,15 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
         const SizedBox(height: 8),
         RadioListTile<String>(
           value: 'committee_boat',
+          // ignore: deprecated_member_use
           groupValue: _finishType,
-          onChanged: (v) => setState(() {
-            _finishType = v!;
-            _finishMarkId = null;
-          }),
+          // ignore: deprecated_member_use
+          onChanged: (v) {
+            setState(() {
+              _finishType = v!;
+              _finishMarkId = null;
+            });
+          },
           title: const Text('Committee Boat',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           subtitle: const Text('Finish between Committee Boat and Mark 1',
@@ -537,12 +543,15 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
         ),
         RadioListTile<String>(
           value: 'club_mark',
+          // ignore: deprecated_member_use
           groupValue: _finishType,
-          onChanged: (v) => setState(() {
-            _finishType = v!;
-            _finishMarkId ??=
-                marks.where((m) => m.name == 'X').firstOrNull?.id ?? marks.firstOrNull?.id;
-          }),
+          // ignore: deprecated_member_use
+          onChanged: (v) {
+            setState(() {
+              _finishType = v!;
+              _finishMarkId = null;
+            });
+          },
           title: const Text('Club Mark',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           subtitle: const Text(
@@ -555,6 +564,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
           Padding(
             padding: const EdgeInsets.only(left: 40, top: 4),
             child: DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _finishMarkId,
               isExpanded: true,
               decoration: const InputDecoration(

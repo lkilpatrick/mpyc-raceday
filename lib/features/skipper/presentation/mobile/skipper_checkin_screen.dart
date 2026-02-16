@@ -82,8 +82,7 @@ class _SkipperCheckinScreenState extends ConsumerState<SkipperCheckinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final memberAsync = ref.watch(currentUserProvider);
-    final member = memberAsync.value;
+    ref.watch(currentUserProvider);
     final fleetAsync = ref.watch(fleetProvider);
     final fleet = fleetAsync.value ?? [];
 
@@ -163,6 +162,7 @@ class _SkipperCheckinScreenState extends ConsumerState<SkipperCheckinScreen> {
                     if (!_useCustomBoat && fleet.isNotEmpty) ...[
                       // Fleet dropdown
                       DropdownButtonFormField<Boat>(
+                        // ignore: deprecated_member_use
                         value: _selectedFleetBoat,
                         isExpanded: true,
                         decoration: InputDecoration(

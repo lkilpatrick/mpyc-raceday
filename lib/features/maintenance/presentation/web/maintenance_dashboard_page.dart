@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/maintenance_request.dart';
-import '../../domain/maintenance_repository.dart';
 import '../maintenance_providers.dart';
 
 class MaintenanceDashboardPage extends ConsumerWidget {
@@ -260,7 +259,6 @@ class _BoatChecklistHistory extends StatelessWidget {
                     final items = d['items'] as List<dynamic>? ?? [];
                     final checked = items.where((i) => (i as Map)['checked'] == true).length;
                     final total = items.length;
-                    final pct = total > 0 ? (checked / total * 100).round() : 0;
 
                     DateTime? startedAt;
                     final startRaw = d['startedAt'];
@@ -268,14 +266,6 @@ class _BoatChecklistHistory extends StatelessWidget {
                       startedAt = startRaw.toDate();
                     } else if (startRaw is String) {
                       startedAt = DateTime.tryParse(startRaw);
-                    }
-
-                    DateTime? completedAt;
-                    final compRaw = d['completedAt'];
-                    if (compRaw is Timestamp) {
-                      completedAt = compRaw.toDate();
-                    } else if (compRaw is String) {
-                      completedAt = DateTime.tryParse(compRaw);
                     }
 
                     final (statusLabel, statusColor) = switch (status) {
@@ -491,7 +481,7 @@ class _BoatChecklistHistory extends StatelessWidget {
 
                       return ListView.separated(
                         itemCount: items.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, index) =>
                             const Divider(height: 1),
                         itemBuilder: (context, i) {
                           final item = items[i];

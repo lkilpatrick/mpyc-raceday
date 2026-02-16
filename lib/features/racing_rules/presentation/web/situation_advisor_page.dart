@@ -985,6 +985,7 @@ class _AdvisorProtestBridgeState extends ConsumerState<_AdvisorProtestBridge> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<int>(
+                        // ignore: deprecated_member_use
                         value: _raceNumber,
                         decoration: const InputDecoration(
                           labelText: 'Race #',

@@ -202,6 +202,7 @@ class _ClubspotTabState extends State<_ClubspotTab> {
           SizedBox(
             width: 300,
             child: DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _syncSchedule,
               decoration: const InputDecoration(
                 labelText: 'Sync Schedule',
@@ -466,6 +467,7 @@ class _WeatherSettingsTabState extends State<_WeatherSettingsTab> {
           SizedBox(
             width: 200,
             child: DropdownButtonFormField<int>(
+              // ignore: deprecated_member_use
               value: _pollingMinutes,
               decoration: const InputDecoration(
                 labelText: 'Polling Interval',
@@ -485,6 +487,7 @@ class _WeatherSettingsTabState extends State<_WeatherSettingsTab> {
           SizedBox(
             width: 200,
             child: DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _units,
               decoration: const InputDecoration(
                 labelText: 'Units',
@@ -577,6 +580,7 @@ class _RaceSettingsTabState extends State<_RaceSettingsTab> {
           SizedBox(
             width: 300,
             child: DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _handicapSystem,
               decoration: const InputDecoration(
                 labelText: 'Handicap System',
@@ -595,6 +599,7 @@ class _RaceSettingsTabState extends State<_RaceSettingsTab> {
           SizedBox(
             width: 300,
             child: DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _timingPrecision,
               decoration: const InputDecoration(
                 labelText: 'Timing Precision',
@@ -613,6 +618,7 @@ class _RaceSettingsTabState extends State<_RaceSettingsTab> {
           SizedBox(
             width: 300,
             child: DropdownButtonFormField<int>(
+              // ignore: deprecated_member_use
               value: _startSequenceMinutes,
               decoration: const InputDecoration(
                 labelText: 'Start Sequence',

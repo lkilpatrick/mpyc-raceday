@@ -80,7 +80,6 @@ void main() {
     });
 
     test('parses full document with all fields', () {
-      final now = DateTime.now();
       final session = RaceSession.fromDoc('evt2', {
         'name': 'Full Race',
         'status': 'scoring',
