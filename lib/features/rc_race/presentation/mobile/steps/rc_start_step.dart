@@ -38,7 +38,10 @@ class _RcStartStepState extends ConsumerState<RcStartStep> {
 
   @override
   void dispose() {
-    _stopListening();
+    _noiseSub?.cancel();
+    _noiseSub = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
     super.dispose();
   }
 
