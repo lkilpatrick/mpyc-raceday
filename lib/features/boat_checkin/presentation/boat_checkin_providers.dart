@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../courses/data/models/fleet.dart';
 import '../data/boat_checkin_repository_impl.dart';
 import '../data/models/boat.dart';
 import '../data/models/boat_checkin.dart';
@@ -26,6 +27,10 @@ final checkinsClosedProvider =
 
 final fleetProvider = StreamProvider<List<Boat>>((ref) {
   return ref.watch(boatCheckinRepositoryProvider).watchFleet();
+});
+
+final fleetDefinitionsProvider = StreamProvider<List<Fleet>>((ref) {
+  return ref.watch(boatCheckinRepositoryProvider).watchFleetDefinitions();
 });
 
 final boatsNotCheckedInProvider =

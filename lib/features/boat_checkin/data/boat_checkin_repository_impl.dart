@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../shared/services/audit_service.dart';
+import '../../courses/data/models/fleet.dart';
 import '../domain/boat_checkin_repository.dart';
 import 'models/boat.dart';
 import 'models/boat_checkin.dart';
@@ -17,6 +18,8 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
       _fs.collection('boat_checkins');
   CollectionReference<Map<String, dynamic>> get _fleetCol =>
       _fs.collection('boats');
+  CollectionReference<Map<String, dynamic>> get _fleetDefsCol =>
+      _fs.collection('fleet_definitions');
 
   // ── Firestore mapping ──
 
@@ -71,6 +74,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
       isRCFleet: d['isRCFleet'] as bool? ?? false,
       phone: d['phone'] as String?,
       email: d['email'] as String?,
+      fleet: d['fleet'] as String?,
     );
   }
 
@@ -87,6 +91,7 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
         'isRCFleet': b.isRCFleet,
         'phone': b.phone,
         'email': b.email,
+        'fleet': b.fleet,
       };
 
   // ── Check-ins ──
@@ -289,6 +294,55 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
         });
       }
     }
+  }
+
+  // ── Fleet Definitions ──
+
+  @override
+  Stream<List<Fleet>> watchFleetDefinitions() {
+    return _fleetDefsCol.orderBy('name').snapshots().map((snap) {
+      return snap.docs.map((doc) {
+        final d = doc.data();
+        return Fleet(
+          id: doc.id,
+          name: d['name'] as String? ?? '',
+          type: d['type'] as String? ?? 'handicap',
+          description: d['description'] as String? ?? '',
+        );
+      }).toList();
+    });
+  }
+
+  @override
+  Future<void> saveFleetDefinition(Fleet fleet) async {
+    final data = {
+      'name': fleet.name,
+      'type': fleet.type,
+      'description': fleet.description,
+    };
+    if (fleet.id.isEmpty) {
+      await _fleetDefsCol.add(data);
+    } else {
+      await _fleetDefsCol.doc(fleet.id).set(data, SetOptions(merge: true));
+    }
+    _audit.log(
+      action: fleet.id.isEmpty ? 'create_fleet_def' : 'update_fleet_def',
+      entityType: 'fleet_definition',
+      entityId: fleet.id,
+      category: 'checkin',
+      details: {'name': fleet.name, 'type': fleet.type},
+    );
+  }
+
+  @override
+  Future<void> deleteFleetDefinition(String fleetId) async {
+    await _fleetDefsCol.doc(fleetId).delete();
+    _audit.log(
+      action: 'delete_fleet_def',
+      entityType: 'fleet_definition',
+      entityId: fleetId,
+      category: 'checkin',
+    );
   }
 
   @override

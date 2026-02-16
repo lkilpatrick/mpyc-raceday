@@ -1,3 +1,4 @@
+import '../../courses/data/models/fleet.dart';
 import '../data/models/boat.dart';
 import '../data/models/boat_checkin.dart';
 
@@ -17,6 +18,11 @@ abstract class BoatCheckinRepository {
   Future<void> saveBoat(Boat boat);
   Future<void> deleteBoat(String boatId);
   Future<void> importFleetFromCsv(String csvContent);
+
+  // Fleet definitions (fleet groups)
+  Stream<List<Fleet>> watchFleetDefinitions();
+  Future<void> saveFleetDefinition(Fleet fleet);
+  Future<void> deleteFleetDefinition(String fleetId);
 
   // Historical lookup
   Future<List<Boat>> getBoatsNotCheckedIn(String eventId);

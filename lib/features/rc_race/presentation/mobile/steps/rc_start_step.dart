@@ -33,8 +33,8 @@ class _RcStartStepState extends ConsumerState<RcStartStep> {
   bool _hornDetected = false;
   bool _micPermissionDenied = false;
 
-  // Horn detection threshold — a loud horn is typically > 85 dB
-  static const _hornThresholdDb = 85.0;
+  // Horn detection threshold — requires a loud horn blast > 100 dB
+  static const _hornThresholdDb = 100.0;
 
   @override
   void dispose() {

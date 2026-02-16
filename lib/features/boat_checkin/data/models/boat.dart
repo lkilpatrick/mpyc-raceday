@@ -12,6 +12,7 @@ class Boat {
     this.isRCFleet = false,
     this.phone,
     this.email,
+    this.fleet,
   });
 
   final String id;
@@ -26,4 +27,5 @@ class Boat {
   final bool isRCFleet;
   final String? phone;
   final String? email;
+  final String? fleet;
 }

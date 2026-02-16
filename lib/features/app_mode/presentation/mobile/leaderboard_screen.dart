@@ -40,6 +40,10 @@ class LeaderboardScreen extends StatelessWidget {
           final raceStartId = eventData['raceStartId'] as String? ?? '';
           final status = eventData['status'] as String? ?? 'setup';
 
+          // Pre-race states — show a friendly waiting screen
+          final isPreRace = ['setup', 'checkin_open', 'start_pending']
+              .contains(status);
+
           return Column(
             children: [
               // Event header
@@ -78,9 +82,11 @@ class LeaderboardScreen extends StatelessWidget {
               ),
               // Results
               Expanded(
-                child: raceStartId.isNotEmpty
-                    ? _buildFinishResults(context, raceStartId)
-                    : _buildRaceStartFinder(context, eventId),
+                child: isPreRace
+                    ? _preRaceState(status)
+                    : raceStartId.isNotEmpty
+                        ? _buildFinishResults(context, raceStartId)
+                        : _buildRaceStartFinder(context, eventId),
               ),
             ],
           );
@@ -216,6 +222,60 @@ class LeaderboardScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _preRaceState(String status) {
+    final (icon, label, sublabel) = switch (status) {
+      'setup' => (
+        Icons.settings,
+        'Setting Up',
+        'The race committee is preparing the event'
+      ),
+      'checkin_open' => (
+        Icons.how_to_reg,
+        'Check-In Open',
+        'Boats are checking in — scoring starts after the race begins'
+      ),
+      'start_pending' => (
+        Icons.timer,
+        'Start Pending',
+        'The start sequence will begin shortly'
+      ),
+      _ => (
+        Icons.hourglass_empty,
+        'Preparing',
+        'Results will appear once the race starts'
+      ),
+    };
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 48, color: Colors.amber.shade700),
+            ),
+            const SizedBox(height: 20),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade700)),
+            const SizedBox(height: 8),
+            Text(sublabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          ],
+        ),
+      ),
     );
   }
 

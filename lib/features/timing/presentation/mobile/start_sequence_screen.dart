@@ -52,7 +52,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   Timer? _listenCountdown;
   StreamSubscription<NoiseReading>? _noiseSub;
   NoiseMeter? _noiseMeter;
-  static const _hornThresholdDb = 85.0;
+  static const _hornThresholdDb = 100.0;
 
   @override
   void dispose() {

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../../courses/data/models/course_config.dart';
 import '../../../../courses/data/models/fleet_broadcast.dart';
 import '../../../../courses/presentation/courses_providers.dart';
@@ -35,9 +36,16 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
   final Map<String, String> _fleetCourseIds = {};
   bool _initialized = false;
 
+  List<String> _firestoreFleetNames = [];
+
   void _initFromSession() {
     if (_initialized) return;
     _initialized = true;
+
+    // Load fleet names from Firestore definitions
+    final defs = ref.read(fleetDefinitionsProvider).value ?? [];
+    _firestoreFleetNames = defs.map((f) => f.name).toList();
+
     final fc = widget.session.fleetCourses;
     if (fc.isNotEmpty) {
       _fleets.addAll(fc.keys);
@@ -47,11 +55,17 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
     } else if (widget.session.courseId != null &&
         widget.session.courseId!.isNotEmpty) {
       // Migrate legacy single-course to first fleet
-      _fleets.add(_defaultFleets.first);
-      _fleetCourseIds[_defaultFleets.first] = widget.session.courseId!;
+      final firstName = _firestoreFleetNames.isNotEmpty
+          ? _firestoreFleetNames.first
+          : _defaultFleets.first;
+      _fleets.add(firstName);
+      _fleetCourseIds[firstName] = widget.session.courseId!;
     } else {
-      // Start with one fleet
-      _fleets.add(_defaultFleets.first);
+      // Start with one fleet from Firestore definitions or defaults
+      final firstName = _firestoreFleetNames.isNotEmpty
+          ? _firestoreFleetNames.first
+          : _defaultFleets.first;
+      _fleets.add(firstName);
     }
   }
 
@@ -143,45 +157,83 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
                   return aNum.compareTo(bNum);
                 });
 
-              return ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+              return Column(
                 children: [
-                  // Fleet cards
-                  for (var fi = 0; fi < _fleets.length; fi++)
-                    _FleetCourseCard(
-                      fleetName: _fleets[fi],
-                      courses: sorted,
-                      selectedCourseId: _fleetCourseIds[_fleets[fi]] ?? '',
-                      recommendedIds: recommendedIds,
-                      onCourseSelected: (courseId) {
+                  // Race start order header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.format_list_numbered,
+                            size: 16, color: Colors.grey.shade600),
+                        const SizedBox(width: 6),
+                        Text('Race Start Order',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade600)),
+                        const SizedBox(width: 6),
+                        Text('(drag to reorder)',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade400)),
+                      ],
+                    ),
+                  ),
+                  // Reorderable fleet cards
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: _fleets.length,
+                      onReorder: (oldIndex, newIndex) {
                         setState(() {
-                          _fleetCourseIds[_fleets[fi]] = courseId;
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _fleets.removeAt(oldIndex);
+                          _fleets.insert(newIndex, item);
                         });
                       },
-                      onRemove: _fleets.length > 1
-                          ? () {
-                              setState(() {
-                                final name = _fleets.removeAt(fi);
-                                _fleetCourseIds.remove(name);
-                              });
-                            }
-                          : null,
-                      onRename: (newName) {
-                        setState(() {
-                          final old = _fleets[fi];
-                          final courseId = _fleetCourseIds.remove(old);
-                          _fleets[fi] = newName;
-                          if (courseId != null) {
-                            _fleetCourseIds[newName] = courseId;
-                          }
-                        });
+                      itemBuilder: (_, fi) {
+                        return _FleetCourseCard(
+                          key: ValueKey(_fleets[fi]),
+                          fleetName: _fleets[fi],
+                          startOrder: fi + 1,
+                          courses: sorted,
+                          selectedCourseId:
+                              _fleetCourseIds[_fleets[fi]] ?? '',
+                          recommendedIds: recommendedIds,
+                          onCourseSelected: (courseId) {
+                            setState(() {
+                              _fleetCourseIds[_fleets[fi]] = courseId;
+                            });
+                          },
+                          onRemove: _fleets.length > 1
+                              ? () {
+                                  setState(() {
+                                    final name = _fleets.removeAt(fi);
+                                    _fleetCourseIds.remove(name);
+                                  });
+                                }
+                              : null,
+                          onRename: (newName) {
+                            setState(() {
+                              final old = _fleets[fi];
+                              final courseId =
+                                  _fleetCourseIds.remove(old);
+                              _fleets[fi] = newName;
+                              if (courseId != null) {
+                                _fleetCourseIds[newName] = courseId;
+                              }
+                            });
+                          },
+                        );
                       },
                     ),
-
+                  ),
                   // Add fleet button
                   if (_fleets.length < 4)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 12),
                       child: OutlinedButton.icon(
                         onPressed: _addFleet,
                         icon: const Icon(Icons.add, size: 18),
@@ -244,8 +296,11 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
       _fleetCourseIds.values.any((id) => id.isNotEmpty);
 
   void _addFleet() {
-    final available =
-        _defaultFleets.where((f) => !_fleets.contains(f)).toList();
+    // Prefer Firestore fleet definitions, fall back to defaults
+    final allNames = _firestoreFleetNames.isNotEmpty
+        ? _firestoreFleetNames
+        : _defaultFleets;
+    final available = allNames.where((f) => !_fleets.contains(f)).toList();
     if (available.isEmpty) return;
     setState(() => _fleets.add(available.first));
   }
@@ -373,7 +428,9 @@ class _RcSetupStepState extends ConsumerState<RcSetupStep> {
 
 class _FleetCourseCard extends StatelessWidget {
   const _FleetCourseCard({
+    super.key,
     required this.fleetName,
+    this.startOrder,
     required this.courses,
     required this.selectedCourseId,
     required this.recommendedIds,
@@ -383,6 +440,7 @@ class _FleetCourseCard extends StatelessWidget {
   });
 
   final String fleetName;
+  final int? startOrder;
   final List<CourseConfig> courses;
   final String selectedCourseId;
   final Set<String> recommendedIds;
@@ -407,6 +465,23 @@ class _FleetCourseCard extends StatelessWidget {
             // Fleet header
             Row(
               children: [
+                // Start order badge
+                if (startOrder != null)
+                  Container(
+                    width: 24,
+                    height: 24,
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('$startOrder',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                  ),
                 const Icon(Icons.sailing, size: 18, color: Colors.indigo),
                 const SizedBox(width: 6),
                 Expanded(
