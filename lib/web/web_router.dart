@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/no_access_page.dart';
 import 'package:mpyc_raceday/features/auth/presentation/web/web_login_page.dart';
+import 'package:mpyc_raceday/features/race_mode/presentation/race_replay_viewer.dart';
 import 'package:mpyc_raceday/web/web_shell.dart';
 
 final GoRouter webRouter = GoRouter(
@@ -59,6 +60,31 @@ final GoRouter webRouter = GoRouter(
         GoRoute(path: '/system-settings', builder: (context, state) => const SizedBox()),
         GoRoute(path: '/situation-advisor', builder: (context, state) => const SizedBox()),
         GoRoute(path: '/settings', builder: (context, state) => const SizedBox()),
+        GoRoute(
+          path: '/race-replay/:eventId',
+          builder: (context, state) {
+            final eventId = state.pathParameters['eventId']!;
+            final name = state.uri.queryParameters['name'] ?? 'Race Replay';
+            return RaceReplayViewer(
+              eventId: eventId,
+              eventName: name,
+              embedded: true,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/race-live-delayed/:eventId',
+          builder: (context, state) {
+            final eventId = state.pathParameters['eventId']!;
+            final name = state.uri.queryParameters['name'] ?? 'Delayed Live';
+            return RaceReplayViewer(
+              eventId: eventId,
+              eventName: name,
+              embedded: true,
+              delayDuration: const Duration(minutes: 5),
+            );
+          },
+        ),
       ],
     ),
   ],

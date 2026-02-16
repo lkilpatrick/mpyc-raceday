@@ -226,6 +226,12 @@ service cloud.firestore {
       allow write: if isRCChair();
     }
 
+    // ── Fleet Definitions (fleet groups for race management) ──
+    match /fleet_definitions/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
     // ── Race Starts (Timing) ──
     match /race_starts/{docId} {
       allow read: if isAuthenticated();
@@ -256,6 +262,22 @@ service cloud.firestore {
     match /live_positions/{posId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    // ── Live Tracks (GPS track points streamed during race) ──
+    match /live_tracks/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+
+      match /boats/{boatKey} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+
+        match /points/{pointId} {
+          allow read: if isAuthenticated();
+          allow write: if isAuthenticated();
+        }
+      }
     }
 
     // ── Race State (current race status) ──

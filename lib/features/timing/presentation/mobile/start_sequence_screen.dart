@@ -12,6 +12,7 @@ import '../../../boat_checkin/data/models/boat_checkin.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../courses/data/models/fleet_broadcast.dart';
 import '../../../courses/presentation/courses_providers.dart';
+import '../../../demo/demo_gps_service.dart';
 import '../../data/models/timing_models.dart';
 import '../timing_providers.dart';
 
@@ -42,6 +43,9 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   // Horn sound player
   final AudioPlayer _hornPlayer = AudioPlayer();
 
+  // Demo GPS streaming
+  DemoGpsService? _demoGps;
+
   // Horn listening state
   bool _listeningForHorn = false;
   bool _hornDetected = false;
@@ -59,6 +63,7 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     _timer?.cancel();
     _stopHornListening();
     _hornPlayer.dispose();
+    _demoGps?.stopStreaming();
     super.dispose();
   }
 
@@ -139,6 +144,22 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     _listenCountdown = null;
     if (mounted) {
       setState(() => _listeningForHorn = false);
+    }
+  }
+
+  /// Start mock GPS streaming for demo races.
+  Future<void> _startDemoGpsIfNeeded() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('race_events')
+          .doc(widget.eventId)
+          .get();
+      if (doc.data()?['isDemo'] == true) {
+        _demoGps = DemoGpsService();
+        _demoGps!.startStreaming(widget.eventId);
+      }
+    } catch (_) {
+      // Non-fatal
     }
   }
 
@@ -714,6 +735,8 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     _haptic();
     // Sync to race_events so skipper/crew/spectator modes see the timer
     _syncStartToRaceEvents(time);
+    // Start demo GPS streaming if this is a demo event
+    _startDemoGpsIfNeeded();
     // Timer continues counting up (negative countdown)
   }
 

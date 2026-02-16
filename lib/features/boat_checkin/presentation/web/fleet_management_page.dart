@@ -279,11 +279,17 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage>
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 FilledButton.icon(
+                  onPressed: _seedDefaultFleets,
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: const Text('Seed Default Fleets'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
                   onPressed: () => _showFleetDefDialog(null),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create First Fleet'),
+                  label: const Text('Create Custom Fleet'),
                 ),
               ],
             ),
@@ -632,6 +638,25 @@ class _FleetManagementPageState extends ConsumerState<FleetManagementPage>
     await ref
         .read(boatCheckinRepositoryProvider)
         .deleteFleetDefinition(fleet.id);
+  }
+
+  Future<void> _seedDefaultFleets() async {
+    final repo = ref.read(boatCheckinRepositoryProvider);
+    final defaults = [
+      const Fleet(id: '', name: 'Shields', type: 'one_design', description: 'Shields one-design fleet'),
+      const Fleet(id: '', name: 'Santana 22', type: 'one_design', description: 'Santana 22 one-design fleet'),
+      const Fleet(id: '', name: 'PHRF A', type: 'handicap', description: 'PHRF handicap fleet A (fast)'),
+      const Fleet(id: '', name: 'PHRF B', type: 'handicap', description: 'PHRF handicap fleet B'),
+      const Fleet(id: '', name: 'Cruiser', type: 'handicap', description: 'Cruiser/cruiser-racer fleet'),
+    ];
+    for (final fleet in defaults) {
+      await repo.saveFleetDefinition(fleet);
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Default fleets created!')),
+      );
+    }
   }
 
   Future<void> _deleteBoat(Boat boat) async {

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../auth/data/auth_providers.dart';
+import '../../../race_mode/data/gps_track_service.dart';
 import '../../../race_mode/data/models/race_track.dart';
 import '../widgets/weather_header.dart';
 
@@ -45,6 +46,10 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
   // Finish zone
   bool _inFinishZone = false;
   static const _defaultFinishZoneRadius = 200.0; // meters
+
+  // Track service for live_tracks storage
+  final _trackService = GpsTrackService();
+  DateTime? _lastTrackWrite;
 
   @override
   void initState() {
@@ -119,6 +124,7 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
     });
 
     _writeLivePosition(pos, speedKnots);
+    _writeTrackPoint(pos, speedKnots);
     _checkFinishZone(pos.latitude, pos.longitude);
   }
 
@@ -148,6 +154,35 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
       'source': 'skipper',
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  void _writeTrackPoint(Position pos, double speedKnots) {
+    // Throttle track writes to every 5 seconds
+    final now = DateTime.now();
+    if (_lastTrackWrite != null &&
+        now.difference(_lastTrackWrite!).inSeconds < 5) {
+      return;
+    }
+    _lastTrackWrite = now;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+    final member = ref.read(currentUserProvider).value;
+
+    _trackService.writeTrackPoint(
+      eventId: widget.eventId,
+      boatKey: uid,
+      point: TrackPoint(
+        lat: pos.latitude,
+        lon: pos.longitude,
+        timestamp: now,
+        speedKnots: speedKnots,
+        heading: pos.heading,
+        accuracy: pos.accuracy,
+      ),
+      sailNumber: member?.sailNumber,
+      boatName: member?.boatName,
+    );
   }
 
   void _checkFinishZone(double lat, double lon) {

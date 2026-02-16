@@ -27,6 +27,7 @@ import 'package:mpyc_raceday/features/maintenance/presentation/mobile/maintenanc
 import 'package:mpyc_raceday/features/auth/presentation/mobile/profile_screen.dart';
 import 'package:mpyc_raceday/features/weather/presentation/mobile/live_wind_screen.dart';
 import 'package:mpyc_raceday/features/race_mode/presentation/mobile/race_mode_screen.dart';
+import 'package:mpyc_raceday/features/race_mode/presentation/race_replay_viewer.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/mode_switcher_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_dashboard_screen.dart';
 import 'package:mpyc_raceday/features/app_mode/presentation/mobile/crew_chat_screen.dart';
@@ -391,6 +392,27 @@ final GoRouter mobileRouter = GoRouter(
     GoRoute(
       path: '/crew-incident',
       builder: (context, state) => const CrewIncidentScreen(),
+    ),
+    // ── Race Replay & Delayed Live ──
+    GoRoute(
+      path: '/race-replay/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        final name = state.uri.queryParameters['name'] ?? 'Race Replay';
+        return RaceReplayViewer(eventId: eventId, eventName: name);
+      },
+    ),
+    GoRoute(
+      path: '/race-live-delayed/:eventId',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId']!;
+        final name = state.uri.queryParameters['name'] ?? 'Delayed Live';
+        return RaceReplayViewer(
+          eventId: eventId,
+          eventName: name,
+          delayDuration: const Duration(minutes: 5),
+        );
+      },
     ),
   ],
 );

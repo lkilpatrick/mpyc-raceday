@@ -1026,25 +1026,226 @@ class _LiveMapCard extends StatelessWidget {
               );
             }
 
-            return FlutterMap(
+            // Layer 3: track polylines from live_tracks
+            return _TrackPolylineMap(
               mapController: mapController,
-              options: MapOptions(
-                initialCenter: _mpycCenter,
-                initialZoom: 13.5,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-                ),
-                if (markers.isNotEmpty) MarkerLayer(markers: markers),
-              ],
+              center: _mpycCenter,
+              markers: markers,
             );
           },
         );
       },
     );
   }
+}
+
+/// Wraps FlutterMap with live track polylines streamed from Firestore.
+class _TrackPolylineMap extends StatelessWidget {
+  const _TrackPolylineMap({
+    required this.mapController,
+    required this.center,
+    required this.markers,
+  });
+
+  final MapController mapController;
+  final LatLng center;
+  final List<Marker> markers;
+
+  @override
+  Widget build(BuildContext context) {
+    // Find today's event ID to query live_tracks
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('race_events')
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isLessThan: Timestamp.fromDate(todayEnd))
+          .limit(1)
+          .snapshots(),
+      builder: (context, eventSnap) {
+        final eventId = eventSnap.data?.docs.firstOrNull?.id;
+
+        if (eventId == null) {
+          return _buildMap(context, []);
+        }
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('live_tracks')
+              .doc(eventId)
+              .collection('boats')
+              .snapshots(),
+          builder: (context, boatSnap) {
+            final boatDocs = boatSnap.data?.docs ?? [];
+            if (boatDocs.isEmpty) {
+              return _buildMap(context, []);
+            }
+
+            // Build polylines from each boat's points subcollection
+            return _BoatTracksBuilder(
+              eventId: eventId,
+              boatDocs: boatDocs,
+              mapController: mapController,
+              center: center,
+              markers: markers,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMap(BuildContext context, List<Polyline> polylines) {
+    return FlutterMap(
+      mapController: mapController,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: 13.5,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate:
+              'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        ),
+        if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+        if (markers.isNotEmpty) MarkerLayer(markers: markers),
+      ],
+    );
+  }
+}
+
+/// Streams track points for each boat and builds polylines.
+class _BoatTracksBuilder extends StatelessWidget {
+  const _BoatTracksBuilder({
+    required this.eventId,
+    required this.boatDocs,
+    required this.mapController,
+    required this.center,
+    required this.markers,
+  });
+
+  final String eventId;
+  final List<QueryDocumentSnapshot> boatDocs;
+  final MapController mapController;
+  final LatLng center;
+  final List<Marker> markers;
+
+  static const _boatColors = [
+    Colors.blue,
+    Colors.red,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+    Colors.amber,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Use a multi-stream approach: query the last N points for each boat
+    // For performance, we limit to the most recent 200 points per boat
+    return StreamBuilder<List<_BoatTrackData>>(
+      stream: _watchAllBoatTracks(),
+      builder: (context, snap) {
+        final tracks = snap.data ?? [];
+        final polylines = <Polyline>[];
+
+        for (var i = 0; i < tracks.length; i++) {
+          final track = tracks[i];
+          if (track.points.length < 2) continue;
+          polylines.add(Polyline(
+            points: track.points,
+            color: _boatColors[i % _boatColors.length].withValues(alpha: 0.7),
+            strokeWidth: 2.5,
+          ));
+        }
+
+        return FlutterMap(
+          mapController: mapController,
+          options: MapOptions(
+            initialCenter: center,
+            initialZoom: 13.5,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate:
+                  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+            ),
+            if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+            if (markers.isNotEmpty) MarkerLayer(markers: markers),
+          ],
+        );
+      },
+    );
+  }
+
+  Stream<List<_BoatTrackData>> _watchAllBoatTracks() {
+    final streams = boatDocs.map((doc) {
+      return FirebaseFirestore.instance
+          .collection('live_tracks')
+          .doc(eventId)
+          .collection('boats')
+          .doc(doc.id)
+          .collection('points')
+          .orderBy('timestamp')
+          .limitToLast(200)
+          .snapshots()
+          .map((snap) => _BoatTrackData(
+                boatKey: doc.id,
+                points: snap.docs.map((d) {
+                  final data = d.data();
+                  return LatLng(
+                    (data['lat'] as num).toDouble(),
+                    (data['lon'] as num).toDouble(),
+                  );
+                }).toList(),
+              ));
+    }).toList();
+
+    if (streams.isEmpty) return Stream.value([]);
+
+    // Combine all streams
+    return streams.first.asyncExpand((first) {
+      if (streams.length == 1) return Stream.value([first]);
+      // For simplicity, use periodic polling to combine
+      return Stream.periodic(const Duration(seconds: 5)).asyncMap((_) async {
+        final results = <_BoatTrackData>[];
+        for (final doc in boatDocs) {
+          final snap = await FirebaseFirestore.instance
+              .collection('live_tracks')
+              .doc(eventId)
+              .collection('boats')
+              .doc(doc.id)
+              .collection('points')
+              .orderBy('timestamp')
+              .limitToLast(200)
+              .get();
+          results.add(_BoatTrackData(
+            boatKey: doc.id,
+            points: snap.docs.map((d) {
+              final data = d.data();
+              return LatLng(
+                (data['lat'] as num).toDouble(),
+                (data['lon'] as num).toDouble(),
+              );
+            }).toList(),
+          ));
+        }
+        return results;
+      });
+    });
+  }
+}
+
+class _BoatTrackData {
+  const _BoatTrackData({required this.boatKey, required this.points});
+  final String boatKey;
+  final List<LatLng> points;
 }
 
 class _LiveBoatCount extends StatelessWidget {
