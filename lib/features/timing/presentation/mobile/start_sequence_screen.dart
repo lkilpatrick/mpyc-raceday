@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:noise_meter/noise_meter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../boat_checkin/data/models/boat_checkin.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
@@ -40,9 +42,22 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
   // Horn sound player
   final AudioPlayer _hornPlayer = AudioPlayer();
 
+  // Horn listening state
+  bool _listeningForHorn = false;
+  bool _hornDetected = false;
+  bool _micPermissionDenied = false;
+  double _currentDb = 0;
+  double _peakDb = 0;
+  int _listenSecondsLeft = 120;
+  Timer? _listenCountdown;
+  StreamSubscription<NoiseReading>? _noiseSub;
+  NoiseMeter? _noiseMeter;
+  static const _hornThresholdDb = 85.0;
+
   @override
   void dispose() {
     _timer?.cancel();
+    _stopHornListening();
     _hornPlayer.dispose();
     super.dispose();
   }
@@ -54,6 +69,93 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
       await _hornPlayer.play(AssetSource('racecalendar/horn.mp3'));
     } catch (_) {
       // Non-fatal — haptic fallback
+    }
+  }
+
+  // ── Horn Listening ──
+
+  Future<void> _startHornListening() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        setState(() => _micPermissionDenied = true);
+      }
+      return;
+    }
+
+    _noiseMeter = NoiseMeter();
+    setState(() {
+      _listeningForHorn = true;
+      _hornDetected = false;
+      _listenSecondsLeft = 120;
+      _currentDb = 0;
+      _peakDb = 0;
+    });
+
+    _listenCountdown = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _listenSecondsLeft--);
+      if (_listenSecondsLeft <= 0) {
+        _stopHornListening();
+      }
+    });
+
+    try {
+      _noiseSub = _noiseMeter!.noise.listen((reading) {
+        if (!mounted) return;
+        final db = reading.meanDecibel;
+        setState(() {
+          _currentDb = db;
+          if (db > _peakDb) _peakDb = db;
+        });
+
+        if (db >= _hornThresholdDb && !_hornDetected) {
+          setState(() => _hornDetected = true);
+          HapticFeedback.heavyImpact();
+          _stopHornListening();
+          // Auto-start the sequence when horn is detected
+          if (!_running && !_started) {
+            _startSequence();
+          }
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _listeningForHorn = false;
+          _micPermissionDenied = true;
+        });
+      }
+    }
+  }
+
+  void _stopHornListening() {
+    _noiseSub?.cancel();
+    _noiseSub = null;
+    _listenCountdown?.cancel();
+    _listenCountdown = null;
+    if (mounted) {
+      setState(() => _listeningForHorn = false);
+    }
+  }
+
+  /// Sync the start time to the race_events collection so all modes
+  /// (skipper, crew, spectator) can see the live race timer.
+  Future<void> _syncStartToRaceEvents(DateTime startTime) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('race_events')
+          .doc(widget.eventId)
+          .update({
+        'status': 'running',
+        'startTime': Timestamp.fromDate(startTime),
+        'startMethod': 'start_sequence',
+      });
+    } catch (_) {
+      // Non-fatal — race_starts is the source of truth
     }
   }
 
@@ -135,7 +237,11 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
             Text(
               _started
                   ? 'RACING'
-                  : (_running ? 'SEQUENCE RUNNING' : 'READY'),
+                  : (_running
+                      ? 'SEQUENCE RUNNING'
+                      : (_listeningForHorn
+                          ? 'LISTENING FOR HORN'
+                          : 'READY')),
               style: TextStyle(
                 color: textColor.withValues(alpha: 0.7),
                 fontSize: 16,
@@ -143,6 +249,63 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
               ),
             ),
             const SizedBox(height: 8),
+
+            // Horn listening indicator
+            if (_listeningForHorn && !_running && !_started)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    Icon(
+                      _hornDetected ? Icons.check_circle : Icons.mic,
+                      size: 48,
+                      color: _hornDetected
+                          ? Colors.green
+                          : Colors.cyan.shade300,
+                    ),
+                    const SizedBox(height: 8),
+                    // dB meter bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: (_currentDb / 120).clamp(0, 1),
+                        minHeight: 16,
+                        backgroundColor: Colors.white12,
+                        valueColor: AlwaysStoppedAnimation(
+                          _currentDb >= _hornThresholdDb
+                              ? Colors.red
+                              : _currentDb >= 70
+                                  ? Colors.orange
+                                  : Colors.cyan,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${_currentDb.toStringAsFixed(0)} dB',
+                            style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 14,
+                                color: Colors.white70)),
+                        Text(
+                            'Peak: ${_peakDb.toStringAsFixed(0)} dB',
+                            style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                color: Colors.white38)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${(_listenSecondsLeft ~/ 60)}:${(_listenSecondsLeft % 60).toString().padLeft(2, '0')} remaining',
+                      style: const TextStyle(
+                          fontSize: 13, color: Colors.white54),
+                    ),
+                  ],
+                ),
+              ),
 
             // LARGE countdown/countup display
             Expanded(
@@ -179,22 +342,103 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: Column(
                 children: [
-                  if (!_running && !_started)
+                  // Pre-start: horn listening + manual override
+                  if (!_running && !_started && !_listeningForHorn) ...[
+                    // Mic permission denied warning
+                    if (_micPermissionDenied)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.mic_off,
+                                  color: Colors.orange, size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Mic permission denied. Use Manual Start.',
+                                  style: TextStyle(
+                                      color: Colors.orange, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // Listen for Horn button
                     SizedBox(
                       width: double.infinity,
                       height: 64,
-                      child: FilledButton(
-                        onPressed: _startSequence,
+                      child: FilledButton.icon(
+                        onPressed: _startHornListening,
+                        icon: const Icon(Icons.mic, size: 26),
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: Colors.cyan.shade700,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'START SEQUENCE',
+                        label: const Text(
+                          'LISTEN FOR HORN',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Manual override
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: _confirmManualStart,
+                        icon: const Icon(Icons.play_arrow,
+                            color: Colors.white70, size: 22),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: const BorderSide(color: Colors.white30),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        label: const Text(
+                          'MANUAL START (Override)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Listening state: stop button
+                  if (_listeningForHorn && !_running && !_started)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: _stopHornListening,
+                        icon: const Icon(Icons.stop,
+                            color: Colors.white70, size: 22),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: const BorderSide(color: Colors.white30),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        label: const Text(
+                          'STOP LISTENING',
+                          style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -468,6 +712,8 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
     });
     _playHorn(); // Rule 26: one horn at 0:00 (start)
     _haptic();
+    // Sync to race_events so skipper/crew/spectator modes see the timer
+    _syncStartToRaceEvents(time);
     // Timer continues counting up (negative countdown)
   }
 
@@ -776,6 +1022,33 @@ class _StartSequenceScreenState extends ConsumerState<StartSequenceScreen> {
       _prepFlag = false;
     });
     _haptic();
+  }
+
+  Future<void> _confirmManualStart() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Manual Start?'),
+        content: const Text(
+          'Start the sequence now without horn detection.\n'
+          'This will be recorded as a manual override.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('START NOW'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      _startSequence();
+    }
   }
 
   void _haptic() {

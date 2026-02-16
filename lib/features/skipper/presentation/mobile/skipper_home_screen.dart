@@ -338,8 +338,8 @@ class _ActiveRaceCard extends ConsumerWidget {
                 ),
               ),
 
-            // Race timer when running
-            if (isActive && startTime != null && isCheckedIn) ...[
+            // Race timer when running — visible to all skippers
+            if (isActive && startTime != null) ...[
               const SizedBox(height: 8),
               _RaceTimerBanner(startTime: startTime),
             ],
