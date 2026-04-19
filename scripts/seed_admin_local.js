@@ -37,7 +37,7 @@ async function seedAdmin() {
   }
 
   // Set custom claims
-  await admin.auth().setCustomUserClaims(uid, { role: "admin", memberId: "test-admin" });
+  await admin.auth().setCustomUserClaims(uid, { roles: ["web_admin"], memberId: "test-admin" });
   console.log("Custom claims set.");
 
   // Create member document
@@ -47,15 +47,17 @@ async function seedAdmin() {
     email: testEmail,
     mobileNumber: "",
     memberNumber: "ADMIN-001",
+    signalNumber: "1627",
     membershipStatus: "active",
     membershipCategory: "Staff",
     memberTags: ["admin", "rc"],
     clubspotId: "",
-    role: "admin",
+    roles: ["web_admin"],
     firebaseUid: uid,
     lastSynced: admin.firestore.FieldValue.serverTimestamp(),
     lastLogin: admin.firestore.FieldValue.serverTimestamp(),
     emergencyContact: { name: "", phone: "" },
+    isActive: true,
   }, { merge: true });
 
   console.log("Member document created/updated.");

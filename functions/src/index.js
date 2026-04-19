@@ -2360,7 +2360,7 @@ exports.seedTestAdmin = onCall(async (request) => {
 
     memberNumber: "ADMIN-001",
 
-    signalNumber: "001",
+    signalNumber: "1627",
 
     membershipStatus: "active",
 

@@ -179,15 +179,12 @@ class _WebLoginPageState extends ConsumerState<WebLoginPage> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'Email or Signal Number',
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Please enter a valid email';
+                            return 'Please enter your email or signal number';
                           }
                           return null;
                         },

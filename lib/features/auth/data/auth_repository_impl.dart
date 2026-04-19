@@ -54,9 +54,27 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Member> signInWithEmail(String email, String password) async {
+  Future<Member> signInWithEmail(String emailOrSignal, String password) async {
+    // Resolve signal number to email if the input doesn't look like an email
+    String resolvedEmail = emailOrSignal;
+    if (!emailOrSignal.contains('@')) {
+      final signalSnap = await _firestore
+          .collection('members')
+          .where('signalNumber', isEqualTo: emailOrSignal.trim())
+          .limit(1)
+          .get();
+      if (signalSnap.docs.isEmpty) {
+        throw Exception('No member found with signal number $emailOrSignal');
+      }
+      final memberEmail = signalSnap.docs.first.data()['email'] as String?;
+      if (memberEmail == null || memberEmail.isEmpty) {
+        throw Exception('No email on file for signal number $emailOrSignal');
+      }
+      resolvedEmail = memberEmail;
+    }
+
     final credential = await _auth.signInWithEmailAndPassword(
-      email: email,
+      email: resolvedEmail,
       password: password,
     );
     final uid = credential.user?.uid;
@@ -73,7 +91,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // Try matching by email
       final emailSnap = await _firestore
           .collection('members')
-          .where('email', isEqualTo: email)
+          .where('email', isEqualTo: resolvedEmail)
           .limit(1)
           .get();
       if (emailSnap.docs.isEmpty) {
