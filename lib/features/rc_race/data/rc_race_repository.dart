@@ -6,7 +6,7 @@ import 'models/race_session.dart';
 /// Operates on the existing `race_events` collection, adding RC-flow fields.
 class RcRaceRepository {
   RcRaceRepository({FirebaseFirestore? firestore})
-      : _fs = firestore ?? FirebaseFirestore.instance;
+    : _fs = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _fs;
 
@@ -20,16 +20,15 @@ class RcRaceRepository {
     final todayEnd = todayStart.add(const Duration(days: 1));
 
     return _events
-        .where('date',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
         .where('date', isLessThan: Timestamp.fromDate(todayEnd))
         .limit(1)
         .snapshots()
         .map((snap) {
-      if (snap.docs.isEmpty) return null;
-      final doc = snap.docs.first;
-      return RaceSession.fromDoc(doc.id, doc.data());
-    });
+          if (snap.docs.isEmpty) return null;
+          final doc = snap.docs.first;
+          return RaceSession.fromDoc(doc.id, doc.data());
+        });
   }
 
   /// Watch a specific session by ID.
@@ -41,18 +40,17 @@ class RcRaceRepository {
   }
 
   /// Transition the session status.
-  Future<void> updateStatus(
-      String eventId, RaceSessionStatus status) async {
-    await _events.doc(eventId).update({
-      'status': status.firestoreValue,
-    });
+  Future<void> updateStatus(String eventId, RaceSessionStatus status) async {
+    await _events.doc(eventId).update({'status': status.firestoreValue});
   }
 
   /// Set the course on the session.
-  Future<void> setCourse(String eventId,
-      {required String courseId,
-      required String courseName,
-      required String courseNumber}) async {
+  Future<void> setCourse(
+    String eventId, {
+    required String courseId,
+    required String courseName,
+    required String courseNumber,
+  }) async {
     await _events.doc(eventId).update({
       'courseId': courseId,
       'courseName': courseName,
@@ -61,10 +59,12 @@ class RcRaceRepository {
   }
 
   /// Record the race start.
-  Future<void> recordStart(String eventId,
-      {required String raceStartId,
-      required DateTime startTime,
-      required String method}) async {
+  Future<void> recordStart(
+    String eventId, {
+    required String raceStartId,
+    required DateTime startTime,
+    required String method,
+  }) async {
     await _events.doc(eventId).update({
       'status': RaceSessionStatus.running.firestoreValue,
       'raceStartId': raceStartId,
@@ -97,12 +97,29 @@ class RcRaceRepository {
   }
 
   /// Undo an abandon — restore to the given status (default: scoring).
-  Future<void> unAbandonRace(String eventId,
-      {RaceSessionStatus restoreTo = RaceSessionStatus.scoring}) async {
+  Future<void> unAbandonRace(
+    String eventId, {
+    RaceSessionStatus restoreTo = RaceSessionStatus.scoring,
+  }) async {
     await _events.doc(eventId).update({
       'status': restoreTo.firestoreValue,
       'abandonedAt': FieldValue.delete(),
       'abandonedReason': FieldValue.delete(),
+    });
+  }
+
+  /// Reset a race back to setup — clears all race-run data so the event
+  /// can be re-run (e.g. after an improper abandon or rescheduling).
+  Future<void> resetRace(String eventId) async {
+    await _events.doc(eventId).update({
+      'status': RaceSessionStatus.setup.firestoreValue,
+      'startTime': FieldValue.delete(),
+      'raceStartId': FieldValue.delete(),
+      'startMethod': FieldValue.delete(),
+      'abandonedAt': FieldValue.delete(),
+      'abandonedReason': FieldValue.delete(),
+      'finalizedAt': FieldValue.delete(),
+      'clubspotReady': false,
     });
   }
 

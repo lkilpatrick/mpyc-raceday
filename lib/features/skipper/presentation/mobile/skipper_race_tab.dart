@@ -27,8 +27,10 @@ class SkipperRaceTab extends ConsumerWidget {
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('race_events')
-                .where('date',
-                    isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+                .where(
+                  'date',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart),
+                )
                 .where('date', isLessThan: Timestamp.fromDate(todayEnd))
                 .limit(1)
                 .snapshots(),
@@ -54,11 +56,10 @@ class SkipperRaceTab extends ConsumerWidget {
                     .limit(1)
                     .snapshots(),
                 builder: (context, checkinSnap) {
-                  final isCheckedIn =
-                      (checkinSnap.data?.docs ?? []).isNotEmpty;
+                  final isCheckedIn = (checkinSnap.data?.docs ?? []).isNotEmpty;
                   final checkinData = isCheckedIn
                       ? checkinSnap.data!.docs.first.data()
-                          as Map<String, dynamic>
+                            as Map<String, dynamic>
                       : null;
                   final boatStatus =
                       checkinData?['status'] as String? ?? 'checked_in';
@@ -89,14 +90,19 @@ class SkipperRaceTab extends ConsumerWidget {
         children: [
           Icon(Icons.sailing, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          const Text('No race today',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey)),
+          const Text(
+            'No race today',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Check back on race day',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+          Text(
+            'Check back on race day',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: () => context.push('/skipper-results'),
@@ -119,25 +125,29 @@ class SkipperRaceTab extends ConsumerWidget {
     required String boatStatus,
   }) {
     final isActive = ['running', 'scoring'].contains(status);
-    final isPreStart =
-        ['setup', 'checkin_open', 'start_pending'].contains(status);
+    final isPreStart = [
+      'setup',
+      'checkin_open',
+      'start_pending',
+    ].contains(status);
     final isFinished = ['review', 'finalized'].contains(status);
     final isAbandoned = status == 'abandoned';
-    final hasFinishedRace =
-        boatStatus == 'finished' || boatStatus == 'dnf';
+    final hasFinishedRace = boatStatus == 'finished' || boatStatus == 'dnf';
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           // Race name + course
-          Text(name,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           if (courseName != null)
-            Text('Course: $courseName',
-                style: TextStyle(
-                    fontSize: 13, color: Colors.grey.shade600)),
+            Text(
+              'Course: $courseName',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
           const SizedBox(height: 16),
 
           // Timer section
@@ -145,8 +155,7 @@ class SkipperRaceTab extends ConsumerWidget {
             _LiveTimer(startTime: startTime),
             const SizedBox(height: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.green.shade50,
                 borderRadius: BorderRadius.circular(20),
@@ -156,27 +165,32 @@ class SkipperRaceTab extends ConsumerWidget {
                 children: [
                   Icon(Icons.circle, size: 10, color: Colors.green),
                   SizedBox(width: 6),
-                  Text('RACING',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                          fontSize: 14)),
+                  Text(
+                    'RACING',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
 
           if (isPreStart) ...[
-            const Text('00:00',
-                style: TextStyle(
-                    fontSize: 64,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: Colors.grey)),
+            const Text(
+              '00:00',
+              style: TextStyle(
+                fontSize: 64,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                color: Colors.grey,
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(20),
@@ -184,19 +198,23 @@ class SkipperRaceTab extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.hourglass_empty,
-                      size: 16, color: Colors.orange),
+                  const Icon(
+                    Icons.hourglass_empty,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     status == 'checkin_open'
                         ? 'Check-In Open'
                         : status == 'start_pending'
-                            ? 'Start Pending'
-                            : 'Setting Up',
+                        ? 'Start Pending'
+                        : 'Setting Up',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                        fontSize: 14),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -206,22 +224,27 @@ class SkipperRaceTab extends ConsumerWidget {
           if (isAbandoned) ...[
             Icon(Icons.cancel, size: 56, color: Colors.red.shade300),
             const SizedBox(height: 8),
-            const Text('Race Abandoned',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red)),
+            const Text(
+              'Race Abandoned',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
           ],
 
           if (isFinished) ...[
-            Icon(Icons.check_circle,
-                size: 56, color: Colors.green.shade300),
+            Icon(Icons.check_circle, size: 56, color: Colors.green.shade300),
             const SizedBox(height: 8),
-            const Text('Race Complete',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green)),
+            const Text(
+              'Race Complete',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
           ],
 
           // Check-in status
@@ -230,11 +253,30 @@ class SkipperRaceTab extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.gps_fixed, size: 14, color: Colors.green.shade700),
+                Icon(
+                  Icons.check_circle,
+                  size: 14,
+                  color: Colors.green.shade700,
+                ),
                 const SizedBox(width: 4),
-                Text('Checked in — GPS transmitting',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.green.shade700)),
+                Text(
+                  'Checked in',
+                  style: TextStyle(fontSize: 12, color: Colors.green.shade700),
+                ),
+                if (isActive) ...[
+                  const SizedBox(width: 8),
+                  const Text(
+                    '·',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.gps_fixed, size: 14, color: Colors.blue),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Open Race Mode to track',
+                    style: TextStyle(fontSize: 12, color: Colors.blue),
+                  ),
+                ],
               ],
             ),
           ],
@@ -253,9 +295,9 @@ class SkipperRaceTab extends ConsumerWidget {
                 Text(
                   boatStatus == 'dnf' ? 'Did Not Finish' : 'Finished',
                   style: TextStyle(
-                      fontSize: 12,
-                      color:
-                          boatStatus == 'dnf' ? Colors.red : Colors.blue),
+                    fontSize: 12,
+                    color: boatStatus == 'dnf' ? Colors.red : Colors.blue,
+                  ),
                 ),
               ],
             ),
@@ -269,11 +311,9 @@ class SkipperRaceTab extends ConsumerWidget {
               width: double.infinity,
               height: 56,
               child: FilledButton.icon(
-                onPressed: () =>
-                    context.push('/skipper-checkin/$eventId'),
+                onPressed: () => context.push('/skipper-checkin/$eventId'),
                 icon: const Icon(Icons.how_to_reg, size: 24),
-                label: const Text('Check In',
-                    style: TextStyle(fontSize: 18)),
+                label: const Text('Check In', style: TextStyle(fontSize: 18)),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.teal,
                   shape: RoundedRectangleBorder(
@@ -288,11 +328,12 @@ class SkipperRaceTab extends ConsumerWidget {
               width: double.infinity,
               height: 56,
               child: FilledButton.icon(
-                onPressed: () =>
-                    context.push('/skipper-race/$eventId'),
+                onPressed: () => context.push('/skipper-race/$eventId'),
                 icon: const Icon(Icons.sailing, size: 24),
-                label: const Text('Open Race Mode',
-                    style: TextStyle(fontSize: 18)),
+                label: const Text(
+                  'Open Race Mode',
+                  style: TextStyle(fontSize: 18),
+                ),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(

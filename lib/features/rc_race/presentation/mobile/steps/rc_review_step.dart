@@ -79,9 +79,13 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
               children: [
                 Icon(Icons.cloud_upload, color: Colors.indigo),
                 SizedBox(width: 8),
-                Text('Ready for Clubspot Export',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.indigo)),
+                Text(
+                  'Ready for Clubspot Export',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo,
+                  ),
+                ),
               ],
             ),
           ),
@@ -93,25 +97,31 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Race Summary',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Race Summary',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const Divider(),
                 _SummaryRow('Event', session.name),
-                _SummaryRow('Date',
-                    DateFormat.yMMMd().format(session.date)),
-                _SummaryRow('Course',
-                    'Course ${session.courseNumber ?? '?'} — ${session.courseName ?? 'Not set'}'),
+                _SummaryRow('Date', DateFormat.yMMMd().format(session.date)),
+                _SummaryRow(
+                  'Course',
+                  'Course ${session.courseNumber ?? '?'} — ${session.courseName ?? 'Not set'}',
+                ),
                 _SummaryRow('Boats Checked In', '$checkinCount'),
                 if (session.startTime != null)
-                  _SummaryRow('Start Time',
-                      DateFormat.Hms().format(session.startTime!)),
-                _SummaryRow('Start Method',
-                    session.startMethod == 'horn'
-                        ? 'Horn Detected'
-                        : session.startMethod == 'manual'
-                            ? 'Manual Override'
-                            : '—'),
+                  _SummaryRow(
+                    'Start Time',
+                    DateFormat.Hms().format(session.startTime!),
+                  ),
+                _SummaryRow(
+                  'Start Method',
+                  session.startMethod == 'horn'
+                      ? 'Horn Detected'
+                      : session.startMethod == 'manual'
+                      ? 'Manual Override'
+                      : '—',
+                ),
               ],
             ),
           ),
@@ -125,25 +135,29 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Results',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Results',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const Divider(),
                 finishesAsync.when(
-                  loading: () => const Center(
-                      child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text('Error: $e'),
                   data: (finishes) {
                     if (finishes.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(12),
-                        child: Text('No finishes recorded',
-                            style: TextStyle(color: Colors.grey)),
+                        child: Text(
+                          'No finishes recorded',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       );
                     }
 
                     // Sort: finished boats by position, then specials
-                    final sorted = [...finishes]..sort((a, b) {
+                    final sorted = [...finishes]
+                      ..sort((a, b) {
                         if (a.letterScore == LetterScore.finished &&
                             b.letterScore == LetterScore.finished) {
                           return a.position.compareTo(b.position);
@@ -158,41 +172,60 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
                         // Header
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
                           color: Colors.grey.shade100,
                           child: const Row(
                             children: [
                               SizedBox(
-                                  width: 36,
-                                  child: Text('Pos',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12))),
+                                width: 36,
+                                child: Text(
+                                  'Pos',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
                               Expanded(
-                                  child: Text('Boat',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12))),
+                                child: Text(
+                                  'Boat',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
                               SizedBox(
-                                  width: 70,
-                                  child: Text('Elapsed',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12))),
+                                width: 70,
+                                child: Text(
+                                  'Elapsed',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
                               SizedBox(
-                                  width: 50,
-                                  child: Text('Status',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12))),
+                                width: 50,
+                                child: Text(
+                                  'Status',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         ...sorted.map((f) {
                           final isFinished =
                               f.letterScore == LetterScore.finished;
-                          final elapsed =
-                              Duration(seconds: f.elapsedSeconds.toInt());
+                          final elapsed = Duration(
+                            seconds: f.elapsedSeconds.toInt(),
+                          );
                           final elapsedStr = isFinished
                               ? '${elapsed.inMinutes}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}'
                               : '—';
@@ -202,11 +235,12 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
 
                           return Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 8),
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               border: Border(
-                                bottom: BorderSide(
-                                    color: Colors.grey.shade200),
+                                bottom: BorderSide(color: Colors.grey.shade200),
                               ),
                             ),
                             child: Row(
@@ -231,22 +265,26 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
                                 ),
                                 SizedBox(
                                   width: 70,
-                                  child: Text(elapsedStr,
-                                      style: const TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 12)),
+                                  child: Text(
+                                    elapsedStr,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                                 SizedBox(
                                   width: 50,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 2),
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: isFinished
                                           ? Colors.green.shade50
                                           : Colors.orange.shade50,
-                                      borderRadius:
-                                          BorderRadius.circular(4),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       statusStr,
@@ -283,9 +321,10 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Notes',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Notes',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _notesController,
@@ -325,16 +364,17 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child:
-                          CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.lock),
               label: Text(
                 _finalizing ? 'Finalizing...' : 'Finalize Results',
                 style: const TextStyle(fontSize: 16),
               ),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.indigo,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
             ),
           ),
         ],
@@ -346,10 +386,26 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
             child: FilledButton.icon(
               onPressed: () => _undoAbandon(),
               icon: const Icon(Icons.undo),
-              label: const Text('Undo Abandon — Resume Race',
-                  style: TextStyle(fontSize: 16)),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.orange,
+              label: const Text(
+                'Undo Abandon — Resume Race',
+                style: TextStyle(fontSize: 16),
+              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => _resetRaceToSetup(),
+              icon: const Icon(Icons.restart_alt, color: Colors.grey),
+              label: const Text(
+                'Reset Race to Setup',
+                style: TextStyle(color: Colors.grey),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.grey.shade400),
               ),
             ),
           ),
@@ -375,9 +431,7 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
                 onPressed: _resetDemo,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reset Demo Race'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                ),
+                style: FilledButton.styleFrom(backgroundColor: Colors.orange),
               ),
             ),
           ],
@@ -421,9 +475,9 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reset failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Reset failed: $e')));
       }
     }
   }
@@ -452,9 +506,38 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
     );
     if (confirm != true) return;
 
-    await ref
-        .read(rcRaceRepositoryProvider)
-        .unAbandonRace(widget.session.id);
+    await ref.read(rcRaceRepositoryProvider).unAbandonRace(widget.session.id);
+  }
+
+  Future<void> _resetRaceToSetup() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Race to Setup?'),
+        content: const Text(
+          'This clears the start time, race start record, and abandon status, '
+          'returning the race to the Setup step so it can be re-run.\n\n'
+          'Finish records and check-ins are preserved but will no longer be linked '
+          'to an active race.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.grey.shade700,
+            ),
+            child: const Text('RESET'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    await ref.read(rcRaceRepositoryProvider).resetRace(widget.session.id);
   }
 
   Future<void> _backToScoring() async {
@@ -489,7 +572,9 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
 
     setState(() => _finalizing = true);
     try {
-      await ref.read(rcRaceRepositoryProvider).finalizeResults(
+      await ref
+          .read(rcRaceRepositoryProvider)
+          .finalizeResults(
             widget.session.id,
             notes: _notesController.text.trim().isNotEmpty
                 ? _notesController.text.trim()
@@ -497,9 +582,9 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
           );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _finalizing = false);
@@ -538,14 +623,18 @@ class _StatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: color)),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey.shade700)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
               ],
             ),
           ),
@@ -569,14 +658,16 @@ class _SummaryRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.grey)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

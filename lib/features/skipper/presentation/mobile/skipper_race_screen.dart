@@ -46,6 +46,12 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
   // Finish zone
   bool _inFinishZone = false;
   static const _defaultFinishZoneRadius = 200.0; // meters
+  double? _finishLat;
+  double? _finishLon;
+  double _finishRadius = _defaultFinishZoneRadius;
+
+  // GPS permission state
+  bool _permissionDenied = false;
 
   // Track service for live_tracks storage
   final _trackService = GpsTrackService();
@@ -74,6 +80,7 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
     }
     if (perm == LocationPermission.denied ||
         perm == LocationPermission.deniedForever) {
+      if (mounted) setState(() => _permissionDenied = true);
       return;
     }
 
@@ -112,7 +119,10 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
     if (_trackPoints.isNotEmpty) {
       final last = _trackPoints.last;
       final distMeters = Geolocator.distanceBetween(
-        last.lat, last.lon, pos.latitude, pos.longitude,
+        last.lat,
+        last.lon,
+        pos.latitude,
+        pos.longitude,
       );
       _totalDistanceNm += distMeters / 1852.0;
     }
@@ -186,10 +196,12 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
   }
 
   void _checkFinishZone(double lat, double lon) {
-    // Check against finish zone stored on the race event
-    // For now use a simple approach: if race_event has finishLat/finishLon
-    // we check proximity. This will be enhanced later.
-    // The _inFinishZone flag is also set from the Firestore stream below.
+    if (_finishLat == null || _finishLon == null) return;
+    final dist = Geolocator.distanceBetween(lat, lon, _finishLat!, _finishLon!);
+    final inZone = dist <= _finishRadius;
+    if (inZone != _inFinishZone) {
+      setState(() => _inFinishZone = inZone);
+    }
   }
 
   Future<void> _finishRace() async {
@@ -305,10 +317,8 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
       final avgSpeed = _trackPoints.isNotEmpty
-          ? _trackPoints
-                  .map((p) => p.speedKnots ?? 0)
-                  .reduce((a, b) => a + b) /
-              _trackPoints.length
+          ? _trackPoints.map((p) => p.speedKnots ?? 0).reduce((a, b) => a + b) /
+                _trackPoints.length
           : 0.0;
 
       final track = RaceTrack(
@@ -350,9 +360,9 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _uploading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     }
   }
@@ -396,13 +406,11 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                 final status = d['status'] as String? ?? '';
 
                 // Check for finish zone coordinates
-                final finishLat =
-                    (d['finishLat'] as num?)?.toDouble();
-                final finishLon =
-                    (d['finishLon'] as num?)?.toDouble();
+                final finishLat = (d['finishLat'] as num?)?.toDouble();
+                final finishLon = (d['finishLon'] as num?)?.toDouble();
                 final finishRadius =
                     (d['finishZoneRadius'] as num?)?.toDouble() ??
-                        _defaultFinishZoneRadius;
+                    _defaultFinishZoneRadius;
 
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) {
@@ -417,18 +425,16 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                         setState(() => _finished = true);
                       }
                     }
-                    // Update finish zone check
-                    if (finishLat != null &&
-                        finishLon != null &&
-                        _trackPoints.isNotEmpty) {
-                      final last = _trackPoints.last;
-                      final dist = Geolocator.distanceBetween(
-                        last.lat, last.lon, finishLat, finishLon,
-                      );
-                      final inZone = dist <= finishRadius;
-                      if (inZone != _inFinishZone) {
-                        setState(() => _inFinishZone = inZone);
-                      }
+                    // Store finish zone coords so _checkFinishZone can use
+                    // them on every GPS tick rather than only on doc changes.
+                    if (_finishLat != finishLat ||
+                        _finishLon != finishLon ||
+                        _finishRadius != finishRadius) {
+                      setState(() {
+                        _finishLat = finishLat;
+                        _finishLon = finishLon;
+                        _finishRadius = finishRadius;
+                      });
                     }
                   }
                 });
@@ -441,20 +447,75 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  // GPS permission denied banner
+                  if (_permissionDenied) ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      color: Colors.red.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.gps_off, color: Colors.red),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Location permission denied.\n'
+                                    'GPS tracking is disabled.',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  await Geolocator.openAppSettings();
+                                },
+                                icon: const Icon(Icons.settings, size: 16),
+                                label: const Text('Open App Settings'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
                   // Timer
                   if (_raceStartTime == null && !_finished) ...[
                     const SizedBox(height: 24),
-                    Icon(Icons.hourglass_empty,
-                        size: 48, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.hourglass_empty,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 8),
-                    Text('Waiting for race start...',
-                        style: TextStyle(
-                            fontSize: 16, color: Colors.grey.shade600)),
+                    Text(
+                      'Waiting for race start...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Timer will start automatically when RC starts the race.',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
-                        textAlign: TextAlign.center),
+                    Text(
+                      'Timer will start automatically when RC starts the race.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
 
                   if (_raceStartTime != null || _finished) ...[
@@ -472,16 +533,17 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                       Text(
                         'Started ${DateFormat.jm().format(_raceStartTime!)}',
                         style: TextStyle(
-                            fontSize: 13,
-                            color: isRacing
-                                ? Colors.white60
-                                : Colors.grey),
+                          fontSize: 13,
+                          color: isRacing ? Colors.white60 : Colors.grey,
+                        ),
                       ),
                     if (_finishTime != null)
                       Text(
                         'Finished ${DateFormat.jm().format(_finishTime!)}',
                         style: const TextStyle(
-                            fontSize: 13, color: Colors.green),
+                          fontSize: 13,
+                          color: Colors.green,
+                        ),
                       ),
                   ],
 
@@ -491,21 +553,33 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                   if (_trackPoints.isNotEmpty)
                     Row(
                       children: [
-                        _StatTile('Speed',
-                            _currentSpeedKnots.toStringAsFixed(1), 'kts',
-                            dark: isRacing),
-                        const SizedBox(width: 6),
-                        _StatTile('Max',
-                            _maxSpeedKnots.toStringAsFixed(1), 'kts',
-                            dark: isRacing),
-                        const SizedBox(width: 6),
-                        _StatTile('Dist',
-                            _totalDistanceNm.toStringAsFixed(2), 'NM',
-                            dark: isRacing),
+                        _StatTile(
+                          'Speed',
+                          _currentSpeedKnots.toStringAsFixed(1),
+                          'kts',
+                          dark: isRacing,
+                        ),
                         const SizedBox(width: 6),
                         _StatTile(
-                            'Pts', '${_trackPoints.length}', '',
-                            dark: isRacing),
+                          'Max',
+                          _maxSpeedKnots.toStringAsFixed(1),
+                          'kts',
+                          dark: isRacing,
+                        ),
+                        const SizedBox(width: 6),
+                        _StatTile(
+                          'Dist',
+                          _totalDistanceNm.toStringAsFixed(2),
+                          'NM',
+                          dark: isRacing,
+                        ),
+                        const SizedBox(width: 6),
+                        _StatTile(
+                          'Pts',
+                          '${_trackPoints.length}',
+                          '',
+                          dark: isRacing,
+                        ),
                       ],
                     ),
 
@@ -516,11 +590,13 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.gps_fixed,
-                            size: 14,
-                            color: _trackPoints.isNotEmpty
-                                ? Colors.green
-                                : Colors.orange),
+                        Icon(
+                          Icons.gps_fixed,
+                          size: 14,
+                          color: _trackPoints.isNotEmpty
+                              ? Colors.green
+                              : Colors.orange,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _trackPoints.isNotEmpty
@@ -541,7 +617,9 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber.shade100,
                         borderRadius: BorderRadius.circular(8),
@@ -552,11 +630,14 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                         children: [
                           Icon(Icons.flag, size: 16, color: Colors.amber),
                           SizedBox(width: 4),
-                          Text('In Finish Zone',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: Colors.amber)),
+                          Text(
+                            'In Finish Zone',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.amber,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -596,13 +677,13 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                       height: _inFinishZone ? 72 : 56,
                       child: FilledButton.icon(
                         onPressed: _finishRace,
-                        icon: Icon(Icons.flag,
-                            size: _inFinishZone ? 28 : 22),
+                        icon: Icon(Icons.flag, size: _inFinishZone ? 28 : 22),
                         label: Text(
                           'FINISH RACE',
                           style: TextStyle(
-                              fontSize: _inFinishZone ? 22 : 18,
-                              fontWeight: FontWeight.bold),
+                            fontSize: _inFinishZone ? 22 : 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: _inFinishZone
@@ -638,21 +719,22 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                         width: double.infinity,
                         height: 52,
                         child: FilledButton.icon(
-                          onPressed:
-                              _uploading || _trackPoints.isEmpty
-                                  ? null
-                                  : _uploadTrack,
+                          onPressed: _uploading || _trackPoints.isEmpty
+                              ? null
+                              : _uploadTrack,
                           icon: _uploading
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white))
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
                               : const Icon(Icons.cloud_upload),
-                          label: Text(_uploading
-                              ? 'Uploading...'
-                              : 'Upload Track'),
+                          label: Text(
+                            _uploading ? 'Uploading...' : 'Upload Track',
+                          ),
                           style: FilledButton.styleFrom(
                             backgroundColor: Colors.blue,
                             shape: RoundedRectangleBorder(
@@ -662,13 +744,19 @@ class _SkipperRaceScreenState extends ConsumerState<SkipperRaceScreen> {
                         ),
                       ),
                     if (_uploaded) ...[
-                      const Icon(Icons.check_circle,
-                          size: 40, color: Colors.green),
+                      const Icon(
+                        Icons.check_circle,
+                        size: 40,
+                        color: Colors.green,
+                      ),
                       const SizedBox(height: 4),
-                      const Text('Track uploaded!',
-                          style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Track uploaded!',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 12),
                     FilledButton(
@@ -708,21 +796,30 @@ class _StatTile extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: dark ? Colors.white60 : Colors.grey)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: dark ? Colors.white60 : Colors.grey,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: dark ? Colors.white : null)),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: dark ? Colors.white : null,
+              ),
+            ),
             if (unit.isNotEmpty)
-              Text(unit,
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: dark ? Colors.white60 : Colors.grey)),
+              Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: dark ? Colors.white60 : Colors.grey,
+                ),
+              ),
           ],
         ),
       ),

@@ -60,14 +60,19 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               // Abandon button
               Expanded(
                 child: SizedBox(
-                  height: 56,
+                  height: 48,
                   child: OutlinedButton.icon(
                     onPressed: () => _confirmAbandon(context),
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    label: const Text('Abandon',
-                        style: TextStyle(color: Colors.red)),
+                    icon: const Icon(Icons.cancel, color: Colors.red, size: 16),
+                    label: const Text(
+                      'Abandon',
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.red, fontSize: 13),
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
                 ),
@@ -77,12 +82,14 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               Expanded(
                 flex: 2,
                 child: SizedBox(
-                  height: 56,
+                  height: 48,
                   child: FilledButton.icon(
                     onPressed: () => _moveToScoring(),
-                    icon: const Icon(Icons.sports_score),
-                    label: const Text('Begin Scoring',
-                        style: TextStyle(fontSize: 16)),
+                    icon: const Icon(Icons.sports_score, size: 18),
+                    label: const Text(
+                      'Begin Scoring',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ),
                 ),
               ),
@@ -119,68 +126,74 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
           final color = source == 'rc'
               ? Colors.red
               : isStale
-                  ? Colors.grey
-                  : Colors.blue;
+              ? Colors.grey
+              : Colors.blue;
 
           if (lat != null && lon != null) {
-            markers.add(Marker(
-              point: LatLng(lat, lon),
-              width: 80,
-              height: 44,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.4),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.sailing,
-                            color: Colors.white, size: 12),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            sail.isNotEmpty ? sail : boat,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+            markers.add(
+              Marker(
+                point: LatLng(lat, lon),
+                width: 80,
+                height: 44,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.4),
+                            blurRadius: 4,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.sailing,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              sail.isNotEmpty ? sail : boat,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${speed.toStringAsFixed(1)} kn',
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: isStale ? Colors.grey : Colors.black87,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      '${speed.toStringAsFixed(1)} kn',
+                      style: TextStyle(
+                        fontSize: 8,
+                        color: isStale ? Colors.grey : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ));
+            );
           }
         }
 
         // Add course marks
         return StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance.collection('marks').snapshots(),
+          stream: FirebaseFirestore.instance.collection('marks').snapshots(),
           builder: (context, markSnap) {
             final markDocs = markSnap.data?.docs ?? [];
             for (final doc in markDocs) {
@@ -189,21 +202,30 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               final lon = (md['lon'] as num?)?.toDouble();
               final name = md['name'] as String? ?? doc.id;
               if (lat != null && lon != null) {
-                markers.add(Marker(
-                  point: LatLng(lat, lon),
-                  width: 40,
-                  height: 40,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on,
-                          color: Colors.orange, size: 20),
-                      Text(name,
+                markers.add(
+                  Marker(
+                    point: LatLng(lat, lon),
+                    width: 40,
+                    height: 40,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        Text(
+                          name,
                           style: const TextStyle(
-                              fontSize: 8, fontWeight: FontWeight.bold)),
-                    ],
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ));
+                );
               }
             }
 
@@ -257,8 +279,8 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(
-                  dialogContext, controller.text.trim()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('ABANDON RACE'),
             ),
@@ -274,9 +296,7 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
   }
 
   Future<void> _moveToScoring() async {
-    await ref
-        .read(rcRaceRepositoryProvider)
-        .moveToScoring(widget.session.id);
+    await ref.read(rcRaceRepositoryProvider).moveToScoring(widget.session.id);
   }
 }
 
@@ -328,8 +348,7 @@ class _BoatCountBadge extends StatelessWidget {
       builder: (context, snap) {
         final count = snap.data?.docs.length ?? 0;
         return Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: Colors.black87,
             borderRadius: BorderRadius.circular(12),
@@ -339,11 +358,14 @@ class _BoatCountBadge extends StatelessWidget {
             children: [
               const Icon(Icons.sailing, color: Colors.white, size: 14),
               const SizedBox(width: 4),
-              Text('$count live',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
+              Text(
+                '$count live',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         );

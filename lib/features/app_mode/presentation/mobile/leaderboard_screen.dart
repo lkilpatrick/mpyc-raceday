@@ -12,90 +12,99 @@ class LeaderboardScreen extends StatelessWidget {
     final todayEnd = todayStart.add(const Duration(days: 1));
 
     return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('race_events')
-            .where('date',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
-            .where('date', isLessThan: Timestamp.fromDate(todayEnd))
-            .limit(1)
-            .snapshots(),
-        builder: (context, eventSnap) {
-          if (eventSnap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      stream: FirebaseFirestore.instance
+          .collection('race_events')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isLessThan: Timestamp.fromDate(todayEnd))
+          .limit(1)
+          .snapshots(),
+      builder: (context, eventSnap) {
+        if (eventSnap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final eventDocs = eventSnap.data?.docs ?? [];
-          if (eventDocs.isEmpty) {
-            return _emptyState(
-              icon: Icons.event_busy,
-              title: 'No race event today',
-              subtitle: 'Scoring will be available on race day',
-            );
-          }
-
-          final eventId = eventDocs.first.id;
-          final eventData =
-              eventDocs.first.data() as Map<String, dynamic>;
-          final eventName = eventData['name'] as String? ?? 'Race Day';
-          final raceStartId = eventData['raceStartId'] as String? ?? '';
-          final status = eventData['status'] as String? ?? 'setup';
-
-          // Pre-race states — show a friendly waiting screen
-          final isPreRace = ['setup', 'checkin_open', 'start_pending']
-              .contains(status);
-
-          return Column(
-            children: [
-              // Event header
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.indigo.shade50,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.indigo.shade100),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.leaderboard,
-                        color: Colors.indigo, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(eventName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16)),
-                          Text(_statusLabel(status),
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Results
-              Expanded(
-                child: isPreRace
-                    ? _preRaceState(status)
-                    : raceStartId.isNotEmpty
-                        ? _buildFinishResults(context, raceStartId)
-                        : _buildRaceStartFinder(context, eventId),
-              ),
-            ],
+        final eventDocs = eventSnap.data?.docs ?? [];
+        if (eventDocs.isEmpty) {
+          return _emptyState(
+            icon: Icons.event_busy,
+            title: 'No race event today',
+            subtitle: 'Scoring will be available on race day',
           );
-        },
+        }
+
+        final eventId = eventDocs.first.id;
+        final eventData = eventDocs.first.data() as Map<String, dynamic>;
+        final eventName = eventData['name'] as String? ?? 'Race Day';
+        final raceStartId = eventData['raceStartId'] as String? ?? '';
+        final status = eventData['status'] as String? ?? 'setup';
+
+        // Pre-race states — show a friendly waiting screen
+        final isPreRace = [
+          'setup',
+          'checkin_open',
+          'start_pending',
+        ].contains(status);
+
+        return Column(
+          children: [
+            // Event header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                border: Border(
+                  bottom: BorderSide(color: Colors.indigo.shade100),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.leaderboard, color: Colors.indigo, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          eventName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          _statusLabel(status),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Results
+            Expanded(
+              child: isPreRace
+                  ? _preRaceState(status)
+                  : raceStartId.isNotEmpty
+                  ? _buildFinishResults(context, raceStartId, status)
+                  : _buildRaceStartFinder(context, eventId, status),
+            ),
+          ],
+        );
+      },
     );
   }
 
   /// Find race starts for the event and show their finish records.
-  Widget _buildRaceStartFinder(BuildContext context, String eventId) {
+  Widget _buildRaceStartFinder(
+    BuildContext context,
+    String eventId,
+    String status,
+  ) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_starts')
@@ -113,14 +122,18 @@ class LeaderboardScreen extends StatelessWidget {
 
         // Use the most recent race start
         final latestDoc = docs.last;
-        return _buildFinishResults(context, latestDoc.id);
+        return _buildFinishResults(context, latestDoc.id, status);
       },
     );
   }
 
   /// Show finish records for a given raceStartId from the top-level
   /// `finish_records` collection.
-  Widget _buildFinishResults(BuildContext context, String raceStartId) {
+  Widget _buildFinishResults(
+    BuildContext context,
+    String raceStartId,
+    String status,
+  ) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('finish_records')
@@ -143,24 +156,27 @@ class LeaderboardScreen extends StatelessWidget {
         // Sort by position client-side
         final sorted = [...docs];
         sorted.sort((a, b) {
-          final aPos = (a.data() as Map<String, dynamic>)['position'] as int? ?? 999;
-          final bPos = (b.data() as Map<String, dynamic>)['position'] as int? ?? 999;
+          final aPos =
+              (a.data() as Map<String, dynamic>)['position'] as int? ?? 999;
+          final bPos =
+              (b.data() as Map<String, dynamic>)['position'] as int? ?? 999;
           return aPos.compareTo(bPos);
         });
 
         return ListView.builder(
           padding: const EdgeInsets.all(8),
-          itemCount: sorted.length,
+          itemCount: sorted.length + 1, // +1 for status footer
           itemBuilder: (_, i) {
+            // Status footer — fills empty space and shows race state
+            if (i == sorted.length) {
+              return _buildStatusFooter(status);
+            }
             final d = sorted[i].data() as Map<String, dynamic>;
             final sail = d['sailNumber'] as String? ?? '?';
             final boat = d['boatName'] as String? ?? '';
-            final elapsed =
-                (d['elapsedSeconds'] as num?)?.toDouble() ?? 0;
-            final corrected =
-                (d['correctedSeconds'] as num?)?.toDouble();
-            final letterScore =
-                d['letterScore'] as String? ?? 'finished';
+            final elapsed = (d['elapsedSeconds'] as num?)?.toDouble() ?? 0;
+            final corrected = (d['correctedSeconds'] as num?)?.toDouble();
+            final letterScore = d['letterScore'] as String? ?? 'finished';
             final pos = d['position'] as int? ?? (i + 1);
             final isFinished = letterScore == 'finished';
 
@@ -181,21 +197,24 @@ class LeaderboardScreen extends StatelessWidget {
                           Colors.orange,
                         ][pos - 1]
                       : isFinished
-                          ? Colors.indigo.shade100
-                          : Colors.red.shade100,
+                      ? Colors.indigo.shade100
+                      : Colors.red.shade100,
                   child: isFinished
-                      ? Text('$pos',
+                      ? Text(
+                          '$pos',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: pos <= 3
-                                ? Colors.white
-                                : Colors.indigo,
-                          ))
-                      : Text(letterScore.toUpperCase().substring(0, 3),
+                            color: pos <= 3 ? Colors.white : Colors.indigo,
+                          ),
+                        )
+                      : Text(
+                          letterScore.toUpperCase().substring(0, 3),
                           style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red)),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
                 ),
                 title: Text(
                   boat.isNotEmpty ? '$sail — $boat' : 'Sail $sail',
@@ -207,14 +226,17 @@ class LeaderboardScreen extends StatelessWidget {
                         '${corrected != null ? ' • Corrected: ${_formatSeconds(corrected.toInt())}' : ''}',
                         style: const TextStyle(fontSize: 12),
                       )
-                    : Text(letterScore.toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.red)),
+                    : Text(
+                        letterScore.toUpperCase(),
+                        style: const TextStyle(fontSize: 12, color: Colors.red),
+                      ),
                 trailing: isFinished
                     ? Text(
                         _formatFinishTime(d),
                         style: const TextStyle(
-                            fontFamily: 'monospace', fontSize: 12),
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
                       )
                     : null,
               ),
@@ -230,22 +252,22 @@ class LeaderboardScreen extends StatelessWidget {
       'setup' => (
         Icons.settings,
         'Setting Up',
-        'The race committee is preparing the event'
+        'The race committee is preparing the event',
       ),
       'checkin_open' => (
         Icons.how_to_reg,
         'Check-In Open',
-        'Boats are checking in — scoring starts after the race begins'
+        'Boats are checking in — scoring starts after the race begins',
       ),
       'start_pending' => (
         Icons.timer,
         'Start Pending',
-        'The start sequence will begin shortly'
+        'The start sequence will begin shortly',
       ),
       _ => (
         Icons.hourglass_empty,
         'Preparing',
-        'Results will appear once the race starts'
+        'Results will appear once the race starts',
       ),
     };
 
@@ -264,15 +286,20 @@ class LeaderboardScreen extends StatelessWidget {
               child: Icon(icon, size: 48, color: Colors.amber.shade700),
             ),
             const SizedBox(height: 20),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade700)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.amber.shade700,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(sublabel,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+            Text(
+              sublabel,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
           ],
         ),
       ),
@@ -290,14 +317,19 @@ class LeaderboardScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 12),
-          Text(title,
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade600)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
         ],
       ),
     );
@@ -322,14 +354,46 @@ class LeaderboardScreen extends StatelessWidget {
   }
 
   String _statusLabel(String status) => switch (status) {
-        'setup' => 'Setting up',
-        'checkin_open' => 'Check-in open',
-        'start_pending' => 'Start pending',
-        'running' => 'Race in progress',
-        'scoring' => 'Scoring',
-        'review' => 'Under review',
-        'finalized' => 'Results final',
-        'abandoned' => 'Abandoned',
-        _ => status,
-      };
+    'setup' => 'Setting up',
+    'checkin_open' => 'Check-in open',
+    'start_pending' => 'Start pending',
+    'running' => 'Race in progress',
+    'scoring' => 'Scoring',
+    'review' => 'Under review',
+    'finalized' => 'Results final',
+    'abandoned' => 'Abandoned',
+    _ => status,
+  };
+
+  Widget _buildStatusFooter(String status) {
+    final (icon, label, color) = switch (status) {
+      'review' => (
+        Icons.rate_review,
+        'Results under review by RC',
+        Colors.purple,
+      ),
+      'finalized' => (Icons.check_circle, 'Results finalized', Colors.green),
+      'abandoned' => (Icons.cancel, 'Race was abandoned', Colors.red),
+      'scoring' => (Icons.sports_score, 'Scoring in progress', Colors.blue),
+      _ => (Icons.sailing, 'Race in progress', Colors.green),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: color.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

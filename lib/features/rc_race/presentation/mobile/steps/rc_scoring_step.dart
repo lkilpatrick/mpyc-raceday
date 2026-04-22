@@ -95,13 +95,29 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
-              _SpecialBtn('DNF', Colors.orange, () => _recordSpecial(LetterScore.dnf)),
+              _SpecialBtn(
+                'DNF',
+                Colors.orange,
+                () => _recordSpecial(LetterScore.dnf),
+              ),
               const SizedBox(width: 6),
-              _SpecialBtn('DNS', Colors.grey, () => _recordSpecial(LetterScore.dns)),
+              _SpecialBtn(
+                'DNS',
+                Colors.grey,
+                () => _recordSpecial(LetterScore.dns),
+              ),
               const SizedBox(width: 6),
-              _SpecialBtn('DSQ', Colors.red, () => _recordSpecial(LetterScore.dsq)),
+              _SpecialBtn(
+                'DSQ',
+                Colors.red,
+                () => _recordSpecial(LetterScore.dsq),
+              ),
               const SizedBox(width: 6),
-              _SpecialBtn('OCS', Colors.red.shade300, () => _recordSpecial(LetterScore.ocs)),
+              _SpecialBtn(
+                'OCS',
+                Colors.red.shade300,
+                () => _recordSpecial(LetterScore.ocs),
+              ),
             ],
           ),
         ),
@@ -109,8 +125,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
         // Finish list
         Expanded(
           child: finishesAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (finishes) {
               // Update next position
@@ -125,8 +140,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
 
               // Auto-move to review when all boats have a finish record
               final checkins = checkinsAsync.value ?? [];
-              if (checkins.isNotEmpty &&
-                  finishes.length >= checkins.length) {
+              if (checkins.isNotEmpty && finishes.length >= checkins.length) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) _autoMoveToReview();
                 });
@@ -134,8 +148,10 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
 
               if (finishes.isEmpty) {
                 return const Center(
-                  child: Text('No finishes recorded yet',
-                      style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    'No finishes recorded yet',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 );
               }
 
@@ -144,16 +160,15 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                 itemCount: finishes.length,
                 itemBuilder: (_, i) {
                   final f = finishes[i];
-                  final elapsed =
-                      Duration(seconds: f.elapsedSeconds.toInt());
-                  final isFinished =
-                      f.letterScore == LetterScore.finished;
+                  final elapsed = Duration(seconds: f.elapsedSeconds.toInt());
+                  final isFinished = f.letterScore == LetterScore.finished;
                   final label = isFinished
                       ? '${elapsed.inMinutes}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}'
                       : f.letterScore.name.toUpperCase();
 
                   // Can undo if it's the last finish and within 30 seconds
-                  final canUndo = i == finishes.length - 1 &&
+                  final canUndo =
+                      i == finishes.length - 1 &&
                       _lastFinishId == f.id &&
                       _lastUndoDeadline != null &&
                       DateTime.now().isBefore(_lastUndoDeadline!);
@@ -162,8 +177,9 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                     color: isFinished ? null : Colors.orange.shade50,
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            isFinished ? Colors.green : Colors.orange,
+                        backgroundColor: isFinished
+                            ? Colors.green
+                            : Colors.orange,
                         child: Text(
                           isFinished ? '${f.position}' : label[0],
                           style: const TextStyle(
@@ -179,8 +195,10 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                       subtitle: Text(label),
                       trailing: canUndo
                           ? IconButton(
-                              icon: const Icon(Icons.undo,
-                                  color: Colors.orange),
+                              icon: const Icon(
+                                Icons.undo,
+                                color: Colors.orange,
+                              ),
                               onPressed: () => _undoFinish(f),
                             )
                           : null,
@@ -204,11 +222,20 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                       height: 48,
                       child: OutlinedButton.icon(
                         onPressed: () => _confirmAbandon(),
-                        icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
-                        label: const Text('Abandon',
-                            style: TextStyle(color: Colors.red, fontSize: 13)),
+                        icon: const Icon(
+                          Icons.cancel,
+                          color: Colors.red,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Abandon',
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.red, fontSize: 13),
+                        ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                       ),
                     ),
@@ -221,8 +248,10 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                       child: FilledButton.icon(
                         onPressed: () => _moveToReview(),
                         icon: const Icon(Icons.rate_review, size: 18),
-                        label: const Text('Review Results',
-                            style: TextStyle(fontSize: 14)),
+                        label: const Text(
+                          'Review Results',
+                          style: TextStyle(fontSize: 14),
+                        ),
                       ),
                     ),
                   ),
@@ -235,8 +264,10 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
                 child: TextButton.icon(
                   onPressed: _backToRunning,
                   icon: const Icon(Icons.arrow_back, size: 16),
-                  label: const Text('Back to Racing',
-                      style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Back to Racing',
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
               ),
             ],
@@ -258,9 +289,9 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
 
     final elapsed = widget.session.startTime != null
         ? _pendingFinishTime!
-            .difference(widget.session.startTime!)
-            .inSeconds
-            .toDouble()
+              .difference(widget.session.startTime!)
+              .inSeconds
+              .toDouble()
         : 0.0;
 
     final record = FinishRecord(
@@ -274,8 +305,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
       position: _nextPosition,
     );
 
-    final saved =
-        await ref.read(timingRepositoryProvider).recordFinish(record);
+    final saved = await ref.read(timingRepositoryProvider).recordFinish(record);
 
     setState(() {
       _pendingFinishTime = null;
@@ -318,7 +348,8 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Undo Finish?'),
         content: Text(
-            'Remove ${record.sailNumber} at position ${record.position}?'),
+          'Remove ${record.sailNumber} at position ${record.position}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -351,7 +382,9 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('This will end scoring and mark the race as abandoned.'),
+              const Text(
+                'This will end scoring and mark the race as abandoned.',
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
@@ -398,9 +431,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
     }
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      await ref
-          .read(rcRaceRepositoryProvider)
-          .moveToReview(widget.session.id);
+      await ref.read(rcRaceRepositoryProvider).moveToReview(widget.session.id);
     }
   }
 
@@ -411,9 +442,7 @@ class _RcScoringStepState extends ConsumerState<RcScoringStep> {
   }
 
   Future<void> _moveToReview() async {
-    await ref
-        .read(rcRaceRepositoryProvider)
-        .moveToReview(widget.session.id);
+    await ref.read(rcRaceRepositoryProvider).moveToReview(widget.session.id);
   }
 }
 
@@ -473,8 +502,7 @@ class _PendingFinishCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Filter out boats that already finished
-    final finishedSails =
-        finishes.map((f) => f.sailNumber).toSet();
+    final finishedSails = finishes.map((f) => f.sailNumber).toSet();
     final available = checkins
         .where((c) => !finishedSails.contains(c.sailNumber))
         .toList();
@@ -498,16 +526,21 @@ class _PendingFinishCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Position $position',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                'Position $position',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               const Spacer(),
               Text(
                 '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
                 style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
+                  fontFamily: 'monospace',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -519,20 +552,25 @@ class _PendingFinishCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text('Tap a boat:',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const Text(
+            'Tap a boat:',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: available.map<Widget>((c) {
               return ActionChip(
-                label: Text(c.sailNumber,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
+                label: Text(
+                  c.sailNumber,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 avatar: const Icon(Icons.sailing, size: 16),
-                onPressed: () =>
-                    onBoatSelected(c.sailNumber, c.boatName),
+                onPressed: () => onBoatSelected(c.sailNumber, c.boatName),
               );
             }).toList(),
           ),
@@ -563,9 +601,10 @@ class _SpecialBtn extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.bold)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
@@ -591,10 +630,12 @@ class _BoatPickerDialog extends StatelessWidget {
             final c = checkins[i];
             return ListTile(
               leading: CircleAvatar(
-                child: Text(c.sailNumber.length > 3
-                    ? c.sailNumber.substring(c.sailNumber.length - 3)
-                    : c.sailNumber,
-                    style: const TextStyle(fontSize: 11)),
+                child: Text(
+                  c.sailNumber.length > 3
+                      ? c.sailNumber.substring(c.sailNumber.length - 3)
+                      : c.sailNumber,
+                  style: const TextStyle(fontSize: 11),
+                ),
               ),
               title: Text('${c.boatName} (${c.sailNumber})'),
               onTap: () => Navigator.pop(context, {
