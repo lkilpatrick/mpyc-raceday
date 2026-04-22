@@ -146,11 +146,17 @@ service cloud.firestore {
       allow write: if hasAnyRole(['web_admin', 'rc_chair']);
     }
 
-    // ── Fleet Broadcasts ──
+    // ── Fleet Broadcasts (with ack subcollection) ──
     match /fleet_broadcasts/{broadcastId} {
       allow read: if isAuthenticated();
       allow create: if hasAnyRole(['web_admin', 'rc_chair']);
       allow delete: if hasAnyRole(['web_admin', 'rc_chair']);
+
+      // Any authenticated user can acknowledge a broadcast
+      match /acks/{uid} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && request.auth.uid == uid;
+      }
     }
 
     match /fleetBroadcasts/{docId} {
@@ -316,6 +322,86 @@ service cloud.firestore {
     match /notices/{docId} {
       allow read: if isAuthenticated();
       allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Crew Assignments — RC writes, assigned crew reads own ──
+    match /crew_assignments/{docId} {
+      allow read: if isAuthenticated() && (
+        hasAnyRole(['web_admin', 'rc_chair']) ||
+        resource.data.crewUid == request.auth.uid
+      );
+      allow create, update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Crew Profiles — owner reads/writes, all authenticated read ──
+    match /crew_profiles/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ── Skipper Profiles — owner reads/writes, all authenticated read ──
+    match /skipper_profiles/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ── Crew Sign-offs — crew creates, RC/admin reads ──
+    match /crew_signoffs/{docId} {
+      allow read: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow create: if isAuthenticated();
+    }
+
+    // ── Crew Chat — all authenticated users read/create ──
+    match /crew_chats/{chatId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
+
+      match /messages/{msgId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow delete: if hasAnyRole(['web_admin', 'rc_chair'])
+          || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      }
+    }
+
+    // ── Race State — RC writes current race state, all read ──
+    match /race_state/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Fleet Notifications — RC creates, all read ──
+    match /fleet_notifications/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Race Incidents (alias used in crew assignment feature) ──
+    match /race_incidents/{docId} {
+      allow read: if hasAnyRole(['web_admin', 'club_board', 'rc_chair', 'skipper']);
+      allow create: if hasAnyRole(['web_admin', 'rc_chair', 'skipper']);
+      allow update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Points (race scoring leaderboard) — all read, RC writes ──
+    match /points/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Weather Alerts — all read, RC client writes ──
+    match /weather_alerts/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow update, delete: if hasAnyRole(['web_admin', 'rc_chair']);
+    }
+
+    // ── Weather Entries — RC polling service writes, all read ──
+    match /weather_entries/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['web_admin', 'rc_chair']);
+      allow delete: if isWebAdmin();
     }
 
     // ── Default deny ──

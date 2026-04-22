@@ -45,10 +45,20 @@ class AuthRepositoryImpl implements AuthRepository {
     // Sign in with the custom token
     await _auth.signInWithCustomToken(customToken);
 
-    // Fetch and return the member
+    // Fetch the member and create the shadow UID doc so Firestore security
+    // rules (getMember → members/{uid}) can resolve the user's roles.
+    final uid = _auth.currentUser?.uid;
     final member = await _fetchMember(memberId);
     if (member == null) {
       throw Exception('Member document not found after verification');
+    }
+    // Create/update the UID-keyed shadow doc so role-based security rules work
+    if (uid != null) {
+      final memberDoc =
+          await _firestore.collection('members').doc(memberId).get();
+      if (memberDoc.exists && memberDoc.data() != null) {
+        await _ensureUidDoc(uid, memberDoc.data()!);
+      }
     }
     return member;
   }
