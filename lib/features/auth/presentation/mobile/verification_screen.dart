@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/core/theme.dart';
+import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
 
 class VerificationScreen extends ConsumerStatefulWidget {
@@ -20,13 +21,14 @@ class VerificationScreen extends ConsumerStatefulWidget {
   final String memberNumber;
 
   @override
-  ConsumerState<VerificationScreen> createState() =>
-      _VerificationScreenState();
+  ConsumerState<VerificationScreen> createState() => _VerificationScreenState();
 }
 
 class _VerificationScreenState extends ConsumerState<VerificationScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
@@ -88,7 +90,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       final repo = ref.read(authRepositoryProvider);
       await repo.verifyCode(widget.memberId, code);
       if (!mounted) return;
-      context.go('/home');
+      // Load persisted app mode; if none found this is a first-time login
+      final hasSavedMode = await loadAppMode(ref);
+      if (!mounted) return;
+      context.go(hasSavedMode ? '/home' : '/mode-switcher');
     } catch (e) {
       setState(() {
         _errorMessage = _parseError(e);
@@ -160,16 +165,16 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 Text(
                   'Verification Code Sent',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Code sent to ${widget.maskedEmail}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
@@ -196,15 +201,18 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                         ),
                         decoration: InputDecoration(
                           counterText: '',
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(
-                                color: AppColors.accent, width: 2),
+                              color: AppColors.accent,
+                              width: 2,
+                            ),
                           ),
                         ),
                         inputFormatters: [
@@ -235,14 +243,19 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline,
-                            color: AppColors.secondary, size: 20),
+                        Icon(
+                          Icons.error_outline,
+                          color: AppColors.secondary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
                             style: TextStyle(
-                                color: AppColors.secondary, fontSize: 14),
+                              color: AppColors.secondary,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ],

@@ -58,19 +58,12 @@ class AuthRepositoryImpl implements AuthRepository {
     // Resolve signal number to email if the input doesn't look like an email
     String resolvedEmail = emailOrSignal;
     if (!emailOrSignal.contains('@')) {
-      final signalSnap = await _firestore
-          .collection('members')
-          .where('signalNumber', isEqualTo: emailOrSignal.trim())
-          .limit(1)
-          .get();
-      if (signalSnap.docs.isEmpty) {
-        throw Exception('No member found with signal number $emailOrSignal');
-      }
-      final memberEmail = signalSnap.docs.first.data()['email'] as String?;
-      if (memberEmail == null || memberEmail.isEmpty) {
-        throw Exception('No email on file for signal number $emailOrSignal');
-      }
-      resolvedEmail = memberEmail;
+      // Use Cloud Function to resolve signal number (avoids Firestore auth rules)
+      final callable = _functions.httpsCallable('resolveSignalNumber');
+      final result = await callable.call<Map<String, dynamic>>(
+        {'signalNumber': emailOrSignal.trim()},
+      );
+      resolvedEmail = result.data['email'] as String;
     }
 
     final credential = await _auth.signInWithEmailAndPassword(

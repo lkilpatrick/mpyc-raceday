@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/features/auth/presentation/mobile/login_screen.dart';
+import 'package:mpyc_raceday/features/auth/presentation/mobile/verification_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/active_checklist_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_history_screen.dart';
 import 'package:mpyc_raceday/features/checklists/presentation/mobile/checklist_list_screen.dart';
@@ -51,16 +52,27 @@ final GoRouter mobileRouter = GoRouter(
   initialLocation: '/home',
   redirect: (context, state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isAuthRoute = state.matchedLocation == '/login';
+    final isAuthRoute =
+        state.matchedLocation == '/login' || state.matchedLocation == '/verify';
 
     if (!isLoggedIn && !isAuthRoute) return '/login';
     if (isLoggedIn && state.matchedLocation == '/login') return '/home';
+    if (isLoggedIn && state.matchedLocation == '/verify') return '/home';
     return null;
   },
   routes: [
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      path: '/verify',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) return const LoginScreen();
+        return VerificationScreen(
+          maskedEmail: extra['maskedEmail'] as String,
+          memberId: extra['memberId'] as String,
+          memberNumber: extra['memberNumber'] as String,
+        );
+      },
     ),
     GoRoute(
       path: '/home',
@@ -288,10 +300,7 @@ final GoRouter mobileRouter = GoRouter(
       path: '/rules/reference',
       builder: (context, state) => const RacingRulesReferenceScreen(),
     ),
-    GoRoute(
-      path: '/demo',
-      builder: (context, state) => const DemoModeScreen(),
-    ),
+    GoRoute(path: '/demo', builder: (context, state) => const DemoModeScreen()),
     GoRoute(
       path: '/rc-race/:eventId',
       builder: (context, state) {

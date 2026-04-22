@@ -14,14 +14,23 @@ import '../../../auth/data/models/member.dart';
 import '../../../boat_checkin/presentation/boat_checkin_providers.dart';
 import '../../../maintenance/presentation/maintenance_providers.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Load persisted app mode from Firestore on first build
-    loadAppMode(ref);
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load persisted app mode from Firestore exactly once
+    loadAppMode(ref);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final memberAsync = ref.watch(currentUserProvider);
     final member = memberAsync.value;
     final isRCChair = member?.isRCChair ?? false;
@@ -95,8 +104,7 @@ class _TodaysRaceCard extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
-          .where('date',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
           .where('date', isLessThan: Timestamp.fromDate(todayEnd))
           .limit(1)
           .snapshots(),
@@ -108,11 +116,12 @@ class _TodaysRaceCard extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.sailing,
-                      size: 48, color: Colors.grey.shade300),
+                  Icon(Icons.sailing, size: 48, color: Colors.grey.shade300),
                   const SizedBox(height: 8),
-                  const Text('No race today',
-                      style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const Text(
+                    'No race today',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -147,22 +156,31 @@ class _TodaysRaceCard extends StatelessWidget {
                       Icon(Icons.sailing, color: statusColor),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(name,
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(statusLabel,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold)),
+                        child: Text(
+                          statusLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -172,7 +190,9 @@ class _TodaysRaceCard extends StatelessWidget {
                       // Course
                       _MiniStat(
                         icon: Icons.map,
-                        label: courseId.isNotEmpty ? 'Course $courseId' : 'No course',
+                        label: courseId.isNotEmpty
+                            ? 'Course $courseId'
+                            : 'No course',
                       ),
                       const SizedBox(width: 16),
                       // Fleet size
@@ -225,8 +245,24 @@ class _MiniStat extends StatelessWidget {
 class _WeatherCard extends StatelessWidget {
   const _WeatherCard();
 
-  static const _dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
-                         'S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  static const _dirs = [
+    'N',
+    'NNE',
+    'NE',
+    'ENE',
+    'E',
+    'ESE',
+    'SE',
+    'SSE',
+    'S',
+    'SSW',
+    'SW',
+    'WSW',
+    'W',
+    'WNW',
+    'NW',
+    'NNW',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -244,8 +280,10 @@ class _WeatherCard extends StatelessWidget {
                 children: [
                   Icon(Icons.cloud_off, color: Colors.grey.shade400, size: 32),
                   const SizedBox(width: 12),
-                  const Text('Weather data loading...',
-                      style: TextStyle(color: Colors.grey)),
+                  const Text(
+                    'Weather data loading...',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -274,10 +312,19 @@ class _WeatherCard extends StatelessWidget {
                     children: [
                       const Icon(Icons.air, color: Colors.blue, size: 20),
                       const SizedBox(width: 6),
-                      const Text('Current Weather',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text(
+                        'Current Weather',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       const Spacer(),
-                      const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -286,7 +333,11 @@ class _WeatherCard extends StatelessWidget {
                       // Wind direction arrow
                       Transform.rotate(
                         angle: dir * 3.14159 / 180,
-                        child: const Icon(Icons.navigation, size: 36, color: Colors.blue),
+                        child: const Icon(
+                          Icons.navigation,
+                          size: 36,
+                          color: Colors.blue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -294,11 +345,19 @@ class _WeatherCard extends StatelessWidget {
                         children: [
                           Text(
                             '${wind.toStringAsFixed(0)} kts $dirLabel',
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           if (gust != null && gust > 0)
-                            Text('Gusts ${gust.toStringAsFixed(0)} kts',
-                                style: TextStyle(fontSize: 13, color: Colors.red.shade700)),
+                            Text(
+                              'Gusts ${gust.toStringAsFixed(0)} kts',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
                         ],
                       ),
                       const Spacer(),
@@ -306,14 +365,29 @@ class _WeatherCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           if (temp != null)
-                            Text('${temp.toStringAsFixed(0)}°F',
-                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                            Text(
+                              '${temp.toStringAsFixed(0)}°F',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           if (humidity != null)
-                            Text('$humidity% RH',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(
+                              '$humidity% RH',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                           if (pressure != null)
-                            Text('${pressure.toStringAsFixed(2)} inHg',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(
+                              '${pressure.toStringAsFixed(2)} inHg',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -374,10 +448,13 @@ class _YourBoatCardState extends State<_YourBoatCard> {
     setState(() => _uploading = true);
     try {
       final bytes = await xFile.readAsBytes();
-      final ref = FirebaseStorage.instance
-          .ref('boat_photos/${widget.member.id}.jpg');
-      await ref.putData(Uint8List.fromList(bytes),
-          SettableMetadata(contentType: 'image/jpeg'));
+      final ref = FirebaseStorage.instance.ref(
+        'boat_photos/${widget.member.id}.jpg',
+      );
+      await ref.putData(
+        Uint8List.fromList(bytes),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
       final url = await ref.getDownloadURL();
 
       await FirebaseFirestore.instance
@@ -388,9 +465,9 @@ class _YourBoatCardState extends State<_YourBoatCard> {
       if (mounted) setState(() => _boatPhotoUrl = url);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -416,27 +493,34 @@ class _YourBoatCardState extends State<_YourBoatCard> {
               child: _uploading
                   ? const Center(child: CircularProgressIndicator())
                   : _boatPhotoUrl != null
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.network(_boatPhotoUrl!, fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _photoPlaceholder()),
-                            Positioned(
-                              right: 8, bottom: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(Icons.camera_alt,
-                                    color: Colors.white, size: 18),
-                              ),
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          _boatPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _photoPlaceholder(),
+                        ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ],
-                        )
-                      : _photoPlaceholder(),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _photoPlaceholder(),
             ),
           ),
           Padding(
@@ -450,44 +534,58 @@ class _YourBoatCardState extends State<_YourBoatCard> {
                       const Icon(Icons.sailing, size: 20, color: Colors.indigo),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(m.boatName!,
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          m.boatName!,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       if (m.sailNumber != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.indigo.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(m.sailNumber!,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo.shade700)),
+                          child: Text(
+                            m.sailNumber!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.indigo.shade700,
+                            ),
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   if (m.boatClass != null)
-                    Text('${m.boatClass}${m.phrfRating != null ? ' • PHRF ${m.phrfRating}' : ''}',
-                        style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                    Text(
+                      '${m.boatClass}${m.phrfRating != null ? ' • PHRF ${m.phrfRating}' : ''}',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
                 ] else ...[
                   Row(
                     children: [
                       const Icon(Icons.person, size: 20, color: Colors.indigo),
                       const SizedBox(width: 8),
-                      Text(m.displayName,
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.bold)),
+                      Text(
+                        m.displayName,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ],
                 const SizedBox(height: 6),
-                Text(m.displayName,
-                    style: const TextStyle(fontSize: 13)),
+                Text(m.displayName, style: const TextStyle(fontSize: 13)),
                 if (m.roles.isNotEmpty)
                   Text(
                     m.roles.map((r) => r.name).join(', '),
@@ -509,8 +607,10 @@ class _YourBoatCardState extends State<_YourBoatCard> {
         children: [
           Icon(Icons.add_a_photo, size: 36, color: Colors.grey.shade400),
           const SizedBox(height: 4),
-          Text('Tap to add boat photo',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          Text(
+            'Tap to add boat photo',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
         ],
       ),
     );
@@ -533,8 +633,7 @@ class _RaceControlCard extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('race_events')
-          .where('date',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
           .where('date', isLessThan: Timestamp.fromDate(todayEnd))
           .limit(1)
           .snapshots(),
@@ -555,9 +654,13 @@ class _RaceControlCard extends StatelessWidget {
                   children: [
                     Icon(Icons.flag, color: Colors.indigo),
                     SizedBox(width: 8),
-                    Text('Race Control',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(
+                      'Race Control',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -568,38 +671,32 @@ class _RaceControlCard extends StatelessWidget {
                     _QuickAction(
                       icon: Icons.map,
                       label: 'Select Course',
-                      onTap: () =>
-                          context.push('/courses/select/$eventId'),
+                      onTap: () => context.push('/courses/select/$eventId'),
                     ),
                     _QuickAction(
                       icon: Icons.timer,
                       label: 'Start Sequence',
-                      onTap: () =>
-                          context.push('/timing/start/$eventId'),
+                      onTap: () => context.push('/timing/start/$eventId'),
                     ),
                     _QuickAction(
                       icon: Icons.sports_score,
                       label: 'Record Finishes',
-                      onTap: () =>
-                          context.push('/timing/$eventId'),
+                      onTap: () => context.push('/timing/$eventId'),
                     ),
                     _QuickAction(
                       icon: Icons.campaign,
                       label: 'Broadcast',
-                      onTap: () =>
-                          context.push('/courses/broadcast/$eventId'),
+                      onTap: () => context.push('/courses/broadcast/$eventId'),
                     ),
                     _QuickAction(
                       icon: Icons.how_to_reg,
                       label: 'Check-In',
-                      onTap: () =>
-                          context.push('/checkin/$eventId'),
+                      onTap: () => context.push('/checkin/$eventId'),
                     ),
                     _QuickAction(
                       icon: Icons.report,
                       label: 'Incident',
-                      onTap: () =>
-                          context.push('/incidents/report/$eventId'),
+                      onTap: () => context.push('/incidents/report/$eventId'),
                     ),
                   ],
                 ),
@@ -640,8 +737,10 @@ class _QuickAction extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: Colors.indigo),
             const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       ),
@@ -673,20 +772,32 @@ class _RaceModeCard extends StatelessWidget {
                   color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.gps_fixed, color: Colors.green.shade800, size: 24),
+                child: Icon(
+                  Icons.gps_fixed,
+                  color: Colors.green.shade800,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Race Mode',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: Colors.green.shade900)),
-                    Text('Track your race with GPS',
-                        style: TextStyle(fontSize: 12, color: Colors.green.shade700)),
+                    Text(
+                      'Race Mode',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                    Text(
+                      'Track your race with GPS',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -729,8 +840,13 @@ class _UpcomingRacesCard extends StatelessWidget {
                   children: [
                     Icon(Icons.event, color: Colors.teal, size: 20),
                     SizedBox(width: 6),
-                    Text('Upcoming Races',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(
+                      'Upcoming Races',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -751,7 +867,8 @@ class _UpcomingRacesCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Container(
-                            width: 44, height: 44,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
                               color: Colors.teal.shade50,
                               borderRadius: BorderRadius.circular(8),
@@ -760,15 +877,23 @@ class _UpcomingRacesCard extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  ts != null ? DateFormat('d').format(ts.toDate()) : '',
+                                  ts != null
+                                      ? DateFormat('d').format(ts.toDate())
+                                      : '',
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.teal.shade700),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal.shade700,
+                                  ),
                                 ),
                                 Text(
-                                  ts != null ? DateFormat('MMM').format(ts.toDate()) : '',
-                                  style: TextStyle(fontSize: 10, color: Colors.teal.shade700),
+                                  ts != null
+                                      ? DateFormat('MMM').format(ts.toDate())
+                                      : '',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.teal.shade700,
+                                  ),
                                 ),
                               ],
                             ),
@@ -778,16 +903,30 @@ class _UpcomingRacesCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(name, style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 if (series.isNotEmpty)
-                                  Text(series,
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                    series,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
                           Text(
-                            daysAway == 0 ? 'Today' : daysAway == 1 ? 'Tomorrow' : '${daysAway}d',
+                            daysAway == 0
+                                ? 'Today'
+                                : daysAway == 1
+                                ? 'Tomorrow'
+                                : '${daysAway}d',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -836,8 +975,9 @@ class _MaintenanceAlertCard extends ConsumerWidget {
                 child: Text(
                   '$count critical maintenance issue${count > 1 ? 's' : ''}',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
                 ),
               ),
               const Icon(Icons.chevron_right),
@@ -879,8 +1019,13 @@ class _RecentResultsCard extends StatelessWidget {
                   children: [
                     Icon(Icons.emoji_events, color: Colors.amber, size: 20),
                     SizedBox(width: 6),
-                    Text('Recent Results',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(
+                      'Recent Results',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -900,23 +1045,41 @@ class _RecentResultsCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            status == 'complete' ? Icons.check_circle : Icons.schedule,
+                            status == 'complete'
+                                ? Icons.check_circle
+                                : Icons.schedule,
                             size: 18,
-                            color: status == 'complete' ? Colors.green : Colors.orange,
+                            color: status == 'complete'
+                                ? Colors.green
+                                : Colors.orange,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(name, style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
-                                Text(dateStr,
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
                         ],
                       ),
                     ),
@@ -967,32 +1130,45 @@ class _BroadcastHistoryCard extends StatelessWidget {
                 color: Colors.orange.shade50,
                 child: Row(
                   children: [
-                    Icon(_broadcastIcon(latestType),
-                        color: Colors.orange.shade700, size: 20),
+                    Icon(
+                      _broadcastIcon(latestType),
+                      color: Colors.orange.shade700,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Latest Broadcast',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey)),
+                          const Text(
+                            'Latest Broadcast',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text(latestMsg,
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            latestMsg,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
                     if (latestAt != null)
-                      Text(DateFormat.jm().format(latestAt),
-                          style: const TextStyle(
-                              fontSize: 10, color: Colors.grey)),
+                      Text(
+                        DateFormat.jm().format(latestAt),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1005,16 +1181,25 @@ class _BroadcastHistoryCard extends StatelessWidget {
                   final at = (d['sentAt'] as Timestamp?)?.toDate();
                   return ListTile(
                     dense: true,
-                    leading: Icon(_broadcastIcon(type),
-                        size: 16, color: Colors.grey),
-                    title: Text(msg,
-                        style: const TextStyle(fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
+                    leading: Icon(
+                      _broadcastIcon(type),
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                    title: Text(
+                      msg,
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: at != null
-                        ? Text(DateFormat.jm().format(at),
+                        ? Text(
+                            DateFormat.jm().format(at),
                             style: const TextStyle(
-                                fontSize: 10, color: Colors.grey))
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          )
                         : null,
                   );
                 }),
@@ -1029,8 +1214,9 @@ class _BroadcastHistoryCard extends StatelessWidget {
     return switch (type) {
       'courseSelection' => Icons.map,
       'postponement' => Icons.schedule,
-      'abandonment' || 'abandonTooMuchWind' || 'abandonTooLittleWind' =>
-        Icons.cancel,
+      'abandonment' ||
+      'abandonTooMuchWind' ||
+      'abandonTooLittleWind' => Icons.cancel,
       'courseChange' => Icons.swap_horiz,
       'generalRecall' => Icons.replay,
       'shortenedCourse' || 'shortenCourse' => Icons.content_cut,

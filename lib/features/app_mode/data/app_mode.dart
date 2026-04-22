@@ -5,62 +5,54 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum AppMode {
-  raceCommittee,
-  skipper,
-  crew,
-  onshore,
-}
+enum AppMode { raceCommittee, skipper, crew, onshore }
 
 extension AppModeX on AppMode {
   String get label => switch (this) {
-        AppMode.raceCommittee => 'Race Committee',
-        AppMode.skipper => 'Skipper',
-        AppMode.crew => 'Crew',
-        AppMode.onshore => 'Onshore',
-      };
+    AppMode.raceCommittee => 'Race Committee',
+    AppMode.skipper => 'Skipper',
+    AppMode.crew => 'Crew',
+    AppMode.onshore => 'Onshore',
+  };
 
   String get subtitle => switch (this) {
-        AppMode.raceCommittee =>
-          'Course selection, timing, scoring, check-in management',
-        AppMode.skipper =>
-          'Remote check-in, countdown, protests, GPS tracking',
-        AppMode.crew =>
-          'Role dashboard, crew chat, safety info, performance',
-        AppMode.onshore =>
-          'Live spectator view, leaderboard, results, weather',
-      };
+    AppMode.raceCommittee =>
+      'Course selection, timing, scoring, check-in management',
+    AppMode.skipper => 'Remote check-in, countdown, protests, GPS tracking',
+    AppMode.crew => 'Role dashboard, crew chat, safety info, performance',
+    AppMode.onshore => 'Live spectator view, leaderboard, results, weather',
+  };
 
   IconData get icon => switch (this) {
-        AppMode.raceCommittee => Icons.flag,
-        AppMode.skipper => Icons.sailing,
-        AppMode.crew => Icons.group,
-        AppMode.onshore => Icons.visibility,
-      };
+    AppMode.raceCommittee => Icons.flag,
+    AppMode.skipper => Icons.sailing,
+    AppMode.crew => Icons.group,
+    AppMode.onshore => Icons.visibility,
+  };
 
   Color get color => switch (this) {
-        AppMode.raceCommittee => const Color(0xFF1B3A5C), // navy
-        AppMode.skipper => Colors.teal,
-        AppMode.crew => Colors.orange,
-        AppMode.onshore => Colors.lightBlue,
-      };
+    AppMode.raceCommittee => const Color(0xFF1B3A5C), // navy
+    AppMode.skipper => Colors.teal,
+    AppMode.crew => Colors.orange,
+    AppMode.onshore => Colors.lightBlue,
+  };
 
   String get firestoreValue => name;
 }
 
 AppMode appModeFromString(String? s) => switch (s) {
-      'raceCommittee' => AppMode.raceCommittee,
-      'skipper' => AppMode.skipper,
-      'crew' => AppMode.crew,
-      'onshore' => AppMode.onshore,
-      _ => AppMode.onshore,
-    };
+  'raceCommittee' => AppMode.raceCommittee,
+  'skipper' => AppMode.skipper,
+  'crew' => AppMode.crew,
+  'onshore' => AppMode.onshore,
+  _ => AppMode.onshore,
+};
 
 /// Global mutable holder for the current app mode.
 /// Riverpod 3.x removed StateProvider, so we use a simple StreamProvider
 /// backed by a broadcast controller.
-final _appModeController =
-    StreamController<AppMode>.broadcast()..add(AppMode.onshore);
+final _appModeController = StreamController<AppMode>.broadcast()
+  ..add(AppMode.onshore);
 AppMode _currentAppMode = AppMode.onshore;
 
 final appModeProvider = StreamProvider<AppMode>((ref) {
@@ -71,9 +63,11 @@ final appModeProvider = StreamProvider<AppMode>((ref) {
 AppMode currentAppMode() => _currentAppMode;
 
 /// Call once at app startup to load the persisted mode from Firestore.
-Future<void> loadAppMode(WidgetRef ref) async {
+/// Returns [true] if a persisted mode was found, [false] if the user
+/// has never explicitly set a mode (first-time login).
+Future<bool> loadAppMode(WidgetRef ref) async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
+  if (uid == null) return false;
   try {
     final snap = await FirebaseFirestore.instance
         .collection('members')
@@ -82,11 +76,15 @@ Future<void> loadAppMode(WidgetRef ref) async {
         .get();
     if (snap.docs.isNotEmpty) {
       final data = snap.docs.first.data();
-      final mode = appModeFromString(data['appMode'] as String?);
-      _currentAppMode = mode;
-      _appModeController.add(mode);
+      if (data.containsKey('appMode') && data['appMode'] != null) {
+        final mode = appModeFromString(data['appMode'] as String?);
+        _currentAppMode = mode;
+        _appModeController.add(mode);
+        return true;
+      }
     }
   } catch (_) {}
+  return false;
 }
 
 /// Persist the mode to Firestore and update the stream.
@@ -102,8 +100,7 @@ Future<void> setAppMode(WidgetRef ref, AppMode mode) async {
         .limit(1)
         .get();
     if (snap.docs.isNotEmpty) {
-      await snap.docs.first.reference
-          .update({'appMode': mode.firestoreValue});
+      await snap.docs.first.reference.update({'appMode': mode.firestoreValue});
     }
   } catch (_) {}
 }

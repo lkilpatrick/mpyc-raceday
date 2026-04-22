@@ -12,22 +12,18 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  bool _obscurePassword = true;
   String? _errorMessage;
-  bool _showForgotPassword = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _identifierController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleContinue() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -37,13 +33,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
-      await repo.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final input = _identifierController.text.trim();
+      final result = await repo.sendVerificationCode(input);
 
       if (!mounted) return;
-      context.go('/home');
+      context.go(
+        '/verify',
+        extra: {
+          'maskedEmail': result.maskedEmail,
+          'memberId': result.memberId,
+          'memberNumber': input,
+        },
+      );
     } catch (e) {
       setState(() {
         _errorMessage = _parseError(e);
@@ -53,52 +54,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      setState(() => _errorMessage = 'Enter your email address first.');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repo = ref.read(authRepositoryProvider);
-      await repo.sendPasswordReset(email);
-      if (!mounted) return;
-      setState(() {
-        _showForgotPassword = false;
-        _errorMessage = null;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset email sent. Check your inbox.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      setState(() => _errorMessage = 'Failed to send reset email.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   String _parseError(Object e) {
     final msg = e.toString();
-    if (msg.contains('wrong-password') || msg.contains('invalid-credential')) {
-      return 'Invalid email or password.';
+    if (msg.contains('not-found') || msg.contains('No member found')) {
+      return 'No member found. Check your signal or member number.';
     }
-    if (msg.contains('user-not-found')) {
-      return 'No account found with this email.';
+    if (msg.contains('failed-precondition') ||
+        msg.contains('No email on file')) {
+      return 'No email address on file for this account. Contact the club.';
     }
     if (msg.contains('too-many-requests')) {
       return 'Too many attempts. Please try again later.';
     }
-    if (msg.contains('No member record')) {
-      return 'No member record linked to this account.';
+    if (msg.contains('invalid-argument')) {
+      return 'Please enter a valid signal number, member number, or email.';
     }
     return 'Sign in failed. Please try again.';
   }
@@ -125,67 +94,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     'MPYC Race Day',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sign in with your email or signal number',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    'Sign in with your signal number or member number',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
 
-                  // Email field
+                  // Signal / member number field
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
+                    controller: _identifierController,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.done,
+                    autocorrect: false,
                     decoration: const InputDecoration(
-                      labelText: 'Email or Signal Number',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      labelText: 'Signal Number or Member Number',
+                      prefixIcon: Icon(Icons.badge_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email or signal number';
+                        return 'Please enter your signal or member number';
                       }
                       return null;
                     },
+                    onFieldSubmitted: (_) => _handleContinue(),
                   ),
-
-                  // Password field (hidden in forgot-password mode)
-                  if (!_showForgotPassword) ...[
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(
-                                () => _obscurePassword = !_obscurePassword);
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        return null;
-                      },
-                      onFieldSubmitted: (_) => _handleLogin(),
-                    ),
-                  ],
 
                   // Error message
                   if (_errorMessage != null) ...[
@@ -198,8 +138,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline,
-                              color: AppColors.secondary, size: 20),
+                          Icon(
+                            Icons.error_outline,
+                            color: AppColors.secondary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -216,16 +159,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                   const SizedBox(height: 24),
 
-                  // Sign In / Reset button
+                  // Continue button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : (_showForgotPassword
-                              ? _handleForgotPassword
-                              : _handleLogin),
+                      onPressed: _isLoading ? null : _handleContinue,
                       child: _isLoading
                           ? const SizedBox(
                               width: 20,
@@ -235,36 +174,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(
-                              _showForgotPassword
-                                  ? 'Send Reset Email'
-                                  : 'Sign In',
-                              style: const TextStyle(fontSize: 16),
+                          : const Text(
+                              'Continue',
+                              style: TextStyle(fontSize: 16),
                             ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Forgot password toggle
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _showForgotPassword = !_showForgotPassword;
-                        _errorMessage = null;
-                      });
-                    },
-                    child: Text(
-                      _showForgotPassword
-                          ? 'Back to Sign In'
-                          : 'Forgot Password?',
-                    ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'A verification code will be sent to your email on file.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Text(
                     'Contact the club for access',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[500],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
                   ),
                 ],
               ),

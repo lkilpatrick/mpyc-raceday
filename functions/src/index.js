@@ -1538,12 +1538,9 @@ exports.weeklyMaintenanceSummary = onSchedule(
 
 
 
-    // Get admin members
-
+    // Get admin members — roles is an array field
     const adminsSnap = await db.collection("members")
-
-      .where("role", "in", ["admin", "rc_chair"])
-
+      .where("roles", "array-contains-any", ["web_admin", "rc_chair"])
       .get();
 
 
@@ -2403,6 +2400,33 @@ exports.seedTestAdmin = onCall(async (request) => {
 });
 
 
+
+// ── Resolve signal number to email (for pre-auth login) ──
+
+exports.resolveSignalNumber = onCall(async (request) => {
+  const {signalNumber} = request.data || {};
+  if (!signalNumber || typeof signalNumber !== "string") {
+    throw new HttpsError("invalid-argument", "signalNumber is required");
+  }
+
+  const snap = await db
+    .collection("members")
+    .where("signalNumber", "==", signalNumber.trim())
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    throw new HttpsError("not-found", "No member found with that signal number.");
+  }
+
+  const memberData = snap.docs[0].data();
+  const email = memberData.email;
+  if (!email) {
+    throw new HttpsError("failed-precondition", "No email on file for this member.");
+  }
+
+  return {email};
+});
 
 // ── Authentication: membership-number verification flow ──
 

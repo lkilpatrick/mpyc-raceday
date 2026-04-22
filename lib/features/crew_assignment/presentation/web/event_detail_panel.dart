@@ -148,9 +148,8 @@ class _EventDetailPanelState extends ConsumerState<EventDetailPanel> {
               child: DragTarget<CrewSlot>(
                 onAcceptWithDetails: (dragged) =>
                     _swapRoles(event, slot, dragged.data),
-                builder: (context, candidateData, rejectedData) => DropdownButtonFormField<String>(
-                  // ignore: deprecated_member_use
-                  value: slot.memberName,
+                builder: (_, __, ___) => DropdownButtonFormField<String>(
+                  initialValue: slot.memberName,
                   hint: const Text('Assign member'),
                   items:
                       const [
