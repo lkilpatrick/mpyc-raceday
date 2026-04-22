@@ -118,7 +118,11 @@ class _EventDetailPanelState extends ConsumerState<EventDetailPanel>
   // ────────────────────────────────────────────────────────────────────────────
 
   Widget _buildCrewTab(RaceEvent event) {
-    final detail = ref.watch(eventDetailProvider(widget.eventId)).valueOrNull;
+    final detailAsync2 = ref.watch(eventDetailProvider(widget.eventId));
+    final detail = switch (detailAsync2) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -234,7 +238,10 @@ class _EventDetailPanelState extends ConsumerState<EventDetailPanel>
           const SizedBox(height: 20),
           Builder(
             builder: (context) {
-              final session = sessionAsync.valueOrNull;
+              final session = switch (sessionAsync) {
+                AsyncData(:final value) => value,
+                _ => null,
+              };
               final raceStartId = session?.raceStartId;
               if (raceStartId == null || raceStartId.isEmpty) {
                 return Column(
