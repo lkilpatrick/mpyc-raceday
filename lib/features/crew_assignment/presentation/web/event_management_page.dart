@@ -125,10 +125,16 @@ class _EventManagementPageState extends ConsumerState<EventManagementPage> {
                         _selectedIds.add(event.id);
                       }
                     }),
-                    onTap: () => showModalBottomSheet(
+                    onTap: () => showDialog<void>(
                       context: context,
-                      isScrollControlled: true,
-                      builder: (_) => EventDetailPanel(eventId: event.id),
+                      builder: (_) => Dialog(
+                        insetPadding: const EdgeInsets.symmetric(
+                          horizontal: 48,
+                          vertical: 24,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: EventDetailPanel(eventId: event.id),
+                      ),
                     ),
                     cells: [
                       DataCell(Text(DateFormat.yMMMd().format(event.date))),

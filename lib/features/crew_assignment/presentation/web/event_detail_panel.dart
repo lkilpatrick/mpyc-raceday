@@ -62,9 +62,27 @@ class _EventDetailPanelState extends ConsumerState<EventDetailPanel>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        event.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              event.name,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close, size: 16),
+                            label: const Text('Close'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: () => _saveNotes(event),
+                            icon: const Icon(Icons.save, size: 16),
+                            label: const Text('Save Notes'),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -648,6 +666,16 @@ class _EventDetailPanelState extends ConsumerState<EventDetailPanel>
         context,
       ).showSnackBar(const SnackBar(content: Text('Race reset to Setup')));
     }
+  }
+
+  Future<void> _saveNotes(RaceEvent event) async {
+    await ref
+        .read(crewAssignmentRepositoryProvider)
+        .saveEvent(event.copyWith(notes: _notesController.text.trim()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Notes saved')));
   }
 
   Widget _slotTile(RaceEvent event, CrewSlot slot) {

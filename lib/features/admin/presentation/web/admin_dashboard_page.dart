@@ -34,38 +34,82 @@ class AdminDashboardPage extends ConsumerWidget {
     _NavSection(
       title: 'Race Operations',
       items: [
-        _NavItem(Icons.calendar_month, 'Season Calendar', '/season-calendar',
-            'View and manage the race season schedule'),
-        _NavItem(Icons.sailing, 'Race Events', '/race-events',
-            'Upcoming races, results, and event details'),
-        _NavItem(Icons.groups, 'Crew Management', '/crew-management',
-            'Assign and track race committee crew'),
-        _NavItem(Icons.map, 'Courses', '/courses',
-            'Course configurations, marks, and diagrams'),
-        _NavItem(Icons.checklist, 'Checklists', '/checklists-admin',
-            'Pre-race and safety checklists'),
-        _NavItem(Icons.report_problem, 'Incidents & Protests',
-            '/incidents', 'File and review incidents'),
-        _NavItem(Icons.gavel, 'Racing Rules', '/rules-reference',
-            'Browse and search the Racing Rules of Sailing'),
+        _NavItem(
+          Icons.calendar_month,
+          'Season Calendar',
+          '/season-calendar',
+          'View and manage the race season schedule',
+        ),
+        _NavItem(
+          Icons.sailing,
+          'Race Events',
+          '/race-events',
+          'Upcoming races, results, and event details',
+        ),
+        _NavItem(
+          Icons.groups,
+          'Crew Management',
+          '/crew-management',
+          'Assign and track race committee crew',
+        ),
+        _NavItem(
+          Icons.map,
+          'Courses',
+          '/courses',
+          'Course configurations, marks, and diagrams',
+        ),
+        _NavItem(
+          Icons.checklist,
+          'Checklists',
+          '/checklists-admin',
+          'Pre-race and safety checklists',
+        ),
+        _NavItem(
+          Icons.report_problem,
+          'Incidents & Protests',
+          '/incidents',
+          'File and review incidents',
+        ),
+        _NavItem(
+          Icons.gavel,
+          'Racing Rules',
+          '/rules-reference',
+          'Browse and search the Racing Rules of Sailing',
+        ),
       ],
     ),
     _NavSection(
       title: 'Fleet Maintenance',
       items: [
-        _NavItem(Icons.build, 'Maintenance', '/maintenance',
-            'Track maintenance requests and repairs'),
+        _NavItem(
+          Icons.build,
+          'Maintenance',
+          '/maintenance',
+          'Track maintenance requests and repairs',
+        ),
       ],
     ),
     _NavSection(
       title: 'Administration',
       items: [
-        _NavItem(Icons.people, 'Members', '/members',
-            'Club membership directory'),
-        _NavItem(Icons.sync, 'Sync Dashboard', '/sync-dashboard',
-            'ClubSpot sync status and logs'),
-        _NavItem(Icons.settings, 'System Settings', '/system-settings',
-            'App configuration and preferences'),
+        _NavItem(
+          Icons.people,
+          'Members',
+          '/members',
+          'Club membership directory',
+        ),
+        _NavItem(
+          Icons.sync,
+          'Sync Dashboard',
+          '/sync-dashboard',
+          'ClubSpot sync status and logs',
+        ),
+        _NavItem(
+          Icons.settings,
+          'System Settings',
+          '/system-settings',
+          'App configuration and preferences',
+        ),
       ],
     ),
   ];
@@ -83,52 +127,62 @@ class AdminDashboardPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Dashboard',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Dashboard',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
-          Text('Welcome to MPYC Race Day',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          Text(
+            'Welcome to MPYC Race Day',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
           const SizedBox(height: 24),
 
           // ── Hero Cards Row ──
-          LayoutBuilder(builder: (context, constraints) {
-            final wide = constraints.maxWidth > 900;
-            final children = <Widget>[
-              _WeatherCard(
-                weather: weatherAsync,
-                stations: stationsAsync,
-              ),
-              _NextRaceCard(eventsAsync: eventsAsync),
-              _FeaturedCourseCard(
-                coursesAsync: allCourses,
-                distancesAsync: distancesAsync,
-              ),
-            ];
-            if (wide) {
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children
-                      .map((c) => Expanded(child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: c,
-                          )))
-                      .toList(),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth > 900;
+              final children = <Widget>[
+                _WeatherCard(weather: weatherAsync, stations: stationsAsync),
+                _NextRaceCard(eventsAsync: eventsAsync),
+                _FeaturedCourseCard(
+                  coursesAsync: allCourses,
+                  distancesAsync: distancesAsync,
                 ),
-              );
-            }
-            return Column(
-              children: children
-                  .map((c) => Padding(
+              ];
+              if (wide) {
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: children
+                        .map(
+                          (c) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                              child: c,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                );
+              }
+              return Column(
+                children: children
+                    .map(
+                      (c) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: c,
-                      ))
-                  .toList(),
-            );
-          }),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
 
           const SizedBox(height: 24),
 
@@ -139,28 +193,30 @@ class AdminDashboardPage extends ConsumerWidget {
 
           // ── Quick Navigation ──
           for (final section in _sections) ...[
-            Text(section.title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade500,
-                  letterSpacing: 0.5,
-                )),
+            Text(
+              section.title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade500,
+                letterSpacing: 0.5,
+              ),
+            ),
             const SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, constraints) {
                 final crossCount = constraints.maxWidth > 900
                     ? 3
                     : constraints.maxWidth > 500
-                        ? 2
-                        : 1;
+                    ? 2
+                    : 1;
                 return Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: section.items.map((item) {
                     final cardWidth =
                         (constraints.maxWidth - (crossCount - 1) * 12) /
-                            crossCount;
+                        crossCount;
                     return SizedBox(
                       width: cardWidth,
                       child: _NavCard(item: item),
@@ -204,21 +260,28 @@ class _WeatherCard extends StatelessWidget {
             loading: () => const SizedBox(
               height: 180,
               child: Center(
-                  child: CircularProgressIndicator(color: Colors.white70)),
+                child: CircularProgressIndicator(color: Colors.white70),
+              ),
             ),
             error: (error, stackTrace) => const SizedBox(
               height: 180,
               child: Center(
-                  child: Text('Weather unavailable',
-                      style: TextStyle(color: Colors.white70))),
+                child: Text(
+                  'Weather unavailable',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
             ),
             data: (w) {
               if (w == null) {
                 return const SizedBox(
                   height: 180,
                   child: Center(
-                      child: Text('No weather data',
-                          style: TextStyle(color: Colors.white70))),
+                    child: Text(
+                      'No weather data',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
                 );
               }
               final stationList = stations.value ?? [];
@@ -230,25 +293,33 @@ class _WeatherCard extends StatelessWidget {
                     children: [
                       const Icon(Icons.cloud, color: Colors.white70, size: 16),
                       const SizedBox(width: 6),
-                      Text('CURRENT CONDITIONS',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                          )),
+                      Text(
+                        'CURRENT CONDITIONS',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
+                        ),
+                      ),
                       const Spacer(),
                       if (w.isStale)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withAlpha(50),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('STALE',
-                              style: TextStyle(
-                                  color: Colors.orange, fontSize: 10)),
+                          child: const Text(
+                            'STALE',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -267,39 +338,50 @@ class _WeatherCard extends StatelessWidget {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('${w.speedKts.round()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1,
-                                    )),
+                                Text(
+                                  '${w.speedKts.round()}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1,
+                                  ),
+                                ),
                                 const SizedBox(width: 3),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 3),
-                                  child: Text('kts',
-                                      style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 13)),
+                                  child: Text(
+                                    'kts',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ),
                                 if (w.gustKts != null) ...[
                                   const SizedBox(width: 6),
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 3),
-                                    child: Text('G ${w.gustKts!.round()}',
-                                        style: TextStyle(
-                                          color: Colors.amber.shade300,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        )),
+                                    child: Text(
+                                      'G ${w.gustKts!.round()}',
+                                      style: TextStyle(
+                                        color: Colors.amber.shade300,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text('${w.windDirectionLabel} (${w.dirDeg}°)',
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
+                            Text(
+                              '${w.windDirectionLabel} (${w.dirDeg}°)',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -308,16 +390,23 @@ class _WeatherCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           if (w.tempF != null)
-                            Text('${w.tempF!.round()}°F',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              '${w.tempF!.round()}°F',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           if (w.textDescription != null &&
                               w.textDescription!.isNotEmpty)
-                            Text(w.textDescription!,
-                                style: const TextStyle(
-                                    color: Colors.white60, fontSize: 11)),
+                            Text(
+                              w.textDescription!,
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontSize: 11,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -328,13 +417,15 @@ class _WeatherCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     const Divider(color: Colors.white24, height: 1),
                     const SizedBox(height: 8),
-                    Text('NEARBY STATIONS',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                        )),
+                    Text(
+                      'NEARBY STATIONS',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     ...stationList.take(5).map((s) => _stationRow(s)),
                   ],
@@ -381,19 +472,26 @@ class _WeatherCard extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 11),
             ),
             if (s.gustKts != null && s.gustKts! > 0)
-              Text(' G${s.gustKts!.round()}',
-                  style: TextStyle(
-                      color: Colors.amber.shade300,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                ' G${s.gustKts!.round()}',
+                style: TextStyle(
+                  color: Colors.amber.shade300,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
           ],
           if (!hasWind && s.waterTempF != null)
-            Text('Water ${s.waterTempF!.round()}°F',
-                style: TextStyle(color: Colors.cyan.shade200, fontSize: 11)),
+            Text(
+              'Water ${s.waterTempF!.round()}°F',
+              style: TextStyle(color: Colors.cyan.shade200, fontSize: 11),
+            ),
           if (s.tempF != null) ...[
             const SizedBox(width: 8),
-            Text('${s.tempF!.round()}°F',
-                style: const TextStyle(color: Colors.white60, fontSize: 11)),
+            Text(
+              '${s.tempF!.round()}°F',
+              style: const TextStyle(color: Colors.white60, fontSize: 11),
+            ),
           ],
         ],
       ),
@@ -432,17 +530,20 @@ class _WindyForecastCardState extends State<_WindyForecastCard> {
               children: [
                 Icon(Icons.air, color: Colors.blue.shade400, size: 18),
                 const SizedBox(width: 8),
-                Text('WIND FORECAST — MPYC',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                    )),
+                Text(
+                  'WIND FORECAST — MPYC',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                  ),
+                ),
                 const Spacer(),
-                Text('Powered by Windy.app',
-                    style: TextStyle(
-                        fontSize: 10, color: Colors.grey.shade400)),
+                Text(
+                  'Powered by Windy.app',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                ),
               ],
             ),
           ),
@@ -471,9 +572,7 @@ class _WindCompass extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _CompassPainter(dirDeg: dirDeg),
-      ),
+      child: CustomPaint(painter: _CompassPainter(dirDeg: dirDeg)),
     );
   }
 }
@@ -555,10 +654,14 @@ class _CompassPainter extends CustomPainter {
     final headLen = 8.0;
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
-      ..lineTo(tip.dx - headLen * math.cos(headAngle1),
-          tip.dy - headLen * math.sin(headAngle1))
-      ..lineTo(tip.dx - headLen * math.cos(headAngle2),
-          tip.dy - headLen * math.sin(headAngle2))
+      ..lineTo(
+        tip.dx - headLen * math.cos(headAngle1),
+        tip.dy - headLen * math.sin(headAngle1),
+      )
+      ..lineTo(
+        tip.dx - headLen * math.cos(headAngle2),
+        tip.dy - headLen * math.sin(headAngle2),
+      )
       ..close();
     canvas.drawPath(path, Paint()..color = Colors.amber);
   }
@@ -592,12 +695,17 @@ class _NextRaceCard extends StatelessWidget {
           ),
           data: (events) {
             final now = DateTime.now();
-            final upcoming = events
-                .where((e) =>
-                    e.status != EventStatus.cancelled &&
-                    e.date.isAfter(now.subtract(const Duration(hours: 12))))
-                .toList()
-              ..sort((a, b) => a.date.compareTo(b.date));
+            final upcoming =
+                events
+                    .where(
+                      (e) =>
+                          e.status != EventStatus.cancelled &&
+                          e.date.isAfter(
+                            now.subtract(const Duration(hours: 12)),
+                          ),
+                    )
+                    .toList()
+                  ..sort((a, b) => a.date.compareTo(b.date));
 
             if (upcoming.isEmpty) {
               return SizedBox(
@@ -608,9 +716,13 @@ class _NextRaceCard extends StatelessWidget {
                     _sectionHeader(context, Icons.sailing, 'NEXT RACE'),
                     const Spacer(),
                     Center(
-                      child: Text('No upcoming races',
-                          style: TextStyle(
-                              color: Colors.grey.shade500, fontSize: 14)),
+                      child: Text(
+                        'No upcoming races',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                     const Spacer(),
                   ],
@@ -625,30 +737,39 @@ class _NextRaceCard extends StatelessWidget {
             final countdownText = daysUntil == 0
                 ? 'Today'
                 : daysUntil == 1
-                    ? 'Tomorrow'
-                    : '$daysUntil days away';
+                ? 'Tomorrow'
+                : '$daysUntil days away';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sectionHeader(context, Icons.sailing, 'NEXT RACE'),
                 const SizedBox(height: 16),
-                Text(next.name,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  next.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(next.seriesName,
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey.shade600)),
+                Text(
+                  next.seriesName,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _infoPill(Icons.calendar_today,
-                        DateFormat('EEE, MMM d').format(next.date)),
+                    _infoPill(
+                      Icons.calendar_today,
+                      DateFormat('EEE, MMM d').format(next.date),
+                    ),
                     const SizedBox(width: 8),
                     if (next.startTime != null)
-                      _infoPill(Icons.access_time,
-                          next.startTime!.format(context)),
+                      _infoPill(
+                        Icons.access_time,
+                        next.startTime!.format(context),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -658,7 +779,9 @@ class _NextRaceCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: daysUntil <= 1
                             ? Colors.orange.withAlpha(30)
@@ -682,37 +805,51 @@ class _NextRaceCard extends StatelessWidget {
                     Text(
                       '${next.confirmedCount}/${next.crewSlots.length} crew',
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const Spacer(),
                     InkWell(
                       onTap: () => context.go('/race-events'),
-                      child: Text('View all →',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.w600,
-                          )),
+                      child: Text(
+                        'View all →',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 if (upcoming.length > 1) ...[
                   const SizedBox(height: 12),
-                  ...upcoming.skip(1).take(2).map((e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.circle,
-                                size: 6, color: Colors.grey.shade400),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${DateFormat('MMM d').format(e.date)} — ${e.name}',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade500),
-                            ),
-                          ],
+                  ...upcoming
+                      .skip(1)
+                      .take(2)
+                      .map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.circle,
+                                size: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${DateFormat('MMM d').format(e.date)} — ${e.name}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      )),
+                      ),
                 ],
               ],
             );
@@ -734,8 +871,10 @@ class _NextRaceCard extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: Colors.grey.shade600),
           const SizedBox(width: 4),
-          Text(text,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+          Text(
+            text,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+          ),
         ],
       ),
     );
@@ -746,13 +885,15 @@ class _NextRaceCard extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.grey.shade500, size: 16),
         const SizedBox(width: 6),
-        Text(label,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1,
-            )),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
+          ),
+        ),
       ],
     );
   }
@@ -780,9 +921,11 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
 
   void _pickRandom(List<CourseConfig> courses) {
     if (courses.isEmpty) return;
+    final featuredStillExists =
+        _featured != null && courses.any((c) => c.id == _featured!.id);
     // Use day-of-year as seed so it changes daily but stays stable per session
     final seed = DateTime.now().difference(DateTime(2024)).inDays;
-    if (_lastSeed == seed && _featured != null) return;
+    if (_lastSeed == seed && featuredStillExists) return;
     _lastSeed = seed;
     final rng = math.Random(seed);
     _featured = courses[rng.nextInt(courses.length)];
@@ -792,8 +935,14 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
     if (courses.isEmpty) return;
     final rng = math.Random();
     setState(() {
-      _featured = courses[rng.nextInt(courses.length)];
-      _lastSeed = -1; // force override
+      var next = courses[rng.nextInt(courses.length)];
+      if (_featured != null && courses.length > 1 && next.id == _featured!.id) {
+        next =
+            courses[(courses.indexWhere((c) => c.id == next.id) + 1) %
+                courses.length];
+      }
+      _featured = next;
+      _lastSeed = DateTime.now().difference(DateTime(2024)).inDays;
     });
   }
 
@@ -827,13 +976,15 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                 children: [
                   Icon(Icons.school, color: Colors.grey.shade500, size: 16),
                   const SizedBox(width: 6),
-                  Text('LEARN A COURSE',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
-                      )),
+                  Text(
+                    'LEARN A COURSE',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
                   const Spacer(),
                   if (courses.isNotEmpty)
                     InkWell(
@@ -841,12 +992,19 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.refresh,
-                              size: 14, color: Colors.grey.shade500),
+                          Icon(
+                            Icons.refresh,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
                           const SizedBox(width: 4),
-                          Text('Shuffle',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey.shade500)),
+                          Text(
+                            'Shuffle',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -863,50 +1021,69 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                 // Course title + wind group badge
                 Row(
                   children: [
-                    Text('Course ${featured.courseNumber}',
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Course ${featured.courseNumber}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     if (wg != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color:
-                              _parseHex(wg.color).withAlpha(20),
+                          color: _parseHex(wg.color).withAlpha(20),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: _parseHex(wg.color).withAlpha(80)),
+                            color: _parseHex(wg.color).withAlpha(80),
+                          ),
                         ),
-                        child: Text(wg.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: _parseHex(wg.color),
-                            )),
+                        child: Text(
+                          wg.label,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _parseHex(wg.color),
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 if (featured.courseName.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(featured.courseName,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
+                    child: Text(
+                      featured.courseName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                   ),
 
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text('${featured.distanceNm} nm',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700)),
+                    Text(
+                      '${featured.distanceNm} nm',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Text('Finish: ${featured.finishLocation}',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
+                    Text(
+                      'Finish: ${featured.finishLocation}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                   ],
                 ),
 
@@ -932,12 +1109,14 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                   alignment: Alignment.centerRight,
                   child: InkWell(
                     onTap: () => context.go('/courses'),
-                    child: Text('View all courses →',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.w600,
-                        )),
+                    child: Text(
+                      'View all courses →',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -964,18 +1143,18 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
                 color: color.withAlpha(30),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: Icon(icon, size: 12, color: color),
-              ),
+              child: Center(child: Icon(icon, size: 12, color: color)),
             ),
             const SizedBox(width: 8),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(width: 6),
-            Text(detail,
-                style: TextStyle(
-                    fontSize: 11, color: Colors.grey.shade600)),
+            Text(
+              detail,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
           ],
         ),
       );
@@ -987,15 +1166,18 @@ class _FeaturedCourseCardState extends State<_FeaturedCourseCard> {
 
     for (final m in seq) {
       final rounding = m.rounding == MarkRounding.port ? 'port' : 'starboard';
-      items.add(row(
-        m.rounding == MarkRounding.port ? Icons.turn_left : Icons.turn_right,
-        m.rounding == MarkRounding.port ? Colors.red : Colors.green,
-        'Mark ${m.markName}',
-        'Leave to $rounding',
-      ));
+      items.add(
+        row(
+          m.rounding == MarkRounding.port ? Icons.turn_left : Icons.turn_right,
+          m.rounding == MarkRounding.port ? Colors.red : Colors.green,
+          'Mark ${m.markName}',
+          'Leave to $rounding',
+        ),
+      );
     }
 
-    final finishDetail = course.finishType == 'club_mark' && course.finishMarkId != null
+    final finishDetail =
+        course.finishType == 'club_mark' && course.finishMarkId != null
         ? 'Finish at Mark ${course.finishMarkId}'
         : 'Finish at committee boat';
     items.add(row(Icons.sports_score, Colors.green, 'Finish', finishDetail));
@@ -1047,20 +1229,27 @@ class _NavCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.label,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(
+                      item.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(item.description,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      item.description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: Colors.grey.shade400),
+              Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
             ],
           ),
         ),
