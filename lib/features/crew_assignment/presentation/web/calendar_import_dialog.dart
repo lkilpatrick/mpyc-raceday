@@ -19,15 +19,15 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
   int _step = 0;
   List<Map<String, String>> _rows = [];
   final Map<String, String> _mapping = {
-    'Title': 'Title',
-    'Start Date': 'Start Date',
+    'Event Name': 'Event Name',
+    'Date': 'Date',
+    'Series': 'Series',
     'Start Time': 'Start Time',
-    'Description': 'Description',
-    'Location': 'Location',
-    'Contact': 'Contact',
-    'Extra Info': 'Extra Info',
-    'RC Fleet': 'RC Fleet',
-    'Race Committee': 'Race Committee',
+    'PRO': 'PRO',
+    'Signal Boat': 'Signal Boat',
+    'Mark Boat': 'Mark Boat',
+    'Safety': 'Safety',
+    'Notes': 'Notes',
   };
   List<String> _headers = [];
   List<String> _validationErrors = [];
@@ -51,7 +51,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
               const SizedBox(height: 12),
               Stepper(
                 currentStep: _step,
-                controlsBuilder: (context, details) => const SizedBox.shrink(),
+                controlsBuilder: (_, __) => const SizedBox.shrink(),
                 steps: [
                   Step(
                     title: const Text('Upload'),
@@ -134,8 +134,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
         return SizedBox(
           width: 260,
           child: DropdownButtonFormField<String>(
-            // ignore: deprecated_member_use
-            value: _mapping[target],
+            initialValue: _mapping[target],
             decoration: InputDecoration(labelText: target),
             items: _headers
                 .map((h) => DropdownMenuItem(value: h, child: Text(h)))
@@ -185,42 +184,26 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
     );
   }
 
-  /// Parse a CSV line respecting quoted fields (e.g. "Sunday, March 08, 2026")
-  static List<String> _parseCsvLine(String line) {
-    final fields = <String>[];
-    var current = StringBuffer();
-    var inQuotes = false;
-
-    for (var i = 0; i < line.length; i++) {
-      final ch = line[i];
-      if (ch == '"') {
-        // Handle escaped quotes ""
-        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-          current.write('"');
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch == ',' && !inQuotes) {
-        fields.add(current.toString().trim());
-        current = StringBuffer();
-      } else {
-        current.write(ch);
-      }
-    }
-    fields.add(current.toString().trim());
-    return fields;
-  }
-
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['csv'],
+      allowedExtensions: ['csv', 'xlsx'],
       withData: true,
     );
     if (result == null || result.files.single.bytes == null) return;
 
     final file = result.files.single;
+    final ext = file.extension?.toLowerCase();
+    if (ext == 'xlsx') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'XLSX upload accepted; using CSV-style parser in this scaffold.',
+          ),
+        ),
+      );
+    }
+
     final text = utf8.decode(file.bytes!);
     final lines = text
         .split('\n')
@@ -229,25 +212,14 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
         .toList();
     if (lines.isEmpty) return;
 
-    // Find the header row (contains "Title" and "Start Date")
-    var headerIdx = 0;
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].contains('Title') && lines[i].contains('Start Date')) {
-        headerIdx = i;
-        break;
-      }
-    }
-
-    final headers = _parseCsvLine(lines[headerIdx]);
+    final headers = lines.first.split(',').map((e) => e.trim()).toList();
     final rows = <Map<String, String>>[];
 
-    for (final line in lines.skip(headerIdx + 1)) {
-      final parts = _parseCsvLine(line);
-      // Skip filler rows (month headers, empty rows)
-      if (parts.every((p) => p.isEmpty)) continue;
+    for (final line in lines.skip(1)) {
+      final parts = line.split(',');
       final row = <String, String>{};
       for (var i = 0; i < headers.length && i < parts.length; i++) {
-        row[headers[i]] = parts[i];
+        row[headers[i]] = parts[i].trim();
       }
       rows.add(row);
     }
@@ -262,38 +234,33 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
   }
 
   void _validate() {
+    final now = DateTime.now();
     final errors = <String>[];
     final seen = <String>{};
-    var validCount = 0;
 
     for (final row in _mappedRows()) {
-      final eventName = (row['Title'] ?? '').trim();
-      final dateRaw = (row['Start Date'] ?? '').trim();
+      final eventName = row['Event Name'] ?? '';
+      final dateRaw = row['Date'] ?? '';
+      final date = DateTime.tryParse(dateRaw);
 
-      // Skip filler rows
-      if (eventName.isEmpty && dateRaw.isEmpty) continue;
-      if (eventName.isEmpty || dateRaw.isEmpty) {
-        if (eventName.isNotEmpty && !RegExp(r'^[A-Z]+$').hasMatch(eventName)) {
-          errors.add('Missing date for: $eventName');
-        }
-        continue;
+      if (date == null) {
+        errors.add('Invalid date: $dateRaw ($eventName)');
+      } else if (date.isBefore(DateTime(now.year, now.month, now.day))) {
+        errors.add('Past date found: $eventName on $dateRaw');
       }
-
-      // Skip revision header
-      if (eventName.toLowerCase().startsWith('revision')) continue;
 
       final key = '$eventName-$dateRaw';
       if (seen.contains(key)) {
-        errors.add('Duplicate: $eventName ($dateRaw)');
+        errors.add('Duplicate row: $eventName ($dateRaw)');
       }
       seen.add(key);
-      validCount++;
-    }
 
-    if (validCount == 0) {
-      errors.insert(0, 'No valid events found in the CSV.');
-    } else {
-      errors.insert(0, '$validCount events ready to import.');
+      for (final roleCol in ['PRO', 'Signal Boat', 'Mark Boat', 'Safety']) {
+        final name = row[roleCol] ?? '';
+        if (name.isNotEmpty && name.length < 3) {
+          errors.add('Unknown member name in $roleCol: "$name"');
+        }
+      }
     }
 
     setState(() => _validationErrors = errors);

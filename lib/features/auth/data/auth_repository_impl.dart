@@ -11,9 +11,9 @@ class AuthRepositoryImpl implements AuthRepository {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _functions = functions ?? FirebaseFunctions.instance;
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _functions = functions ?? FirebaseFunctions.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -21,11 +21,12 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<({String maskedEmail, String memberId})> sendVerificationCode(
-      String memberNumber) async {
+    String memberNumber,
+  ) async {
     final callable = _functions.httpsCallable('sendVerificationCode');
-    final result = await callable.call<Map<String, dynamic>>(
-      {'memberNumber': memberNumber},
-    );
+    final result = await callable.call<Map<String, dynamic>>({
+      'memberNumber': memberNumber,
+    });
     final data = result.data;
     return (
       maskedEmail: data['maskedEmail'] as String,
@@ -36,9 +37,10 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Member> verifyCode(String memberId, String code) async {
     final callable = _functions.httpsCallable('verifyCodeAndCreateToken');
-    final result = await callable.call<Map<String, dynamic>>(
-      {'memberId': memberId, 'code': code},
-    );
+    final result = await callable.call<Map<String, dynamic>>({
+      'memberId': memberId,
+      'code': code,
+    });
     final data = result.data;
     final customToken = data['customToken'] as String;
 
@@ -54,8 +56,10 @@ class AuthRepositoryImpl implements AuthRepository {
     }
     // Create/update the UID-keyed shadow doc so role-based security rules work
     if (uid != null) {
-      final memberDoc =
-          await _firestore.collection('members').doc(memberId).get();
+      final memberDoc = await _firestore
+          .collection('members')
+          .doc(memberId)
+          .get();
       if (memberDoc.exists && memberDoc.data() != null) {
         await _ensureUidDoc(uid, memberDoc.data()!);
       }
@@ -70,9 +74,9 @@ class AuthRepositoryImpl implements AuthRepository {
     if (!emailOrSignal.contains('@')) {
       // Use Cloud Function to resolve signal number (avoids Firestore auth rules)
       final callable = _functions.httpsCallable('resolveSignalNumber');
-      final result = await callable.call<Map<String, dynamic>>(
-        {'signalNumber': emailOrSignal.trim()},
-      );
+      final result = await callable.call<Map<String, dynamic>>({
+        'signalNumber': emailOrSignal.trim(),
+      });
       resolvedEmail = result.data['email'] as String;
     }
 
@@ -118,7 +122,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> updatePassword(
-      String currentPassword, String newPassword) async {
+    String currentPassword,
+    String newPassword,
+  ) async {
     final user = _auth.currentUser;
     if (user == null || user.email == null) {
       throw Exception('No authenticated user');
@@ -207,9 +213,7 @@ class AuthRepositoryImpl implements AuthRepository {
         .get();
     if (snap.docs.isEmpty) throw Exception('Member not found');
 
-    await snap.docs.first.reference.update({
-      'notificationsEnabled': enabled,
-    });
+    await snap.docs.first.reference.update({'notificationsEnabled': enabled});
   }
 
   Future<Member?> _fetchMember(String memberId) async {
@@ -241,7 +245,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
     final emergencyData =
         data['emergencyContact'] as Map<String, dynamic>? ??
-            {'name': 'Unknown', 'phone': ''};
+        {'name': 'Unknown', 'phone': ''};
 
     final lastSyncedRaw = data['lastSynced'];
     DateTime lastSynced;
@@ -326,9 +330,7 @@ class AuthRepositoryImpl implements AuthRepository {
             'lastLogin': FieldValue.serverTimestamp(),
           });
         } else {
-          await uidDocRef.update({
-            'lastLogin': FieldValue.serverTimestamp(),
-          });
+          await uidDocRef.update({'lastLogin': FieldValue.serverTimestamp()});
         }
         return;
       }
