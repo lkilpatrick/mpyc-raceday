@@ -174,9 +174,12 @@ class BoatCheckinRepositoryImpl implements BoatCheckinRepository {
   Stream<List<Boat>> watchFleet() {
     return _fleetCol
         .where('isActive', isEqualTo: true)
-        .orderBy('sailNumber')
         .snapshots()
-        .map((snap) => snap.docs.map(_boatFromDoc).toList());
+        .map((snap) {
+      final list = snap.docs.map(_boatFromDoc).toList();
+      list.sort((a, b) => a.sailNumber.compareTo(b.sailNumber));
+      return list;
+    });
   }
 
   @override

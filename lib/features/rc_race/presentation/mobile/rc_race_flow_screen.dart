@@ -91,6 +91,7 @@ class _RcRaceFlowScreenState extends ConsumerState<RcRaceFlowScreen> {
           _StepIndicator(
             currentStep: currentStep,
             status: session.status,
+            onStepTapped: (stepIndex) => _onStepTapped(session, stepIndex),
           ),
 
           // Step content — keyed by status so it only rebuilds on status change
@@ -103,6 +104,55 @@ class _RcRaceFlowScreenState extends ConsumerState<RcRaceFlowScreen> {
         ],
       ),
     );
+  }
+
+  /// Map step index back to the status it represents.
+  static const _stepStatuses = [
+    RaceSessionStatus.setup,
+    RaceSessionStatus.checkinOpen,
+    RaceSessionStatus.startPending,
+    RaceSessionStatus.running,
+    RaceSessionStatus.scoring,
+    RaceSessionStatus.review,
+  ];
+
+  Future<void> _onStepTapped(RaceSession session, int stepIndex) async {
+    final current = session.status.stepIndex;
+    // Only allow tapping completed (earlier) steps or the current step
+    if (stepIndex >= current) return;
+    // Don't allow navigation from terminal states except abandoned
+    if (session.status == RaceSessionStatus.finalized) return;
+
+    final targetStatus = _stepStatuses[stepIndex];
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Go Back?'),
+        content: Text(
+          'Return the race to "${targetStatus.label}"?\n\n'
+          'No data will be lost — you can progress forward again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('GO BACK'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final repo = ref.read(rcRaceRepositoryProvider);
+    if (session.status == RaceSessionStatus.abandoned) {
+      await repo.unAbandonRace(widget.eventId, restoreTo: targetStatus);
+    } else {
+      await repo.updateStatus(widget.eventId, targetStatus);
+    }
   }
 
   Widget _buildStepContent(RaceSession session) {
@@ -216,10 +266,15 @@ class _ElapsedClock extends StatelessWidget {
 }
 
 class _StepIndicator extends StatelessWidget {
-  const _StepIndicator({required this.currentStep, required this.status});
+  const _StepIndicator({
+    required this.currentStep,
+    required this.status,
+    this.onStepTapped,
+  });
 
   final int currentStep;
   final RaceSessionStatus status;
+  final ValueChanged<int>? onStepTapped;
 
   static const _icons = [
     Icons.settings,
@@ -239,6 +294,8 @@ class _StepIndicator extends StatelessWidget {
         children: List.generate(6, (i) {
           final isActive = i == currentStep;
           final isDone = i < currentStep;
+          final isTappable = isDone &&
+              status != RaceSessionStatus.finalized;
           final color = status.isTerminal && i == currentStep
               ? (status == RaceSessionStatus.abandoned
                   ? Colors.red
@@ -250,37 +307,40 @@ class _StepIndicator extends StatelessWidget {
                       : Colors.grey.shade300;
 
           return Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isDone || isActive
-                        ? color
-                        : Colors.grey.shade200,
-                    shape: BoxShape.circle,
+            child: GestureDetector(
+              onTap: isTappable ? () => onStepTapped?.call(i) : null,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isDone || isActive
+                          ? color
+                          : Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isDone ? Icons.check : _icons[i],
+                      size: 16,
+                      color: isDone || isActive
+                          ? Colors.white
+                          : Colors.grey.shade400,
+                    ),
                   ),
-                  child: Icon(
-                    isDone ? Icons.check : _icons[i],
-                    size: 16,
-                    color: isDone || isActive
-                        ? Colors.white
-                        : Colors.grey.shade400,
+                  const SizedBox(height: 2),
+                  Text(
+                    RcRaceFlowScreen._stepLabels[i],
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight:
+                          isActive ? FontWeight.bold : FontWeight.normal,
+                      color: isActive ? Colors.blue : Colors.grey,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  RcRaceFlowScreen._stepLabels[i],
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight:
-                        isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive ? Colors.blue : Colors.grey,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }),

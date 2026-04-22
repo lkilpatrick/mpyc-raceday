@@ -339,6 +339,23 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
           ),
         ],
 
+        if (isAbandoned) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton.icon(
+              onPressed: () => _undoAbandon(),
+              icon: const Icon(Icons.undo),
+              label: const Text('Undo Abandon — Resume Race',
+                  style: TextStyle(fontSize: 16)),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.orange,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+
         if (isFinalized || isAbandoned) ...[
           SizedBox(
             width: double.infinity,
@@ -409,6 +426,35 @@ class _RcReviewStepState extends ConsumerState<RcReviewStep> {
         );
       }
     }
+  }
+
+  Future<void> _undoAbandon() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resume Race?'),
+        content: const Text(
+          'This will undo the abandon and return the race to scoring.\n\n'
+          'All existing finish records are preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('RESUME'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    await ref
+        .read(rcRaceRepositoryProvider)
+        .unAbandonRace(widget.session.id);
   }
 
   Future<void> _backToScoring() async {

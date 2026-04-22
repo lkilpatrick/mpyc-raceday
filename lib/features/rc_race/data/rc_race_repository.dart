@@ -96,6 +96,16 @@ class RcRaceRepository {
     });
   }
 
+  /// Undo an abandon — restore to the given status (default: scoring).
+  Future<void> unAbandonRace(String eventId,
+      {RaceSessionStatus restoreTo = RaceSessionStatus.scoring}) async {
+    await _events.doc(eventId).update({
+      'status': restoreTo.firestoreValue,
+      'abandonedAt': FieldValue.delete(),
+      'abandonedReason': FieldValue.delete(),
+    });
+  }
+
   /// Finalize results and mark clubspot-ready.
   Future<void> finalizeResults(String eventId, {String? notes}) async {
     await _events.doc(eventId).update({
