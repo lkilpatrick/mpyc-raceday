@@ -252,74 +252,81 @@ The command center for race management, accessible to RC Chairs, Club Board, and
 ## Getting Started
 
 ### Prerequisites
-- Flutter SDK ≥ 3.10
-- Node.js ≥ 18 (for Cloud Functions and seed scripts)
+- Flutter SDK ≥ 3.38 (Dart ≥ 3.10)
+- Node.js 22 (required by Cloud Functions)
 - Firebase CLI (`npm install -g firebase-tools`)
-- A Firebase project with Firestore, Auth, Functions, Storage, and Hosting enabled
+- Access to the `mpyc-raceday` Firebase project
 
 ### Setup
 
 ```bash
-# Clone
-git clone https://github.com/lkilpatrick/mpyc-raceday.git
-cd mpyc-raceday
-
-# Install Flutter dependencies
 flutter pub get
-
-# Install Cloud Functions dependencies
-cd functions && npm install && cd ..
-
-# Firebase login and project selection
+npm ci --prefix functions
 firebase login
 firebase use mpyc-raceday
 ```
 
+Confirm the selected project before running any Firebase command:
+
+```bash
+firebase use
+```
+
+It must print `mpyc-raceday`. Deployment commands below also pass `--project mpyc-raceday` explicitly to prevent accidental deployment to another Firebase project.
+
 ### Environment
 
-Create a `.env` file in the project root (optional, for Clubspot API):
-```
-CLUBSPOT_API_KEY=your_key_here
-```
+`CARTO_BASEMAPS_API_KEY` is required for unwatermarked CARTO raster basemaps. It is supplied at compile time via `--dart-define-from-file=.env` and is embedded in client builds, so it must be domain/app restricted in CARTO. Without it, the app falls back to the standard unkeyed CARTO tile URL. Never pass `CLUBSPOT_API_KEY` to a web build with `--dart-define`; compile-time web values are included in the public JavaScript bundle.
 
-Optional weather station API keys (set in Firestore `weather/config` doc):
-- `wuApiKey` — Weather Underground API key (enables 8 additional PWS stations)
-- `ambientAppKey` + `ambientApiKey` — AmbientWeather REST API keys (enables club station direct feed)
+Optional Clubspot-backed Cloud Functions read `CLUBSPOT_API_KEY` and `CLUBSPOT_CLUB_ID` from their deployed runtime environment. The repository does not contain production values. Confirm those variables are configured before using or redeploying member sync and score submission functions.
+
+Optional weather station API keys are stored in the Firestore `weather/config` document:
+- `wuApiKey` — Weather Underground API key
+- `ambientAppKey` + `ambientApiKey` — AmbientWeather REST API keys
 
 ### Seed Data
 
-Populate Firestore with race marks, courses, wind groups, and fleets:
+Seed scripts write to Firestore. Confirm the intended project and credentials before running one:
+
 ```bash
+firebase use
 node scripts/seed_courses.js
 ```
 
-### Run
+### Run Locally
+
+The current local demo runs the Flutter frontend locally while using the configured `mpyc-raceday` Firebase production services. A fully isolated emulator mode is not configured yet.
 
 ```bash
-# Mobile (Android emulator or device)
-flutter run
+flutter run -d chrome --dart-define=CARTO_BASEMAPS_API_KEY=<restricted-carto-key>
+```
 
-# Web
-flutter run -d chrome
+For the mobile app on an Android device or emulator:
 
-# Build Android APK
-flutter build apk
+```bash
+cp .env.example .env
+flutter run -d <android-device-id> --dart-define-from-file=.env
+```
 
-# Build for web deployment
-flutter build web --no-tree-shake-icons
+For a browser-independent local URL:
+
+```bash
+flutter run -d web-server --web-hostname 127.0.0.1 --web-port 7357
+```
+
+Build the Firebase Hosting artifact with:
+
+```bash
+flutter build web --release
 ```
 
 ### Deploy
 
 ```bash
-# Deploy web app to Firebase Hosting
-firebase deploy --only hosting
-
-# Deploy Cloud Functions
-firebase deploy --only functions
-
-# Deploy Firestore rules and indexes
-firebase deploy --only firestore
+flutter build web --release
+firebase deploy --only hosting --project mpyc-raceday
+firebase deploy --only functions --project mpyc-raceday
+firebase deploy --only firestore --project mpyc-raceday
 ```
 
 ---

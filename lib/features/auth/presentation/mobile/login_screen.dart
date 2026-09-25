@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mpyc_raceday/core/theme.dart';
+import 'package:mpyc_raceday/features/app_mode/data/app_mode.dart';
 import 'package:mpyc_raceday/features/auth/data/auth_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -13,13 +14,16 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _identifierController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
   void dispose() {
     _identifierController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -33,18 +37,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
-      final input = _identifierController.text.trim();
-      final result = await repo.sendVerificationCode(input);
-
-      if (!mounted) return;
-      context.go(
-        '/verify',
-        extra: {
-          'maskedEmail': result.maskedEmail,
-          'memberId': result.memberId,
-          'memberNumber': input,
-        },
+      await repo.signInWithEmail(
+        _identifierController.text.trim(),
+        _passwordController.text,
       );
+      if (!mounted) return;
+      final hasSavedMode = await loadAppMode(ref);
+      if (!mounted) return;
+      context.go(hasSavedMode ? '/home' : '/mode-switcher');
     } catch (e) {
       setState(() {
         _errorMessage = _parseError(e);
@@ -56,18 +56,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _parseError(Object e) {
     final msg = e.toString();
-    if (msg.contains('not-found') || msg.contains('No member found')) {
-      return 'No member found. Check your signal or member number.';
+    if (msg.contains('wrong-password') || msg.contains('invalid-credential')) {
+      return 'Invalid email, signal number, or password.';
     }
-    if (msg.contains('failed-precondition') ||
-        msg.contains('No email on file')) {
-      return 'No email address on file for this account. Contact the club.';
+    if (msg.contains('user-not-found')) {
+      return 'No account found for this email or signal number.';
     }
     if (msg.contains('too-many-requests')) {
       return 'Too many attempts. Please try again later.';
     }
-    if (msg.contains('invalid-argument')) {
-      return 'Please enter a valid signal number, member number, or email.';
+    if (msg.contains('No member record')) {
+      return 'No member record is linked to this account.';
     }
     return 'Sign in failed. Please try again.';
   }
@@ -100,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sign in with your signal number or member number',
+                    'Sign in with your email or signal number',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -112,15 +111,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _identifierController,
                     keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                     autocorrect: false,
                     decoration: const InputDecoration(
-                      labelText: 'Signal Number or Member Number',
+                      labelText: 'Email or Signal Number',
                       prefixIcon: Icon(Icons.badge_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your signal or member number';
+                        return 'Please enter your email or signal number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outlined),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
                       }
                       return null;
                     },
@@ -175,14 +202,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             )
                           : const Text(
-                              'Continue',
+                              'Sign In',
                               style: TextStyle(fontSize: 16),
                             ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'A verification code will be sent to your email on file.',
+                    'Use your MPYC account password.',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),

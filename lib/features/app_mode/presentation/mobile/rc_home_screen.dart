@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 
 import '../../../demo/demo_mode_service.dart';
 
@@ -625,7 +626,7 @@ class _RcLiveMapCard extends StatelessWidget {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                            MapConfig.cartoTileUrl,
                         ),
                     ],
                   ),
@@ -656,7 +657,7 @@ class _RcLiveMapCard extends StatelessWidget {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                      MapConfig.cartoTileUrl,
                   ),
                 if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],
@@ -865,7 +866,7 @@ class _FullscreenMapPage extends StatelessWidget {
                 children: [
                   TileLayer(
                     urlTemplate:
-                        'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                        MapConfig.cartoTileUrl,
                     ),
                   if (markers.isNotEmpty)
                     MarkerLayer(markers: markers),

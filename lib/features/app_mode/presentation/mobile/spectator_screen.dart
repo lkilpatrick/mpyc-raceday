@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 
 import '../../../weather/data/models/live_weather.dart';
 import '../../../weather/presentation/live_weather_providers.dart';
@@ -1004,7 +1005,7 @@ class _LiveMapCard extends StatelessWidget {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                            MapConfig.cartoTileUrl,
                       ),
                     ],
                   ),
@@ -1109,7 +1110,7 @@ class _TrackPolylineMap extends StatelessWidget {
       children: [
         TileLayer(
           urlTemplate:
-              'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+              MapConfig.cartoTileUrl,
         ),
         if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
         if (markers.isNotEmpty) MarkerLayer(markers: markers),
@@ -1174,7 +1175,7 @@ class _BoatTracksBuilder extends StatelessWidget {
           children: [
             TileLayer(
               urlTemplate:
-                  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                  MapConfig.cartoTileUrl,
             ),
             if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
             if (markers.isNotEmpty) MarkerLayer(markers: markers),

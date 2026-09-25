@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 
 import '../../data/models/live_weather.dart';
 import '../live_weather_providers.dart';
@@ -239,7 +240,7 @@ class _WeatherLogPageState extends ConsumerState<WeatherLogPage> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+          urlTemplate: MapConfig.cartoTileUrl,
         ),
         MarkerLayer(
           markers: stations.map((w) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 
 import '../../../data/models/race_session.dart';
 import '../../rc_race_providers.dart';
@@ -238,7 +239,7 @@ class _RcRunningStepState extends ConsumerState<RcRunningStep> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                      MapConfig.cartoTileUrl,
                 ),
                 if (markers.isNotEmpty) MarkerLayer(markers: markers),
               ],

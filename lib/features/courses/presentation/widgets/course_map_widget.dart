@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 import 'package:mpyc_raceday/core/theme.dart';
 
 import '../../data/models/course_config.dart';
@@ -59,7 +60,7 @@ class _CourseMapWidgetState extends State<CourseMapWidget> {
           children: [
             // OpenStreetMap tiles
             TileLayer(
-              urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+              urlTemplate: MapConfig.cartoTileUrl,
               maxZoom: 19,
             ),
 

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mpyc_raceday/core/map_config.dart';
 
 import '../data/models/race_track.dart';
 
@@ -467,7 +468,7 @@ class _RaceReplayViewerState extends State<RaceReplayViewer> {
       children: [
         TileLayer(
           urlTemplate:
-              'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+              MapConfig.cartoTileUrl,
         ),
         if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
         if (markers.isNotEmpty) MarkerLayer(markers: markers),

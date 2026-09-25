@@ -51,7 +51,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
               const SizedBox(height: 12),
               Stepper(
                 currentStep: _step,
-                controlsBuilder: (_, __) => const SizedBox.shrink(),
+                controlsBuilder: (_, _) => const SizedBox.shrink(),
                 steps: [
                   Step(
                     title: const Text('Upload'),
@@ -190,7 +190,7 @@ class _CalendarImportDialogState extends ConsumerState<CalendarImportDialog> {
       allowedExtensions: ['csv', 'xlsx'],
       withData: true,
     );
-    if (result == null || result.files.single.bytes == null) return;
+    if (!mounted || result == null || result.files.single.bytes == null) return;
 
     final file = result.files.single;
     final ext = file.extension?.toLowerCase();
